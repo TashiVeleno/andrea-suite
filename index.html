@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andrea Suite</title>
 
+<!-- Libreria leggera per l'effetto coriandoli (gratificazione visiva) -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <style>
 :root {
     --bg: #0b0f17;
@@ -46,31 +49,9 @@ header {
     max-width: 1250px;
     margin: auto;
     padding: 10px 22px;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 15px;
-}
-
-.header-left {
-    justify-self: start;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-}
-
-.header-center {
-    justify-self: center;
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 500;
-    text-transform: capitalize;
-}
-
-.header-right {
-    justify-self: end;
-    display: flex;
-    align-items: center;
-    gap: 12px;
 }
 
 .logo {
@@ -80,6 +61,12 @@ header {
 
 .logo span {
     color: var(--accent);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
 .guide-trigger-btn {
@@ -471,13 +458,26 @@ label {
     border-radius: 16px;
 }
 
+/* Milestone UI */
+.milestone-badge {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #1c2635;
+    border: 1px solid var(--border);
+    display: inline-block;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
 .progress-container {
     width: 100%;
     height: 12px;
     background: #0d131d;
     border-radius: 20px;
     overflow: hidden;
-    margin-top: 14px;
+    margin-top: 6px;
 }
 
 .progress-bar {
@@ -682,19 +682,12 @@ canvas {
 
 @media(max-width:750px) {
     .header-content {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
-        row-gap: 8px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
     }
-    .header-left { grid-column: 1; }
-    .header-right { 
-        grid-column: 2; 
-        justify-self: end;
-    }
-    .header-center {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        justify-self: center;
+    .header-right {
+        justify-content: space-between;
     }
     
     .container { padding: 16px 14px 70px; }
@@ -739,9 +732,7 @@ canvas {
 
 <header>
     <div class="header-content">
-        <div class="header-left">
-            <div class="logo">🏠 Andrea <span>Suite</span></div>
-        </div>
+        <div class="logo">🏠 Andrea <span>Suite</span></div>
         <div class="header-center" id="todayDate"></div>
         <div class="header-right">
             <button class="guide-trigger-btn" onclick="openGuideModal()">
@@ -977,6 +968,7 @@ canvas {
         <div class="header-back">
             <button class="secondary icon-btn" onclick="goToPage('main-dashboard')" title="Indietro">←</button>
             <button class="secondary icon-btn" onclick="openStatsModal()" title="Statistiche">📊</button>
+            <button class="secondary icon-btn" onclick="exportProjectToCSV()" title="Esporta in Excel (CSV)">📗</button>
             <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
@@ -1035,6 +1027,9 @@ canvas {
                 </div>
                 <div class="goal-status" id="goalStatus">🎯 In corso</div>
             </div>
+
+            <!-- Gamification: Badge dei Livelli -->
+            <div id="milestoneBadge" class="milestone-badge" style="margin-top: 14px;">🌱 Livello Iniziale</div>
 
             <div class="progress-container">
                 <div class="progress-bar" id="goalProgressBar" style="width:0%;"></div>
@@ -1387,8 +1382,51 @@ function confirmCloseProject(status) {
     
     window.saveProjects(projects);
     closeCloseProjectModal();
+    
+    // Pioggia di coriandoli in caso di vittoria!
+    if (status === 'completed' && typeof confetti === 'function') {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }
+    
     goToPage('main-dashboard'); 
 }
+
+// Fuzione di Esportazione in Excel (CSV)
+window.exportProjectToCSV = function() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const stats = calculateProject(project);
+
+    let csv = "Data;Tipo Movimento;Importo/Saldo (EUR);Guadagno Giorno (EUR);Risultato Netto (EUR)\n";
+
+    const historyMap = {};
+    stats.history.forEach(item => { historyMap[item.id] = item; });
+    const movements = [...project.movements].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    movements.forEach(m => {
+        const item = historyMap[m.id];
+        const date = new Date(m.date).toLocaleString("it-IT");
+        let type = m.type === 'deposit' ? 'Deposito' : m.type === 'withdraw' ? 'Prelievo' : 'Saldo';
+        let val = m.type === 'day' ? m.balance : m.amount;
+        let diff = (m.type === 'day' && item && item.dayDiff !== null) ? item.dayDiff : 0;
+        let result = item ? item.resultAfter : 0;
+
+        csv += `${date};${type};${val};${diff};${result}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Export_${project.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
 
 function euro(value) {
     return new Intl.NumberFormat("it-IT", {
@@ -1912,6 +1950,31 @@ function renderProjectDetail() {
     document.getElementById("goalProgress").textContent = stats.goalProgress.toFixed(2) + "%";
     document.getElementById("goalRemaining").textContent = euro(stats.goalRemaining);
     document.getElementById("goalEndDate").textContent = formatDate(project.endDate);
+
+    // Sistema Milestones
+    let badgeHtml = "";
+    if (stats.goalProgress >= 100) {
+        badgeHtml = "💎 Livello Massimo (100%)";
+        document.getElementById("milestoneBadge").style.color = "#a855f7"; // viola diamante
+        document.getElementById("milestoneBadge").style.borderColor = "#a855f7";
+    } else if (stats.goalProgress >= 75) {
+        badgeHtml = "🥇 Livello Oro (75%)";
+        document.getElementById("milestoneBadge").style.color = "#facc15"; // oro
+        document.getElementById("milestoneBadge").style.borderColor = "#facc15";
+    } else if (stats.goalProgress >= 50) {
+        badgeHtml = "🥈 Livello Argento (50%)";
+        document.getElementById("milestoneBadge").style.color = "#94a3b8"; // argento
+        document.getElementById("milestoneBadge").style.borderColor = "#94a3b8";
+    } else if (stats.goalProgress >= 25) {
+        badgeHtml = "🥉 Livello Bronzo (25%)";
+        document.getElementById("milestoneBadge").style.color = "#d97706"; // bronzo
+        document.getElementById("milestoneBadge").style.borderColor = "#d97706";
+    } else {
+        badgeHtml = "🌱 Livello Iniziale";
+        document.getElementById("milestoneBadge").style.color = "var(--text)";
+        document.getElementById("milestoneBadge").style.borderColor = "var(--border)";
+    }
+    document.getElementById("milestoneBadge").textContent = badgeHtml;
     
     if (isClosed) {
         document.getElementById("situazioneLabel").textContent = "finale";
