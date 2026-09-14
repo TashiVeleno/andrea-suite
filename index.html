@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andrea Suite</title>
 
-
+<!-- Link per trasformare la suite in una PWA installabile senza barre -->
+<link rel="manifest" href="manifest.json">
 
 <!-- Libreria per l'effetto coriandoli -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -441,7 +442,7 @@ input {
     border: 1px solid var(--border);
     background: #0d131d;
     color: white;
-    font-size: 16px; /* Evita lo zoom automatico su iOS e migliora il tocco */
+    font-size: 16px;
 }
 
 input:focus { outline: none; border-color: var(--accent); }
@@ -688,8 +689,8 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p><strong>Saldo:</strong> Giacenza liquida.<br><strong>Risultato:</strong> Guadagno/perdita totale.</p>
             </div>
             <div class="guide-box">
-                <h4>⏱️ Ritmo</h4>
-                <p>Incasso medio giornaliero necessario.</p>
+                <h4>⏱️ Ritmo Necessario</h4>
+                <p>La media giornaliera, settimanale e mensile che devi mantenere da oggi in poi per centrare l'obiettivo finale.</p>
             </div>
             <div class="guide-box">
                 <h4>🗺️ Tabella di Marcia</h4>
@@ -1342,9 +1343,6 @@ function calculateProject(project) {
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(today, endDate) + 1);
 
     const originalDaily = goal / totalDays;
-    const originalWeekly = originalDaily * 7;
-    const originalMonthly = originalDaily * 30.44;
-
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
@@ -1362,9 +1360,8 @@ function calculateProject(project) {
     return {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, startDate, endDate, totalDays,
-        elapsedDays, daysRemaining, originalDaily, originalWeekly, originalMonthly,
-        expectedToday, roadmapDifference, daysDifference, dailyNeeded, weeklyNeeded,
-        monthlyNeeded, history
+        elapsedDays, daysRemaining, dailyNeeded, weeklyNeeded, monthlyNeeded,
+        expectedToday, roadmapDifference, daysDifference, history
     };
 }
 
@@ -1606,7 +1603,6 @@ function showOperationForm(type) {
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
         
-        // Forzatura nativa focus per tastiera mobile
         setTimeout(() => { 
             const balanceInput = document.getElementById("operationBalance");
             if (balanceInput) {
