@@ -454,6 +454,16 @@ h2 {
     color: white;
 }
 
+/* Stile per i pulsanti a icona nell'header */
+.icon-btn {
+    padding: 8px 14px;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+}
+
 .primary {
     background: var(--accent);
 }
@@ -547,20 +557,13 @@ label {
     color: white;
     border-radius: 16px;
     padding: 18px 20px;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
 }
 
 .main-operation strong {
     display: block;
     font-size: 18px;
-}
-
-.main-operation span {
-    display: block;
-    color: var(--muted);
-    margin-top: 5px;
-    font-size: 13px;
 }
 
 .secondary-operations {
@@ -576,20 +579,13 @@ label {
     padding: 16px;
     cursor: pointer;
     color: white;
-    text-align: left;
+    text-align: center;
     background: var(--card2);
 }
 
 .operation-btn strong {
     display: block;
     font-size: 16px;
-}
-
-.operation-btn span {
-    display: block;
-    margin-top: 5px;
-    color: var(--muted);
-    font-size: 12px;
 }
 
 .deposit-btn:hover { border-color: var(--green); }
@@ -1017,7 +1013,6 @@ canvas {
             <div>
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
                     <h1 style="margin: 0;">💼 I miei progetti</h1>
-                    <!-- Pulsante Nuovo posizionato vicino al titolo -->
                     <button class="primary" style="padding: 6px 14px; font-size: 13px;" onclick="toggleNewProjectForm()">➕ Nuovo</button>
                 </div>
                 <p class="subtitle">I tuoi progetti in corso e archiviati.</p>
@@ -1059,11 +1054,9 @@ canvas {
 <section id="projectDetail" class="page">
     <div class="page-header page-header-detail">
         <div class="header-back">
-            <button class="secondary" onclick="goBackFromDetail()">← Indietro</button>
-            <button class="secondary" onclick="openStatsModal()">📊 Statistiche</button>
-            <!-- Pulsante Modifica -->
-            <button class="secondary" id="btnEditProjectHeader" onclick="openEditProjectModal(currentProjectId)">✏️ Modifica</button>
-            <button class="danger" id="btnCloseProjectHeader" onclick="openCloseProjectModal()">Concludi</button>
+            <button class="secondary icon-btn" onclick="goBackFromDetail()" title="Indietro">←</button>
+            <button class="secondary icon-btn" onclick="openStatsModal()" title="Statistiche">📊</button>
+            <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
         <div class="header-ritmo">
@@ -1158,17 +1151,14 @@ canvas {
 
             <button class="main-operation operation-day" onclick="showOperationForm('day')">
                 <strong>📅 Aggiorna saldo</strong>
-                <span>Inserisci il saldo reale attualmente presente sul conto</span>
             </button>
 
             <div class="secondary-operations">
                 <button class="operation-btn deposit-btn operation-deposit" onclick="showOperationForm('deposit')">
                     <strong>📥 Deposito</strong>
-                    <span>Aggiungi denaro al conto</span>
                 </button>
                 <button class="operation-btn withdraw-btn operation-withdraw" onclick="showOperationForm('withdraw')">
                     <strong>📤 Prelievo</strong>
-                    <span>Registra denaro prelevato</span>
                 </button>
             </div>
 
@@ -2071,7 +2061,6 @@ function renderProjectDetail() {
         document.getElementById("archivedIcon").textContent = project.status === 'completed' ? '🏆' : '🛑';
         document.getElementById("archivedTitle").textContent = project.status === 'completed' ? 'Obiettivo Raggiunto' : 'Progetto Interrotto';
         document.getElementById("btnCloseProjectHeader").style.display = "none";
-        document.getElementById("btnEditProjectHeader").style.display = "none";
         
     } else {
         document.getElementById("situazioneLabel").textContent = "attuale";
@@ -2082,8 +2071,7 @@ function renderProjectDetail() {
         
         document.getElementById("operationsCardBlock").style.display = "block";
         document.getElementById("archivedBannerBlock").style.display = "none";
-        document.getElementById("btnCloseProjectHeader").style.display = "block";
-        document.getElementById("btnEditProjectHeader").style.display = "block";
+        document.getElementById("btnCloseProjectHeader").style.display = ""; 
     }
     
     document.getElementById("goalProgressBar").style.width = Math.max(0, Math.min(100, stats.goalProgress)) + "%";
