@@ -310,14 +310,10 @@ h2 {
     line-height: 1.5;
 }
 
-
-/* =========================================
-   LAYOUT CONSOLE: 3 QUADRATI + OBIETTIVO 
-   ========================================= */
-
+/* LAYOUT CONSOLE */
 .detail-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr 1fr 0.9fr; /* Tabella di marcia leggermente più stretta */
     gap: 16px;
     margin-top: 16px;
 }
@@ -326,30 +322,24 @@ h2 {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 18px;
-    padding: 24px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    aspect-ratio: 1 / 1; /* Forza il quadrato perfetto */
-    max-height: 380px; /* Evita che diventino giganti su schermi enormi */
 }
 
-/* Griglia interna 2x2 per Situazione Attuale */
 .situazione-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 16px;
-    flex-grow: 1;
-    align-items: center;
-    margin-top: 16px;
+    grid-template-rows: auto auto;
+    gap: 20px 12px;
+    margin-top: 14px;
 }
 
 .roadmap-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr; /* Risultato previsto e Differenza affiancati */
     gap: 12px;
-    margin-top: auto;
+    margin-top: 14px;
 }
 
 .goal-card {
@@ -357,11 +347,8 @@ h2 {
     border: 1px solid var(--border);
     border-radius: 18px;
     padding: 24px;
-    grid-column: 1 / -1; /* Occupa tutta la riga in basso */
-    margin-top: 6px;
+    grid-column: 1 / -1;
 }
-
-/* ========================================= */
 
 .grid {
     display: grid;
@@ -376,7 +363,6 @@ h2 {
     padding: 20px;
 }
 
-/* Card interamente cliccabili */
 .list-item {
     cursor: pointer;
     transition: transform 0.2s, border-color 0.2s;
@@ -394,13 +380,13 @@ h2 {
 }
 
 .card h3, .console-card h3 {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--muted);
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
 .big-number {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
 }
 
@@ -429,7 +415,6 @@ h2 {
     color: white;
 }
 
-/* Stile per i pulsanti a icona nell'header */
 .icon-btn {
     padding: 8px 14px;
     font-size: 18px;
@@ -439,46 +424,27 @@ h2 {
     border-radius: 11px;
 }
 
-.primary {
-    background: var(--accent);
-}
-
-.secondary {
-    background: #1d2734;
-    border: 1px solid var(--border);
-}
-
-.danger,
-.delete-btn {
-    background: rgba(239,68,68,.15);
-    color: #ff8d8d;
-}
+.primary { background: var(--accent); }
+.secondary { background: #1d2734; border: 1px solid var(--border); }
+.danger, .delete-btn { background: rgba(239,68,68,.15); color: #ff8d8d; }
 
 input {
     width: 100%;
-    padding: 13px;
-    margin-top: 7px;
-    margin-bottom: 16px;
+    padding: 11px;
+    margin-top: 5px;
+    margin-bottom: 12px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #0d131d;
     color: white;
-    font-size: 15px;
-}
-
-input:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
-label {
     font-size: 14px;
-    color: var(--muted);
 }
 
-.form-card {
-    max-width: 650px;
-}
+input:focus { outline: none; border-color: var(--accent); }
+
+label { font-size: 13px; color: var(--muted); }
+
+.form-card { max-width: 650px; }
 
 .empty {
     padding: 40px;
@@ -488,7 +454,6 @@ label {
     border-radius: 16px;
 }
 
-/* Milestone UI */
 .milestone-badge {
     font-size: 12px;
     font-weight: bold;
@@ -516,64 +481,50 @@ label {
     transition: width .4s;
 }
 
+.operations-title { margin-bottom: 14px; }
+.operations-title h2 { margin-bottom: 4px; }
+
 .main-operation {
     width: 100%;
     border: 1px solid rgba(79,140,255,.45);
     background: rgba(79,140,255,.12);
     color: white;
-    border-radius: 16px;
-    padding: 18px 20px;
+    border-radius: 14px;
+    padding: 14px 16px;
     text-align: center;
     cursor: pointer;
 }
 
-.main-operation strong {
-    display: block;
-    font-size: 18px;
-}
+.main-operation strong { display: block; font-size: 16px; }
 
 .secondary-operations {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .operation-btn {
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: 12px;
+    padding: 12px 14px;
     cursor: pointer;
     color: white;
     text-align: center;
     background: var(--card2);
 }
 
-.operation-btn strong {
-    display: block;
-    font-size: 16px;
-}
+.operation-btn strong { display: block; font-size: 14px; }
 
 .deposit-btn:hover { border-color: var(--green); }
 .withdraw-btn:hover { border-color: var(--orange); }
 
 .operation-form {
-    margin-top: 16px;
-    padding: 16px;
-    background: #111923;
-    border: 1px solid var(--accent);
-    border-radius: 16px;
+    margin-top: 0;
+    padding: 4px 0 0 0;
+    background: transparent;
+    border: none;
 }
-
-.operation-form-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-}
-
-.operation-form-input { flex: 1; }
-.operation-form-input input { margin-bottom: 0; }
-.operation-form-actions { display: flex; gap: 8px; }
 
 .goal-header {
     display: flex;
@@ -590,36 +541,19 @@ label {
     color: #a8c5ff;
 }
 
-.goal-status.completed {
-    background: rgba(34,197,94,.15);
-    color: var(--green);
-}
-
-.goal-status.delayed {
-    background: rgba(239,68,68,.15);
-    color: var(--red);
-}
+.goal-status.completed { background: rgba(34,197,94,.15); color: var(--green); }
+.goal-status.delayed { background: rgba(239,68,68,.15); color: var(--red); }
 
 .roadmap-status {
-    margin-bottom: 18px;
-    padding: 16px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
     border-radius: 14px;
+    font-size: 13px;
 }
 
-.roadmap-status.ahead {
-    background: rgba(34,197,94,.10);
-    border: 1px solid rgba(34,197,94,.3);
-}
-
-.roadmap-status.behind {
-    background: rgba(239,68,68,.10);
-    border: 1px solid rgba(239,68,68,.3);
-}
-
-.roadmap-status.inline {
-    background: rgba(79,140,255,.10);
-    border: 1px solid rgba(79,140,255,.3);
-}
+.roadmap-status.ahead { background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.3); }
+.roadmap-status.behind { background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); }
+.roadmap-status.inline { background: rgba(79,140,255,.10); border: 1px solid rgba(79,140,255,.3); }
 
 .chart-card { margin-top: 20px; }
 .chart-container {
@@ -629,11 +563,7 @@ label {
     margin-top: 20px;
 }
 
-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
+canvas { width: 100%; height: 100%; display: block; }
 
 .chart-tooltip {
     position: absolute;
@@ -649,10 +579,7 @@ canvas {
     box-shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 
-.chart-tooltip strong {
-    display: block;
-    margin-bottom: 5px;
-}
+.chart-tooltip strong { display: block; margin-bottom: 5px; }
 
 .history-item {
     display: flex;
@@ -664,11 +591,7 @@ canvas {
 }
 
 .history-item:last-child { border-bottom: none; }
-.history-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+.history-right { display: flex; align-items: center; gap: 12px; }
 
 .badge {
     display: inline-block;
@@ -677,27 +600,12 @@ canvas {
     font-size: 12px;
 }
 
-.badge.deposit {
-    background: rgba(34,197,94,.15);
-    color: var(--green);
-}
-
-.badge.withdraw {
-    background: rgba(245,158,11,.15);
-    color: var(--orange);
-}
-
-.badge.day {
-    background: rgba(79,140,255,.15);
-    color: #9ec0ff;
-}
+.badge.deposit { background: rgba(34,197,94,.15); color: var(--green); }
+.badge.withdraw { background: rgba(245,158,11,.15); color: var(--orange); }
+.badge.day { background: rgba(79,140,255,.15); color: #9ec0ff; }
 
 @media(max-width:900px) {
-    .header-content {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 16px;
-    }
+    .header-content { flex-direction: column; align-items: stretch; gap: 16px; }
     .header-right { justify-content: space-between; }
     .container { padding: 16px 14px 70px; }
     
@@ -705,9 +613,8 @@ canvas {
     .page-header-detail .header-name { justify-self: start; text-align: left; }
     .header-ritmo { justify-self: start; justify-content: flex-start; gap: 12px; }
     
-    /* SU MOBILE DISIMPILA I QUADRATI */
     .detail-grid { grid-template-columns: 1fr; }
-    .console-card { aspect-ratio: auto; min-height: 280px; }
+    .roadmap-grid { grid-template-columns: 1fr; }
     
     .history-item { flex-direction: column; align-items: flex-start; }
     .history-right { width: 100%; justify-content: space-between; }
@@ -762,30 +669,20 @@ canvas {
         </div>
         <div class="guide-grid">
             <div class="guide-box">
-                <h4>🎯 Barra Obiettivo (% Incassato)</h4>
-                <p>
-                    Traccia solo i profitti <strong>realmente prelevati e incassati</strong>.<br>
-                    Avanza con la formula: <code>Netti Prelevati = Prelievi Totali - Depositi Totali</code>.
-                </p>
+                <h4>🎯 Barra Obiettivo</h4>
+                <p>Traccia solo i profitti realmente prelevati e incassati: <code>Prelievi - Depositi</code>.</p>
             </div>
             <div class="guide-box">
-                <h4>📊 Saldo Attuale & Risultato Netto</h4>
-                <p>
-                    <strong>Saldo Attuale:</strong> La giacenza liquida sul conto.<br>
-                    <strong>Risultato Netto:</strong> Guadagno/perdita totale generato finora.
-                </p>
+                <h4>📊 Saldo & Risultato</h4>
+                <p><strong>Saldo:</strong> Giacenza liquida.<br><strong>Risultato:</strong> Guadagno/perdita totale.</p>
             </div>
             <div class="guide-box">
-                <h4>⏱️ Ritmo Necessario</h4>
-                <p>
-                    Indica quanto devi incassare in media ogni giorno da oggi alla scadenza per centrare l'obiettivo.
-                </p>
+                <h4>⏱️ Ritmo</h4>
+                <p>Incasso medio giornaliero necessario per centrare l'obiettivo.</p>
             </div>
             <div class="guide-box">
                 <h4>🗺️ Tabella di Marcia</h4>
-                <p>
-                    Confronta il tuo <strong>Risultato Netto attuale</strong> con la crescita ideale prevista per la data di oggi.
-                </p>
+                <p>Confronta il Risultato Netto con la crescita ideale di oggi.</p>
             </div>
         </div>
     </div>
@@ -799,64 +696,28 @@ canvas {
             <button class="modal-close-btn" onclick="closeStatsModal()">✕</button>
         </div>
 
-        <h4 style="color:var(--muted); font-size:12px; margin: 12px 0 8px; letter-spacing:0.5px;">💰 REDDITIVITÀ</h4>
+        <h4 style="color:var(--muted); font-size:12px; margin: 12px 0 8px;">💰 REDDITIVITÀ</h4>
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="guide-box">
-                <div class="small">📈 Media vincita</div>
-                <strong class="green big-number" style="font-size:18px;" id="statAvgWin">+€ 0,00</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">📉 Media perdita</div>
-                <strong class="red big-number" style="font-size:18px;" id="statAvgLoss">-€ 0,00</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">💹 Profit Factor</div>
-                <strong class="blue big-number" style="font-size:18px;" id="statProfitFactor">0,00</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">📊 Media giornaliera</div>
-                <strong class="big-number" style="font-size:18px;" id="statAvgDaily">€ 0,00</strong>
-            </div>
+            <div class="guide-box"><div class="small">📈 Media vincita</div><strong class="green big-number" style="font-size:18px;" id="statAvgWin">+€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">📉 Media perdita</div><strong class="red big-number" style="font-size:18px;" id="statAvgLoss">-€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">💹 Profit Factor</div><strong class="blue big-number" style="font-size:18px;" id="statProfitFactor">0,00</strong></div>
+            <div class="guide-box"><div class="small">📊 Media giornaliera</div><strong class="big-number" style="font-size:18px;" id="statAvgDaily">€ 0,00</strong></div>
         </div>
 
-        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px; letter-spacing:0.5px;">📊 ESITI</h4>
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">📊 ESITI</h4>
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="guide-box">
-                <div class="small">🟢 Positive</div>
-                <strong class="big-number" style="font-size:18px;" id="statWinCount">0</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">🔴 Negative</div>
-                <strong class="big-number" style="font-size:18px;" id="statLossCount">0</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">🟡 In pari</div>
-                <strong class="big-number" style="font-size:18px;" id="statEvenCount">0</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">🎯 Win Rate</div>
-                <strong class="blue big-number" style="font-size:18px;" id="statWinRate">0%</strong>
-            </div>
+            <div class="guide-box"><div class="small">🟢 Positive</div><strong class="big-number" style="font-size:18px;" id="statWinCount">0</strong></div>
+            <div class="guide-box"><div class="small">🔴 Negative</div><strong class="big-number" style="font-size:18px;" id="statLossCount">0</strong></div>
+            <div class="guide-box"><div class="small">🟡 In pari</div><strong class="big-number" style="font-size:18px;" id="statEvenCount">0</strong></div>
+            <div class="guide-box"><div class="small">🎯 Win Rate</div><strong class="blue big-number" style="font-size:18px;" id="statWinRate">0%</strong></div>
         </div>
 
-        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px; letter-spacing:0.5px;">🏆 RECORD</h4>
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">🏆 RECORD</h4>
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="guide-box">
-                <div class="small">🔥 Miglior giorno</div>
-                <strong class="green big-number" style="font-size:18px;" id="statBestDay">€ 0,00</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">❄️ Peggior giorno</div>
-                <strong class="red big-number" style="font-size:18px;" id="statWorstDay">€ 0,00</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">🟢 Record positivo</div>
-                <strong class="big-number" style="font-size:18px;" id="statStreakWin">0 giorni</strong>
-            </div>
-            <div class="guide-box">
-                <div class="small">🔴 Record negativo</div>
-                <strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong>
-            </div>
+            <div class="guide-box"><div class="small">🔥 Miglior giorno</div><strong class="green big-number" style="font-size:18px;" id="statBestDay">€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">❄️ Peggior giorno</div><strong class="red big-number" style="font-size:18px;" id="statWorstDay">€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">🟢 Record positivo</div><strong class="big-number" style="font-size:18px;" id="statStreakWin">0 giorni</strong></div>
+            <div class="guide-box"><div class="small">🔴 Record negativo</div><strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong></div>
         </div>
     </div>
 </div>
@@ -865,7 +726,7 @@ canvas {
 <div class="modal-overlay" id="closeProjectModal" onclick="closeCloseProjectModalOnOverlay(event)">
     <div class="modal-content" style="max-width: 420px; text-align: center;">
         <h3 style="margin-bottom: 12px; font-size: 22px;">Archivia Progetto</h3>
-        <p class="subtitle" style="margin-bottom: 24px;">Stai per chiudere e archiviare definitivamente questo progetto. Hai raggiunto il tuo obiettivo?</p>
+        <p class="subtitle" style="margin-bottom: 24px;">Hai raggiunto il tuo obiettivo?</p>
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <button class="primary" style="background: var(--green); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('completed')">🏆 Sì, obiettivo raggiunto</button>
             <button class="primary" style="background: var(--red); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('abandoned')">🛑 No, progetto interrotto</button>
@@ -883,17 +744,13 @@ canvas {
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
             <label>Nome progetto</label>
-            <input id="editProjectName" placeholder="Es. Investimento Sportivo">
-
+            <input id="editProjectName">
             <label>Capitale iniziale (€)</label>
-            <input id="editProjectCapital" type="number" step="0.01" min="0.01">
-
+            <input id="editProjectCapital" type="number" step="0.01">
             <label>🎯 Obiettivo netto prelevato (€)</label>
-            <input id="editProjectGoal" type="number" step="0.01" min="0.01">
-
+            <input id="editProjectGoal" type="number" step="0.01">
             <label>📅 Data finale</label>
             <input id="editProjectEndDate" type="date">
-
             <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveEditedProject()">💾 Salva Modifiche</button>
         </div>
     </div>
@@ -934,19 +791,14 @@ canvas {
     <div id="newProjectContainer" style="display:none; margin-bottom: 30px;">
         <div class="card form-card">
             <h2 style="margin-bottom:20px;">➕ Nuovo progetto</h2>
-
             <label>Nome progetto</label>
             <input id="projectName" placeholder="Es. Investimento Sportivo">
-
             <label>Capitale iniziale (€)</label>
             <input id="projectCapital" type="number" step="0.01" min="0.01">
-
             <label>🎯 Obiettivo netto prelevato (€)</label>
             <input id="projectGoal" type="number" step="0.01" min="0.01">
-
             <label>📅 Data finale</label>
             <input id="projectEndDate" type="date">
-
             <button class="primary" onclick="createProject()">Crea progetto</button>
             <button class="secondary" style="margin-left:8px;" onclick="toggleNewProjectForm()">Annulla</button>
         </div>
@@ -990,10 +842,10 @@ canvas {
         </div>
     </div>
 
-    <!-- CONSOLE A 3 COLONNE (QUADRATI) -->
+    <!-- CONSOLE A 3 COLONNE COMPATTE -->
     <div class="detail-grid">
         
-        <!-- 1. Quadrato Situazione Attuale -->
+        <!-- 1. Situazione Attuale -->
         <div class="console-card">
             <h2>📊 Situazione <span id="situazioneLabel">attuale</span></h2>
             <div class="situazione-grid">
@@ -1016,21 +868,20 @@ canvas {
             </div>
         </div>
 
-        <!-- 2. Quadrato Operazioni -->
+        <!-- 2. Operazioni (Con apertura diretta dentro la card) -->
         <div class="console-card" id="operationsCardBlock">
             <div class="operations-title">
                 <h2>⚡ Operazioni</h2>
             </div>
             
             <div class="operation-start-message">
-                👋 <strong>Registra il primo deposito per iniziare.</strong>
+                👋 <strong>Registra il primo deposito.</strong>
             </div>
 
-            <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+            <div id="operationInnerContainer" style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
                 <button class="main-operation operation-day" onclick="showOperationForm('day')">
                     <strong>📅 Resoconto Giornaliero</strong>
                 </button>
-
                 <div class="secondary-operations">
                     <button class="operation-btn deposit-btn operation-deposit" onclick="showOperationForm('deposit')">
                         <strong>📥 Deposito</strong>
@@ -1049,31 +900,31 @@ canvas {
             <p class="subtitle" style="margin-top:8px;">Questo progetto è chiuso.</p>
         </div>
 
-        <!-- 3. Quadrato Tabella di Marcia -->
+        <!-- 3. Tabella di Marcia (Con differenza a destra) -->
         <div class="console-card">
             <h2>🗺️ Tabella di marcia</h2>
 
-            <div id="roadmapStatus" class="roadmap-status inline" style="margin-top:12px;">
+            <div id="roadmapStatus" class="roadmap-status inline" style="margin-top:8px;">
                 Calcolo della situazione...
             </div>
 
             <div class="roadmap-grid">
                 <div>
-                    <div class="small" id="expectedLabel">Risultato previsto oggi</div>
-                    <strong id="expectedToday">€ 0,00</strong>
+                    <div class="small" id="expectedLabel">Previsto oggi</div>
+                    <strong id="expectedToday" style="font-size: 16px;">€ 0,00</strong>
                 </div>
                 <div>
-                    <div class="small">Differenza dal piano</div>
-                    <strong id="roadmapDifference">€ 0,00</strong>
+                    <div class="small">Diff. dal piano</div>
+                    <strong id="roadmapDifference" style="font-size: 16px;">€ 0,00</strong>
                 </div>
-                <div>
-                    <div class="small">Scostamento temporale</div>
-                    <strong id="daysDifference">0 giorni</strong>
-                </div>
+            </div>
+            <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border);">
+                <div class="small">Scostamento temporale</div>
+                <strong id="daysDifference" style="font-size: 15px;">0 giorni</strong>
             </div>
         </div>
 
-        <!-- 4. Fascia Orizzontale Obiettivo -->
+        <!-- 4. Obiettivo Orizzontale -->
         <div class="goal-card">
             <div class="goal-header">
                 <div>
@@ -1113,9 +964,6 @@ canvas {
         </div>
         
     </div>
-
-    <!-- Spazio Moduli di versamento a scomparsa -->
-    <div id="operationFormContainer" style="margin-top:16px;"></div>
 
     <div class="card chart-card">
         <h2>📈 Andamento del progetto</h2>
@@ -1186,19 +1034,11 @@ try {
 }
 
 window.loginGoogle = async () => {
-    if (!auth) {
-        alert("Autenticazione Cloud non disponibile.");
-        return;
-    }
-    try {
-        await signInWithPopup(auth, provider);
-    } catch (e) {
-        if (e.code === 'auth/unauthorized-domain') {
-            activateLocalSession();
-        } else {
-            try { await signInWithRedirect(auth, provider); } 
-            catch (err) { alert("Errore d'accesso: " + err.message); }
-        }
+    if (!auth) { alert("Autenticazione Cloud non disponibile."); return; }
+    try { await signInWithPopup(auth, provider); } 
+    catch (e) {
+        if (e.code === 'auth/unauthorized-domain') activateLocalSession();
+        else { try { await signInWithRedirect(auth, provider); } catch (err) { alert("Errore d'accesso: " + err.message); } }
     }
 };
 
@@ -1237,9 +1077,7 @@ function syncWithCloud(uid) {
             localProjects = data.projects || [];
             saveToLocalStorage();
             updateAll();
-        } else {
-            pushToCloud();
-        }
+        } else { pushToCloud(); }
     });
 }
 
@@ -1575,24 +1413,6 @@ function popolaStatisticheProgetto(project) {
     document.getElementById("statWorstDay").textContent = worstDay !== Infinity ? `-${euro(Math.abs(worstDay))}` : "€ 0,00";
     document.getElementById("statStreakWin").textContent = `${maxWinStreak} giorni`;
     document.getElementById("statStreakLoss").textContent = `${maxLossStreak} giorni`;
-
-    const targetDateEl = document.getElementById("statTargetDate");
-    if (project.status === 'completed' || stats.goalRemaining <= 0) {
-        targetDateEl.textContent = "🏆 Obiettivo già raggiunto!";
-        targetDateEl.className = "green";
-    } else if (project.status === 'abandoned') {
-        targetDateEl.textContent = "🛑 Progetto archiviato";
-        targetDateEl.className = "red";
-    } else if (avgDailyProfit > 0) {
-        const daysToGoal = Math.ceil(stats.goalRemaining / avgDailyProfit);
-        const projectedDate = new Date();
-        projectedDate.setDate(projectedDate.getDate() + daysToGoal);
-        targetDateEl.textContent = `📅 ${projectedDate.toLocaleDateString("it-IT", { day: 'numeric', month: 'long', year: 'numeric' })}`;
-        targetDateEl.className = "green";
-    } else {
-        targetDateEl.textContent = "⚠️ Ritmo attuale non sufficiente";
-        targetDateEl.className = "red";
-    }
 }
 
 function goToPage(pageId) {
@@ -1646,11 +1466,7 @@ function renderProjects() {
     const containerClosed = document.getElementById("closedProjectsList");
 
     if (!activeProjects.length) {
-        containerActive.innerHTML = `
-            <div class="empty">
-                💼 Non hai progetti in corso.<br><br>
-                Premi <strong>➕ Nuovo</strong> per iniziare.
-            </div>`;
+        containerActive.innerHTML = `<div class="empty">💼 Non hai progetti in corso.<br><br>Premi <strong>➕ Nuovo</strong> per iniziare.</div>`;
     } else {
         containerActive.innerHTML = activeProjects.map(project => {
             const stats = calculateProject(project);
@@ -1670,31 +1486,17 @@ function renderProjects() {
                         </div>
                     </div>
                     <div class="grid">
-                        <div>
-                            <div class="small">Saldo</div>
-                            <strong>${euro(stats.balance)}</strong>
-                        </div>
-                        <div>
-                            <div class="small">Risultato netto</div>
-                            <strong class="${resultClass}">${euro(stats.result)}</strong>
-                        </div>
-                        <div>
-                            <div class="small">Progresso incassato</div>
-                            <strong class="blue">${stats.goalProgress.toFixed(1)}%</strong>
-                        </div>
+                        <div><div class="small">Saldo</div><strong>${euro(stats.balance)}</strong></div>
+                        <div><div class="small">Risultato netto</div><strong class="${resultClass}">${euro(stats.result)}</strong></div>
+                        <div><div class="small">Progresso incassato</div><strong class="blue">${stats.goalProgress.toFixed(1)}%</strong></div>
                     </div>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width:${progress}%;"></div>
-                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width:${progress}%;"></div></div>
                 </div>`;
         }).join("");
     }
 
     if (!closedProjects.length) {
-        containerClosed.innerHTML = `
-            <div class="empty" style="padding: 20px;">
-                Nessun progetto archiviato.
-            </div>`;
+        containerClosed.innerHTML = `<div class="empty" style="padding: 20px;">Nessun progetto archiviato.</div>`;
     } else {
         containerClosed.innerHTML = closedProjects.map(project => {
             const stats = calculateProject(project);
@@ -1718,22 +1520,11 @@ function renderProjects() {
                         </div>
                     </div>
                     <div class="grid">
-                        <div>
-                            <div class="small">Saldo finale</div>
-                            <strong>${euro(stats.balance)}</strong>
-                        </div>
-                        <div>
-                            <div class="small">Risultato netto</div>
-                            <strong class="${resultClass}">${euro(stats.result)}</strong>
-                        </div>
-                        <div>
-                            <div class="small">Data Chiusura</div>
-                            <strong class="blue">${new Date(project.closedAt || project.endDate).toLocaleDateString('it-IT')}</strong>
-                        </div>
+                        <div><div class="small">Saldo finale</div><strong>${euro(stats.balance)}</strong></div>
+                        <div><div class="small">Risultato netto</div><strong class="${resultClass}">${euro(stats.result)}</strong></div>
+                        <div><div class="small">Data Chiusura</div><strong class="blue">${new Date(project.closedAt || project.endDate).toLocaleDateString('it-IT')}</strong></div>
                     </div>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width:${progress}%;"></div>
-                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width:${progress}%;"></div></div>
                 </div>`;
         }).join("");
     }
@@ -1755,6 +1546,7 @@ function openProject(id) {
     renderProjectDetail();
 }
 
+// APERTURA DIRETTA DEGLI INPUT ALL'INTERNO DELLA CARD OPERAZIONI
 function showOperationForm(type) {
     const project = getProject(currentProjectId);
     if (!project || (project.status === 'completed' || project.status === 'abandoned')) return;
@@ -1767,37 +1559,36 @@ function showOperationForm(type) {
         return;
     }
 
-    const container = document.getElementById("operationFormContainer");
+    const container = document.getElementById("operationInnerContainer");
     let title = "", label = "", placeholder = "", inputId = "";
 
     if (type === "day") {
-        title = "📅 Resoconto Giornaliero";
         container.innerHTML = `
             <div class="operation-form">
-                <h3 style="margin-bottom:14px;">${title}</h3>
-                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                <h3 style="margin-bottom:10px; color: var(--accent);">📅 Resoconto</h3>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
                     <div>
-                        <label>Data e Ora operazione</label>
-                        <input id="operationDate" type="datetime-local" style="margin-top:4px; margin-bottom:0;">
+                        <label>Data e Ora</label>
+                        <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
                     </div>
                     <div>
-                        <label>Saldo reale attuale sul conto (€) *</label>
-                        <input id="operationBalance" type="number" step="0.01" min="0" placeholder="Es. 250" style="margin-top:4px; margin-bottom:0;">
+                        <label>Saldo attuale (€) *</label>
+                        <input id="operationBalance" type="number" step="0.01" min="0" placeholder="Es. 250" style="margin-top:2px; margin-bottom:0; padding:8px;">
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                         <div>
-                            <label>Eventuali prelievi (€)</label>
-                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" placeholder="Opzionale" style="margin-top:4px; margin-bottom:0;">
+                            <label>Prelievi (€)</label>
+                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
                         </div>
                         <div>
-                            <label>Eventuali depositi (€)</label>
-                            <input id="operationDayDeposit" type="number" step="0.01" min="0" placeholder="Opzionale" style="margin-top:4px; margin-bottom:0;">
+                            <label>Depositi (€)</label>
+                            <input id="operationDayDeposit" type="number" step="0.01" min="0" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
                         </div>
                     </div>
                 </div>
-                <div class="operation-form-actions">
-                    <button class="primary" style="flex:1;" onclick="saveOperation('${type}')">💾 Salva</button>
-                    <button class="secondary" style="flex:1;" onclick="closeOperationForm()">✕</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="primary" style="flex:1; padding:8px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                    <button class="secondary" style="flex:1; padding:8px;" onclick="resetOperationCard()">✕</button>
                 </div>
             </div>`;
             
@@ -1809,33 +1600,27 @@ function showOperationForm(type) {
     } 
     
     if (type === "deposit") {
-        title = "📥 Nuovo deposito";
-        label = "Importo del deposito (€)";
-        placeholder = "Es. 100";
-        inputId = "operationAmount";
+        title = "📥 Deposito"; label = "Importo (€)"; placeholder = "100"; inputId = "operationAmount";
     } else if (type === "withdraw") {
-        title = "📤 Nuovo prelievo";
-        label = "Importo del prelievo (€)";
-        placeholder = "Es. 100";
-        inputId = "operationAmount";
+        title = "📤 Prelievo"; label = "Importo (€)"; placeholder = "100"; inputId = "operationAmount";
     }
 
     container.innerHTML = `
         <div class="operation-form">
-            <h3 style="margin-bottom:14px;">${title}</h3>
-            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+            <h3 style="margin-bottom:10px; color: var(--accent);">${title}</h3>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
                 <div>
-                    <label>Data e Ora operazione</label>
-                    <input id="operationDate" type="datetime-local" style="margin-top:4px; margin-bottom:0;">
+                    <label>Data e Ora</label>
+                    <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
                 </div>
                 <div>
                     <label>${label}</label>
-                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:4px; margin-bottom:0;">
+                    <input id="${inputId}" type="number" step="0.01" min="0" placeholder="${placeholder}" style="margin-top:2px; margin-bottom:0; padding:8px;">
                 </div>
             </div>
-            <div class="operation-form-actions">
-                <button class="primary" style="flex:1;" onclick="saveOperation('${type}')">💾 Salva</button>
-                <button class="secondary" style="flex:1;" onclick="closeOperationForm()">✕</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="primary" style="flex:1; padding:8px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                <button class="secondary" style="flex:1; padding:8px;" onclick="resetOperationCard()">✕</button>
             </div>
         </div>`;
 
@@ -1845,8 +1630,21 @@ function showOperationForm(type) {
     setTimeout(() => { document.getElementById(inputId)?.focus(); }, 50);
 }
 
-function closeOperationForm() {
-    document.getElementById("operationFormContainer").innerHTML = "";
+// Ripristina i bottoni standard nella card Operazioni
+function resetOperationCard() {
+    const container = document.getElementById("operationInnerContainer");
+    container.innerHTML = `
+        <button class="main-operation operation-day" onclick="showOperationForm('day')">
+            <strong>📅 Resoconto Giornaliero</strong>
+        </button>
+        <div class="secondary-operations">
+            <button class="operation-btn deposit-btn operation-deposit" onclick="showOperationForm('deposit')">
+                <strong>📥 Deposito</strong>
+            </button>
+            <button class="operation-btn withdraw-btn operation-withdraw" onclick="showOperationForm('withdraw')">
+                <strong>📤 Prelievo</strong>
+            </button>
+        </div>`;
 }
 
 function saveOperation(type) {
@@ -1857,7 +1655,7 @@ function saveOperation(type) {
     const hasFirstDeposit = project.movements.some(m => m.type === "deposit");
     if (!hasFirstDeposit && type !== "deposit") {
         alert("Prima del primo deposito non è consentito salvare questa operazione.");
-        closeOperationForm();
+        resetOperationCard();
         return;
     }
 
@@ -1880,19 +1678,12 @@ function saveOperation(type) {
             const netCapital = stats.deposits - stats.withdrawals;
             const remainingSpace = project.capital - netCapital;
             if (dep > remainingSpace) {
-                alert(`Limite superato!\n\nIl capitale iniziale impostato per questo progetto è di ${euro(project.capital)}.\nAttualmente hai ${euro(netCapital)} di capitale netto versato in gioco.\n\nPuoi depositare al massimo altri ${euro(remainingSpace > 0 ? remainingSpace : 0)}.`);
+                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
                 return;
             }
         }
         
-        movement = { 
-            id: Date.now(), 
-            type: "day", 
-            balance: Number(inputBal), 
-            deposit: dep, 
-            withdraw: wit, 
-            date: finalDate 
-        };
+        movement = { id: Date.now(), type: "day", balance: Number(inputBal), deposit: dep, withdraw: wit, date: finalDate };
         
     } else {
         const input = document.getElementById("operationAmount");
@@ -1905,7 +1696,7 @@ function saveOperation(type) {
             const netCapital = stats.deposits - stats.withdrawals;
             const remainingSpace = project.capital - netCapital;
             if (amount > remainingSpace) {
-                alert(`Limite superato!\n\nIl capitale iniziale impostato per questo progetto è di ${euro(project.capital)}.\nAttualmente hai ${euro(netCapital)} di capitale netto versato in gioco.\n\nPuoi depositare al massimo altri ${euro(remainingSpace > 0 ? remainingSpace : 0)}.`);
+                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
                 return;
             }
         }
@@ -1919,12 +1710,12 @@ function saveOperation(type) {
 
     project.movements.push(movement);
     window.saveProjects(projects);
-    closeOperationForm();
+    resetOperationCard();
     updateProjectStartState(project);
 }
 
 function deleteMovement(id) {
-    if (!confirm("Vuoi eliminare questo movimento?\n\nI calcoli verranno aggiornati automaticamente.")) return;
+    if (!confirm("Vuoi eliminare questo movimento? I calcoli si aggiorneranno automaticamente.")) return;
     const projects = window.loadProjects();
     const project = projects.find(p => p.id === currentProjectId);
     if (!project) return;
@@ -1975,27 +1766,11 @@ function renderProjectDetail() {
     document.getElementById("goalEndDate").textContent = formatDate(project.endDate);
 
     let badgeHtml = "";
-    if (stats.goalProgress >= 100) {
-        badgeHtml = "💎 Livello Massimo (100%)";
-        document.getElementById("milestoneBadge").style.color = "#a855f7";
-        document.getElementById("milestoneBadge").style.borderColor = "#a855f7";
-    } else if (stats.goalProgress >= 75) {
-        badgeHtml = "🥇 Livello Oro (75%)";
-        document.getElementById("milestoneBadge").style.color = "#facc15";
-        document.getElementById("milestoneBadge").style.borderColor = "#facc15";
-    } else if (stats.goalProgress >= 50) {
-        badgeHtml = "🥈 Livello Argento (50%)";
-        document.getElementById("milestoneBadge").style.color = "#94a3b8"; 
-        document.getElementById("milestoneBadge").style.borderColor = "#94a3b8";
-    } else if (stats.goalProgress >= 25) {
-        badgeHtml = "🥉 Livello Bronzo (25%)";
-        document.getElementById("milestoneBadge").style.color = "#d97706";
-        document.getElementById("milestoneBadge").style.borderColor = "#d97706";
-    } else {
-        badgeHtml = "🌱 Livello Iniziale";
-        document.getElementById("milestoneBadge").style.color = "var(--text)";
-        document.getElementById("milestoneBadge").style.borderColor = "var(--border)";
-    }
+    if (stats.goalProgress >= 100) { badgeHtml = "💎 Livello Massimo (100%)"; document.getElementById("milestoneBadge").style.color = "#a855f7"; document.getElementById("milestoneBadge").style.borderColor = "#a855f7"; }
+    else if (stats.goalProgress >= 75) { badgeHtml = "🥇 Livello Oro (75%)"; document.getElementById("milestoneBadge").style.color = "#facc15"; document.getElementById("milestoneBadge").style.borderColor = "#facc15"; }
+    else if (stats.goalProgress >= 50) { badgeHtml = "🥈 Livello Argento (50%)"; document.getElementById("milestoneBadge").style.color = "#94a3b8"; document.getElementById("milestoneBadge").style.borderColor = "#94a3b8"; }
+    else if (stats.goalProgress >= 25) { badgeHtml = "🥉 Livello Bronzo (25%)"; document.getElementById("milestoneBadge").style.color = "#d97706"; document.getElementById("milestoneBadge").style.borderColor = "#d97706"; }
+    else { badgeHtml = "🌱 Livello Iniziale"; document.getElementById("milestoneBadge").style.color = "var(--text)"; document.getElementById("milestoneBadge").style.borderColor = "var(--border)"; }
     document.getElementById("milestoneBadge").textContent = badgeHtml;
     
     if (isClosed) {
@@ -2010,13 +1785,12 @@ function renderProjectDetail() {
         document.getElementById("archivedIcon").textContent = project.status === 'completed' ? '🏆' : '🛑';
         document.getElementById("archivedTitle").textContent = project.status === 'completed' ? 'Obiettivo Raggiunto' : 'Progetto Interrotto';
         document.getElementById("btnCloseProjectHeader").style.display = "none";
-        
     } else {
         document.getElementById("situazioneLabel").textContent = "attuale";
         document.getElementById("saldoLabel").textContent = "💰 Saldo attuale";
         document.getElementById("daysRemainingLabel").textContent = "Giorni rimanenti";
         document.getElementById("goalDaysRemaining").textContent = stats.daysRemaining >= 0 ? stats.daysRemaining : "Scaduto";
-        document.getElementById("expectedLabel").textContent = "Risultato previsto oggi";
+        document.getElementById("expectedLabel").textContent = "Previsto oggi";
         
         document.getElementById("operationsCardBlock").style.display = "flex";
         document.getElementById("archivedBannerBlock").style.display = "none";
@@ -2028,56 +1802,44 @@ function renderProjectDetail() {
     const goalStatus = document.getElementById("goalStatus");
     goalStatus.className = "goal-status";
     
-    if (project.status === 'completed') {
-        goalStatus.textContent = "🏆 Raggiunto";
-        goalStatus.classList.add("completed");
-    } else if (project.status === 'abandoned') {
-        goalStatus.textContent = "🛑 Interrotto";
-        goalStatus.classList.add("delayed");
-    } else if (stats.realizedResult >= project.goal) {
-        goalStatus.textContent = "🏆 Obiettivo virtuale superato";
-        goalStatus.classList.add("completed");
-    } else if (stats.daysRemaining < 0) {
-        goalStatus.textContent = "⚠️ Scadenza superata";
-        goalStatus.classList.add("delayed");
-    } else {
-        goalStatus.textContent = "🎯 In corso";
-    }
+    if (project.status === 'completed') { goalStatus.textContent = "🏆 Raggiunto"; goalStatus.classList.add("completed"); }
+    else if (project.status === 'abandoned') { goalStatus.textContent = "🛑 Interrotto"; goalStatus.classList.add("delayed"); }
+    else if (stats.realizedResult >= project.goal) { goalStatus.textContent = "🏆 Obiettivo superato"; goalStatus.classList.add("completed"); }
+    else if (stats.daysRemaining < 0) { goalStatus.textContent = "⚠️ Scadenza superata"; goalStatus.classList.add("delayed"); }
+    else { goalStatus.textContent = "🎯 In corso"; }
 
     document.getElementById("expectedToday").textContent = euro(stats.expectedToday);
-    const differenceElement = document.getElementById("roadmapDifference");
-    differenceElement.textContent = stats.roadmapDifference > 0 ? "+" + euro(stats.roadmapDifference) : euro(stats.roadmapDifference);
-    differenceElement.className = "";
-    if (stats.roadmapDifference > 0) differenceElement.classList.add("green");
-    if (stats.roadmapDifference < 0) differenceElement.classList.add("red");
+    
+    const diffEl = document.getElementById("roadmapDifference");
+    diffEl.textContent = stats.roadmapDifference > 0 ? "+" + euro(stats.roadmapDifference) : euro(stats.roadmapDifference);
+    diffEl.className = stats.roadmapDifference > 0 ? "green" : stats.roadmapDifference < 0 ? "red" : "";
 
     const roundedDays = Math.round(Math.abs(stats.daysDifference));
     let daysText = "In linea";
     if (stats.daysDifference > 0) daysText = roundedDays + " giorni di anticipo";
     if (stats.daysDifference < 0) daysText = roundedDays + " giorni di ritardo";
 
-    const daysElement = document.getElementById("daysDifference");
-    daysElement.textContent = daysText;
-    daysElement.className = "";
-    if (stats.daysDifference > 0) daysElement.classList.add("green");
-    if (stats.daysDifference < 0) daysElement.classList.add("red");
+    const daysEl = document.getElementById("daysDifference");
+    daysEl.textContent = daysText;
+    daysEl.className = stats.daysDifference > 0 ? "green" : stats.daysDifference < 0 ? "red" : "";
 
     const roadmapStatus = document.getElementById("roadmapStatus");
     if (Math.abs(stats.daysDifference) < 1) {
         roadmapStatus.className = "roadmap-status inline";
-        roadmapStatus.innerHTML = `<strong>🎯 ${isClosed ? 'Eri perfettamente' : 'Sei perfettamente'} in linea con la tabella di marcia.</strong>`;
+        roadmapStatus.innerHTML = `<strong>🎯 Perfettamente in linea.</strong>`;
     } else if (stats.roadmapDifference > 0) {
         roadmapStatus.className = "roadmap-status ahead";
-        roadmapStatus.innerHTML = `<strong class="green">🚀 ${isClosed ? 'Eri in anticipo' : 'Sei in anticipo'} sulla tabella di marcia!</strong><br><br>Hai <strong>${euro(stats.roadmapDifference)}</strong> in più rispetto al risultato previsto.<br>Circa <strong>${roundedDays} giorni di anticipo.</strong>`;
+        roadmapStatus.innerHTML = `<strong class="green">🚀 In anticipo!</strong> Circa ${roundedDays} giorni avanti.`;
     } else {
         roadmapStatus.className = "roadmap-status behind";
-        roadmapStatus.innerHTML = `<strong class="red">⚠️ ${isClosed ? 'Eri indietro' : 'Sei indietro'} rispetto alla tabella di marcia.</strong><br><br>Ti mancano <strong>${euro(Math.abs(stats.roadmapDifference))}</strong> rispetto al risultato previsto.<br>Circa <strong>${roundedDays} giorni di ritardo.</strong>`;
+        roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
     document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
     document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
     document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
 
+    resetOperationCard();
     renderHistory(project, stats);
     setTimeout(() => { drawProjectChart(project, stats); }, 50);
 }
