@@ -1066,7 +1066,8 @@ canvas {
             </div>
 
             <button class="main-operation operation-day" onclick="showOperationForm('day')">
-                <strong>📅 Aggiorna saldo</strong>
+                <strong>📅 Resoconto Giornaliero</strong>
+                <span style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Aggiorna saldo ed eventuali depositi/prelievi in un colpo solo</span>
             </button>
 
             <div class="secondary-operations">
@@ -1383,7 +1384,6 @@ function confirmCloseProject(status) {
     window.saveProjects(projects);
     closeCloseProjectModal();
     
-    // Pioggia di coriandoli in caso di vittoria!
     if (status === 'completed' && typeof confetti === 'function') {
         confetti({
             particleCount: 150,
@@ -1395,7 +1395,6 @@ function confirmCloseProject(status) {
     goToPage('main-dashboard'); 
 }
 
-// Fuzione di Esportazione in Excel (CSV)
 window.exportProjectToCSV = function() {
     const project = getProject(currentProjectId);
     if (!project) return;
@@ -1481,14 +1480,20 @@ function calculateProject(project) {
             balance += amount;
             deposits += amount;
         }
-        if (movement.type === "withdraw") {
+        else if (movement.type === "withdraw") {
             const amount = Number(movement.amount || 0);
             balance -= amount;
             withdrawals += amount;
         }
-        if (movement.type === "day") {
+        else if (movement.type === "day") {
             const currentBalance = Number(movement.balance || 0);
-            dayDiff = currentBalance - prevBalance;
+            const dep = Number(movement.deposit || 0);
+            const wit = Number(movement.withdraw || 0);
+            
+            deposits += dep;
+            withdrawals += wit;
+            
+            dayDiff = (currentBalance - prevBalance) + wit - dep;
             balance = currentBalance;
         }
 
@@ -1804,11 +1809,45 @@ function showOperationForm(type) {
     let title = "", label = "", placeholder = "", inputId = "";
 
     if (type === "day") {
-        title = "📅 Aggiorna saldo";
-        label = "Saldo reale attualmente presente sul conto (€)";
-        placeholder = "Es. 250";
-        inputId = "operationBalance";
-    } else if (type === "deposit") {
+        title = "📅 Resoconto Giornaliero";
+        container.innerHTML = `
+            <div class="operation-form">
+                <h3 style="margin-bottom:14px;">${title}</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <label>Data e Ora operazione</label>
+                        <input id="operationDate" type="datetime-local" style="margin-top:4px; margin-bottom:0;">
+                    </div>
+                    <div>
+                        <label>Saldo reale attuale sul conto (€) *</label>
+                        <input id="operationBalance" type="number" step="0.01" min="0" placeholder="Es. 250" style="margin-top:4px; margin-bottom:0;">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label>Eventuali prelievi (€)</label>
+                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" placeholder="Opzionale" style="margin-top:4px; margin-bottom:0;">
+                        </div>
+                        <div>
+                            <label>Eventuali depositi (€)</label>
+                            <input id="operationDayDeposit" type="number" step="0.01" min="0" placeholder="Opzionale" style="margin-top:4px; margin-bottom:0;">
+                        </div>
+                    </div>
+                </div>
+                <div class="operation-form-actions">
+                    <button class="primary" style="flex:1;" onclick="saveOperation('${type}')">💾 Salva</button>
+                    <button class="secondary" style="flex:1;" onclick="closeOperationForm()">✕</button>
+                </div>
+            </div>`;
+            
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
+        setTimeout(() => { document.getElementById("operationBalance")?.focus(); }, 50);
+        return;
+    } 
+    
+    // Per i tasti separati Deposito/Prelievo
+    if (type === "deposit") {
         title = "📥 Nuovo deposito";
         label = "Importo del deposito (€)";
         placeholder = "Es. 100";
@@ -1867,9 +1906,34 @@ function saveOperation(type) {
     const finalDate = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
 
     if (type === "day") {
-        const input = document.getElementById("operationBalance");
-        if (input.value === "" || Number(input.value) < 0) { alert("Inserisci un saldo valido."); return; }
-        movement = { id: Date.now(), type: "day", balance: Number(input.value), date: finalDate };
+        const inputBal = document.getElementById("operationBalance").value;
+        const inputW = document.getElementById("operationDayWithdraw").value;
+        const inputD = document.getElementById("operationDayDeposit").value;
+        
+        if (inputBal === "" || Number(inputBal) < 0) { alert("Inserisci un saldo valido."); return; }
+        
+        const dep = Number(inputD) || 0;
+        const wit = Number(inputW) || 0;
+        const stats = calculateProject(project);
+        
+        if (dep > 0) {
+            const netCapital = stats.deposits - stats.withdrawals;
+            const remainingSpace = project.capital - netCapital;
+            if (dep > remainingSpace) {
+                alert(`Limite superato!\n\nIl capitale iniziale impostato per questo progetto è di ${euro(project.capital)}.\nAttualmente hai ${euro(netCapital)} di capitale netto versato in gioco.\n\nPuoi depositare al massimo altri ${euro(remainingSpace > 0 ? remainingSpace : 0)}.`);
+                return;
+            }
+        }
+        
+        movement = { 
+            id: Date.now(), 
+            type: "day", 
+            balance: Number(inputBal), 
+            deposit: dep, 
+            withdraw: wit, 
+            date: finalDate 
+        };
+        
     } else {
         const input = document.getElementById("operationAmount");
         const amount = Number(input.value);
@@ -1880,7 +1944,6 @@ function saveOperation(type) {
         if (type === "deposit") {
             const netCapital = stats.deposits - stats.withdrawals;
             const remainingSpace = project.capital - netCapital;
-            
             if (amount > remainingSpace) {
                 alert(`Limite superato!\n\nIl capitale iniziale impostato per questo progetto è di ${euro(project.capital)}.\nAttualmente hai ${euro(netCapital)} di capitale netto versato in gioco.\n\nPuoi depositare al massimo altri ${euro(remainingSpace > 0 ? remainingSpace : 0)}.`);
                 return;
@@ -1955,19 +2018,19 @@ function renderProjectDetail() {
     let badgeHtml = "";
     if (stats.goalProgress >= 100) {
         badgeHtml = "💎 Livello Massimo (100%)";
-        document.getElementById("milestoneBadge").style.color = "#a855f7"; // viola diamante
+        document.getElementById("milestoneBadge").style.color = "#a855f7";
         document.getElementById("milestoneBadge").style.borderColor = "#a855f7";
     } else if (stats.goalProgress >= 75) {
         badgeHtml = "🥇 Livello Oro (75%)";
-        document.getElementById("milestoneBadge").style.color = "#facc15"; // oro
+        document.getElementById("milestoneBadge").style.color = "#facc15";
         document.getElementById("milestoneBadge").style.borderColor = "#facc15";
     } else if (stats.goalProgress >= 50) {
         badgeHtml = "🥈 Livello Argento (50%)";
-        document.getElementById("milestoneBadge").style.color = "#94a3b8"; // argento
+        document.getElementById("milestoneBadge").style.color = "#94a3b8"; 
         document.getElementById("milestoneBadge").style.borderColor = "#94a3b8";
     } else if (stats.goalProgress >= 25) {
         badgeHtml = "🥉 Livello Bronzo (25%)";
-        document.getElementById("milestoneBadge").style.color = "#d97706"; // bronzo
+        document.getElementById("milestoneBadge").style.color = "#d97706";
         document.getElementById("milestoneBadge").style.borderColor = "#d97706";
     } else {
         badgeHtml = "🌱 Livello Iniziale";
@@ -2085,7 +2148,14 @@ function renderHistory(project, stats) {
             value = `<strong class="orange">-${euro(movement.amount)}</strong>`;
         }
         if (movement.type === "day") {
-            badge = `<span class="badge day">📅 Saldo registrato</span>`;
+            const dep = movement.deposit || 0;
+            const wit = movement.withdraw || 0;
+            let extraBadges = "";
+            if (dep > 0) extraBadges += ` <span class="badge deposit" style="margin-left:4px;">📥 +${euro(dep)}</span>`;
+            if (wit > 0) extraBadges += ` <span class="badge withdraw" style="margin-left:4px;">📤 -${euro(wit)}</span>`;
+            
+            badge = `<span class="badge day">📅 Resoconto</span>${extraBadges}`;
+            
             const diff = (item && item.dayDiff !== null && item.dayDiff !== undefined) ? item.dayDiff : 0;
             const diffSign = diff > 0 ? "+" : "";
             const diffClass = diff > 0 ? "green" : diff < 0 ? "red" : "";
