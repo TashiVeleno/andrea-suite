@@ -190,6 +190,7 @@ h2 {
     align-items: center;
     gap: 16px;
     margin-bottom: 25px;
+    flex-wrap: wrap;
 }
 
 .page-header-left {
@@ -208,6 +209,10 @@ h2 {
 
 .page-header-detail .header-back {
     justify-self: start;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .page-header-detail .header-name h1 {
@@ -248,7 +253,7 @@ h2 {
     margin-left: 4px;
 }
 
-/* MODALE GUIDA */
+/* MODALI POPUP */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -335,14 +340,6 @@ h2 {
     line-height: 1.5;
 }
 
-.guide-box code {
-    background: #0d131d;
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: #cbd5e1;
-    font-size: 12px;
-}
-
 .detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -380,6 +377,22 @@ h2 {
     padding: 20px;
 }
 
+/* Card interamente cliccabili */
+.list-item {
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+}
+.list-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+}
+/* Evita che il click sul cestino apra la card */
+.delete-btn {
+    position: relative;
+    z-index: 2;
+}
+
 .card h3 {
     font-size: 14px;
     color: var(--muted);
@@ -398,6 +411,10 @@ h2 {
 
 .section-title {
     margin: 32px 0 16px;
+    font-size: 18px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .module-grid {
@@ -765,91 +782,6 @@ canvas {
     padding: 18px;
     font-size: 17px;
 }
-
-/* =========================
-   PAGINA STATISTICHE
-========================= */
-.project-navigation {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.statistics-page-header {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-}
-
-.statistics-title h1,
-.statistics-title .subtitle {
-    margin-left: 0;
-}
-
-.statistics-description {
-    margin: 0 0 22px;
-    max-width: 900px;
-}
-
-.statistics-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.statistic-card {
-    min-height: 120px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.statistic-card .big-number {
-    margin-top: 10px;
-}
-
-.prediction-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-}
-
-.prediction-card p {
-    margin: 0;
-    max-width: 520px;
-    text-align: right;
-}
-
-@media(max-width: 900px) {
-    .statistics-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media(max-width: 600px) {
-    .statistics-page-header {
-        flex-wrap: wrap;
-    }
-
-    .statistics-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .prediction-card {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .prediction-card p {
-        text-align: left;
-    }
-
-    .project-navigation {
-        flex-wrap: wrap;
-    }
-}
-
 </style>
 </head>
 
@@ -880,6 +812,7 @@ canvas {
     </div>
 </header>
 
+<!-- MODALE GUIDA -->
 <div class="modal-overlay" id="guideModal" onclick="closeGuideModalOnOverlay(event)">
     <div class="modal-content">
         <div class="modal-header">
@@ -919,6 +852,96 @@ canvas {
     </div>
 </div>
 
+<!-- MODALE STATISTICHE AVANZATE -->
+<div class="modal-overlay" id="statsModal" onclick="closeStatsModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>📊 Statistiche di Progetto</h3>
+            <button class="modal-close-btn" onclick="closeStatsModal()">✕</button>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 12px 0 8px; letter-spacing:0.5px;">💰 REDDITIVITÀ</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box">
+                <div class="small">📈 Media vincita</div>
+                <strong class="green big-number" style="font-size:18px;" id="statAvgWin">+€ 0,00</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">📉 Media perdita</div>
+                <strong class="red big-number" style="font-size:18px;" id="statAvgLoss">-€ 0,00</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">💹 Profit Factor</div>
+                <strong class="blue big-number" style="font-size:18px;" id="statProfitFactor">0,00</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">📊 Media giornaliera</div>
+                <strong class="big-number" style="font-size:18px;" id="statAvgDaily">€ 0,00</strong>
+            </div>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px; letter-spacing:0.5px;">📊 ESITI</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box">
+                <div class="small">🟢 Positive</div>
+                <strong class="big-number" style="font-size:18px;" id="statWinCount">0</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">🔴 Negative</div>
+                <strong class="big-number" style="font-size:18px;" id="statLossCount">0</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">🟡 In pari</div>
+                <strong class="big-number" style="font-size:18px;" id="statEvenCount">0</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">🎯 Win Rate</div>
+                <strong class="blue big-number" style="font-size:18px;" id="statWinRate">0%</strong>
+            </div>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px; letter-spacing:0.5px;">🏆 RECORD</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box">
+                <div class="small">🔥 Miglior giorno</div>
+                <strong class="green big-number" style="font-size:18px;" id="statBestDay">€ 0,00</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">❄️ Peggior giorno</div>
+                <strong class="red big-number" style="font-size:18px;" id="statWorstDay">€ 0,00</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">🟢 Record positivo</div>
+                <strong class="big-number" style="font-size:18px;" id="statStreakWin">0 giorni</strong>
+            </div>
+            <div class="guide-box">
+                <div class="small">🔴 Record negativo</div>
+                <strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong>
+            </div>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px; letter-spacing:0.5px;">🎯 PREVISIONE</h4>
+        <div class="guide-box" style="text-align: center; padding: 16px;">
+            <div class="small">Giorno di raggiungimento previsto</div>
+            <div class="green" style="font-size: 20px; font-weight: bold; margin: 6px 0;" id="statTargetDate">--</div>
+            <div class="small" style="font-size: 11px;">Basato sul ritmo medio attuale dei giorni registrati</div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE CHIUSURA PROGETTO -->
+<div class="modal-overlay" id="closeProjectModal" onclick="closeCloseProjectModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+        <h3 style="margin-bottom: 12px; font-size: 22px;">Archivia Progetto</h3>
+        <p class="subtitle" style="margin-bottom: 24px;">Stai per chiudere e archiviare definitivamente questo progetto. Hai raggiunto il tuo obiettivo?</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="primary" style="background: var(--green); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('completed')">🏆 Sì, obiettivo raggiunto</button>
+            <button class="primary" style="background: var(--red); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('abandoned')">🛑 No, progetto interrotto</button>
+            <button class="secondary" style="margin-top: 8px; padding: 12px;" onclick="closeCloseProjectModal()">Annulla</button>
+        </div>
+    </div>
+</div>
+
 <main class="container">
 
 <section id="dashboard" class="page active">
@@ -927,15 +950,15 @@ canvas {
 
     <div class="grid" style="margin-top:25px;">
         <div class="card">
-            <h3>💰 Saldo complessivo</h3>
+            <h3>💰 Saldo attivo</h3>
             <div class="big-number blue" id="totalBalance">€ 0,00</div>
         </div>
         <div class="card">
-            <h3>📈 Risultato netto</h3>
+            <h3>📈 Risultato netto attivo</h3>
             <div class="big-number" id="totalResult">€ 0,00</div>
         </div>
         <div class="card">
-            <h3>📂 Progetti</h3>
+            <h3>📂 Progetti attivi</h3>
             <div class="big-number" id="projectCount">0</div>
         </div>
         <div class="card">
@@ -960,19 +983,23 @@ canvas {
     </div>
 </section>
 
+<!-- SEZIONE UNICA PROGETTI (Aperti e Chiusi) -->
 <section id="projects" class="page">
-    <div class="page-header">
+    <div class="page-header" style="align-items: flex-start;">
         <div class="page-header-left">
-            <button class="secondary" onclick="goToPage('dashboard')">← Home</button>
+            <button class="secondary" style="margin-top: 4px;" onclick="goToPage('dashboard')">← Home</button>
             <div>
-                <h1>💼 I miei progetti</h1>
-                <p class="subtitle">Ogni progetto possiede un obiettivo netto.</p>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                    <h1 style="margin: 0;">💼 I miei progetti</h1>
+                    <!-- Pulsante Nuovo posizionato vicino al titolo -->
+                    <button class="primary" style="padding: 6px 14px; font-size: 13px;" onclick="toggleNewProjectForm()">➕ Nuovo</button>
+                </div>
+                <p class="subtitle">I tuoi progetti in corso e archiviati.</p>
             </div>
         </div>
-        <button class="primary" onclick="toggleNewProjectForm()">➕ Nuovo progetto</button>
     </div>
 
-    <div id="newProjectContainer" style="display:none;">
+    <div id="newProjectContainer" style="display:none; margin-bottom: 30px;">
         <div class="card form-card">
             <h2 style="margin-bottom:20px;">➕ Nuovo progetto</h2>
 
@@ -993,14 +1020,22 @@ canvas {
         </div>
     </div>
 
+    <!-- Container Progetti Aperti -->
+    <h2 class="section-title" style="margin-top: 10px;">📂 Progetti aperti</h2>
     <div id="projectsList"></div>
+
+    <!-- Container Progetti Chiusi -->
+    <h2 class="section-title" style="margin-top: 40px;">🗄️ Progetti chiusi</h2>
+    <div id="closedProjectsList"></div>
 </section>
+
 
 <section id="projectDetail" class="page">
     <div class="page-header page-header-detail">
-        <div class="header-back project-navigation">
-            <button class="secondary" onclick="goToPage('projects')">← Progetti</button>
-            <button class="secondary" onclick="openStatistics()">📊 Statistiche</button>
+        <div class="header-back">
+            <button class="secondary" onclick="goBackFromDetail()">← Indietro</button>
+            <button class="secondary" onclick="openStatsModal()">📊 Statistiche</button>
+            <button class="danger" id="btnCloseProjectHeader" onclick="openCloseProjectModal()">Concludi</button>
         </div>
 
         <div class="header-ritmo">
@@ -1026,10 +1061,10 @@ canvas {
 
     <div class="detail-grid">
         <div class="card">
-            <h2>📊 Situazione attuale</h2>
+            <h2>📊 Situazione <span id="situazioneLabel">attuale</span></h2>
             <div class="grid situazione-grid" style="margin-top:16px;">
                 <div>
-                    <h3>💰 Saldo attuale</h3>
+                    <h3 id="saldoLabel">💰 Saldo attuale</h3>
                     <div class="big-number blue" id="detailBalance">€ 0,00</div>
                 </div>
                 <div>
@@ -1077,13 +1112,13 @@ canvas {
                     <strong id="goalEndDate">--</strong>
                 </div>
                 <div>
-                    <div class="small">Giorni rimanenti</div>
+                    <div class="small" id="daysRemainingLabel">Giorni rimanenti</div>
                     <strong id="goalDaysRemaining">--</strong>
                 </div>
             </div>
         </div>
 
-        <div class="card operations-card">
+        <div class="card operations-card" id="operationsCardBlock">
             <div class="operations-title">
                 <h2>⚡ Operazioni</h2>
             </div>
@@ -1112,6 +1147,13 @@ canvas {
             <div id="operationFormContainer"></div>
         </div>
 
+        <!-- Banner mostrato solo per progetti archiviati -->
+        <div class="card" id="archivedBannerBlock" style="display:none; text-align:center; padding: 30px;">
+            <div style="font-size: 40px; margin-bottom: 12px;" id="archivedIcon">🗄️</div>
+            <h2 id="archivedTitle">Progetto Archiviato</h2>
+            <p class="subtitle" style="margin-top:8px;">Questo progetto è stato chiuso e non accetta più operazioni.</p>
+        </div>
+
         <div class="card roadmap">
             <h2>🗺️ Tabella di marcia</h2>
 
@@ -1121,7 +1163,7 @@ canvas {
 
             <div class="grid roadmap-grid">
                 <div>
-                    <div class="small">Risultato previsto oggi</div>
+                    <div class="small" id="expectedLabel">Risultato previsto oggi</div>
                     <strong id="expectedToday">€ 0,00</strong>
                 </div>
                 <div>
@@ -1154,96 +1196,6 @@ canvas {
     </div>
 </section>
 
-
-<!-- STATISTICHE DEL PROGETTO -->
-<section id="statistics" class="page">
-    <div class="page-header statistics-page-header">
-        <div class="project-navigation">
-            <button class="secondary" onclick="goToPage('projectDetail')">← Progetto</button>
-        </div>
-
-        <div class="statistics-title">
-            <h1>📊 Statistiche</h1>
-            <p class="subtitle" id="statisticsProjectName">Progetto</p>
-        </div>
-    </div>
-
-    <p class="small statistics-description">
-        Le statistiche giornaliere neutralizzano depositi e prelievi, quindi un movimento di denaro non viene mai considerato automaticamente una vittoria o una perdita.
-    </p>
-
-    <h2 class="section-title">💰 Redditività</h2>
-    <div class="statistics-grid">
-        <div class="card statistic-card">
-            <div class="small">📈 Media vittoria</div>
-            <div class="big-number green" id="statAverageWin">--</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">📉 Media perdita</div>
-            <div class="big-number red" id="statAverageLoss">--</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">💹 Profit Factor</div>
-            <div class="big-number" id="statProfitFactor">--</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">📊 Media giornaliera complessiva</div>
-            <div class="big-number" id="statDailyAverage">--</div>
-        </div>
-    </div>
-
-    <h2 class="section-title">🎯 Esiti</h2>
-    <div class="statistics-grid">
-        <div class="card statistic-card">
-            <div class="small">🟢 Giornate positive</div>
-            <div class="big-number green" id="statPositiveDays">0</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">🔴 Giornate negative</div>
-            <div class="big-number red" id="statNegativeDays">0</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">🟡 Giornate in pari</div>
-            <div class="big-number" id="statBreakEvenDays">0</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">🎯 Win Rate</div>
-            <div class="big-number blue" id="statWinRate">0%</div>
-        </div>
-    </div>
-
-    <h2 class="section-title">🏆 Record</h2>
-    <div class="statistics-grid">
-        <div class="card statistic-card">
-            <div class="small">🔥 Miglior giornata</div>
-            <div class="big-number green" id="statBestDay">--</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">❄️ Peggior giornata</div>
-            <div class="big-number red" id="statWorstDay">--</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">🟢 Record giorni positivi</div>
-            <div class="big-number" id="statPositiveStreak">0 giorni</div>
-        </div>
-        <div class="card statistic-card">
-            <div class="small">🔴 Record giorni negativi</div>
-            <div class="big-number" id="statNegativeStreak">0 giorni</div>
-        </div>
-    </div>
-
-    <h2 class="section-title">🚀 Previsione</h2>
-    <div class="card prediction-card">
-        <div>
-            <div class="small">🎯 Giorno di raggiungimento previsto</div>
-            <div class="big-number blue" id="statPredictedDate">Dati insufficienti</div>
-        </div>
-        <p class="small" id="statPredictionNote">
-            La previsione verrà calcolata in base alla media giornaliera effettiva.
-        </p>
-    </div>
-</section>
-
 <section id="notes" class="page">
     <div class="page-header">
         <div class="page-header-left">
@@ -1264,7 +1216,6 @@ canvas {
 
 </main>
 
-<!-- FIREBASE & AUTH SCRIPT ROBUSTO CON FALLBACK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -1310,7 +1261,7 @@ try {
         }
     });
 } catch (e) {
-    console.warn("Firebase non disponibile, modalità Offline attiva:", e);
+    console.warn("Firebase offline mode:", e);
     renderAuthUI(null);
     loadLocalData();
 }
@@ -1323,9 +1274,7 @@ window.loginGoogle = async () => {
     try {
         await signInWithPopup(auth, provider);
     } catch (e) {
-        console.warn("Popup error, provando redirect...", e);
         if (e.code === 'auth/unauthorized-domain') {
-            alert("Dominio non autorizzato su Firebase Console. Uso la sessione locale protetta.");
             activateLocalSession();
         } else {
             try {
@@ -1398,7 +1347,7 @@ async function pushToCloud() {
             updatedAt: new Date().toISOString()
         }, { merge: true });
     } catch (e) {
-        console.error("Errore di sincronizzazione Cloud:", e);
+        console.error("Errore sync Cloud:", e);
     }
 }
 
@@ -1445,21 +1394,55 @@ if (localStorage.getItem("andrea_suite_local_session") === "true") {
 loadLocalData();
 </script>
 
-<!-- LOGICA E CALCOLI STATISTICI COMPLETI -->
 <script>
 let currentProjectId = null;
 let chartPoints = [];
+let sourcePage = 'projects';
 
 function openGuideModal() {
     document.getElementById("guideModal").classList.add("active");
 }
-
 function closeGuideModal() {
     document.getElementById("guideModal").classList.remove("active");
 }
-
 function closeGuideModalOnOverlay(event) {
     if (event.target.id === "guideModal") closeGuideModal();
+}
+
+function openStatsModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    popolaStatisticheProgetto(project);
+    document.getElementById("statsModal").classList.add("active");
+}
+function closeStatsModal() {
+    document.getElementById("statsModal").classList.remove("active");
+}
+function closeStatsModalOnOverlay(event) {
+    if (event.target.id === "statsModal") closeStatsModal();
+}
+
+function openCloseProjectModal() {
+    document.getElementById("closeProjectModal").classList.add("active");
+}
+function closeCloseProjectModal() {
+    document.getElementById("closeProjectModal").classList.remove("active");
+}
+function closeCloseProjectModalOnOverlay(event) {
+    if (event.target.id === "closeProjectModal") closeCloseProjectModal();
+}
+
+function confirmCloseProject(status) {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    
+    project.status = status;
+    project.closedAt = new Date().toISOString();
+    
+    window.saveProjects(projects);
+    closeCloseProjectModal();
+    goToPage('projects'); // Torna alla lista principale dove si vedono aperti/chiusi
 }
 
 function euro(value) {
@@ -1507,6 +1490,9 @@ function calculateProject(project) {
     const history = [];
 
     movements.forEach(movement => {
+        const prevBalance = balance;
+        let dayDiff = null;
+
         if (movement.type === "deposit") {
             const amount = Number(movement.amount || 0);
             balance += amount;
@@ -1518,7 +1504,9 @@ function calculateProject(project) {
             withdrawals += amount;
         }
         if (movement.type === "day") {
-            balance = Number(movement.balance || 0);
+            const currentBalance = Number(movement.balance || 0);
+            dayDiff = currentBalance - prevBalance;
+            balance = currentBalance;
         }
 
         const resultAfter = balance + withdrawals - deposits;
@@ -1528,7 +1516,8 @@ function calculateProject(project) {
             date: movement.date,
             balanceAfter: balance,
             resultAfter,
-            type: movement.type
+            type: movement.type,
+            dayDiff: dayDiff
         });
     });
 
@@ -1547,9 +1536,11 @@ function calculateProject(project) {
     endDate.setHours(0,0,0,0);
 
     const today = getToday();
+    const referenceDateForElapsed = project.closedAt ? new Date(project.closedAt) : today;
+    
     const totalDays = Math.max(1, daysBetween(startDate, endDate) + 1);
-    const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDate, today) + 1));
-    const daysRemaining = Math.max(0, daysBetween(today, endDate) + 1);
+    const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDate, referenceDateForElapsed) + 1));
+    const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(today, endDate) + 1);
 
     const originalDaily = goal / totalDays;
     const originalWeekly = originalDaily * 7;
@@ -1563,7 +1554,7 @@ function calculateProject(project) {
     let weeklyNeeded = 0;
     let monthlyNeeded = 0;
 
-    if (goalRemaining > 0 && daysRemaining > 0) {
+    if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
         dailyNeeded = goalRemaining / daysRemaining;
         weeklyNeeded = dailyNeeded * 7;
         monthlyNeeded = dailyNeeded * 30.44;
@@ -1576,6 +1567,82 @@ function calculateProject(project) {
         expectedToday, roadmapDifference, daysDifference, dailyNeeded, weeklyNeeded,
         monthlyNeeded, history
     };
+}
+
+function popolaStatisticheProgetto(project) {
+    const stats = calculateProject(project);
+    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
+
+    let winCount = 0, lossCount = 0, evenCount = 0;
+    let winSum = 0, lossSum = 0;
+    let bestDay = -Infinity, worstDay = Infinity;
+    let curWinStreak = 0, maxWinStreak = 0;
+    let curLossStreak = 0, maxLossStreak = 0;
+
+    dayMovements.forEach(h => {
+        const diff = h.dayDiff;
+        if (diff > 0) {
+            winCount++;
+            winSum += diff;
+            curWinStreak++;
+            curLossStreak = 0;
+            if (curWinStreak > maxWinStreak) maxWinStreak = curWinStreak;
+        } else if (diff < 0) {
+            lossCount++;
+            lossSum += Math.abs(diff);
+            curLossStreak++;
+            curWinStreak = 0;
+            if (curLossStreak > maxLossStreak) maxLossStreak = curLossStreak;
+        } else {
+            evenCount++;
+            curWinStreak = 0;
+            curLossStreak = 0;
+        }
+
+        if (diff > bestDay) bestDay = diff;
+        if (diff < worstDay) worstDay = diff;
+    });
+
+    const totalDays = winCount + lossCount + evenCount;
+    const winRate = totalDays > 0 ? ((winCount / totalDays) * 100).toFixed(0) : "0";
+    const avgWin = winCount > 0 ? (winSum / winCount) : 0;
+    const avgLoss = lossCount > 0 ? (lossSum / lossCount) : 0;
+    const profitFactor = lossSum > 0 ? (winSum / lossSum).toFixed(2) : (winSum > 0 ? "∞" : "0,00");
+    const avgDailyProfit = totalDays > 0 ? (winSum - lossSum) / totalDays : 0;
+
+    document.getElementById("statAvgWin").textContent = `+${euro(avgWin)}`;
+    document.getElementById("statAvgLoss").textContent = `-${euro(avgLoss)}`;
+    document.getElementById("statProfitFactor").textContent = profitFactor;
+    document.getElementById("statAvgDaily").textContent = `${avgDailyProfit >= 0 ? '+' : ''}${euro(avgDailyProfit)}`;
+    document.getElementById("statAvgDaily").className = `big-number ${avgDailyProfit >= 0 ? 'green' : 'red'}`;
+
+    document.getElementById("statWinCount").textContent = winCount;
+    document.getElementById("statLossCount").textContent = lossCount;
+    document.getElementById("statEvenCount").textContent = evenCount;
+    document.getElementById("statWinRate").textContent = `${winRate}%`;
+
+    document.getElementById("statBestDay").textContent = bestDay !== -Infinity ? `+${euro(bestDay)}` : "€ 0,00";
+    document.getElementById("statWorstDay").textContent = worstDay !== Infinity ? `-${euro(Math.abs(worstDay))}` : "€ 0,00";
+    document.getElementById("statStreakWin").textContent = `${maxWinStreak} giorni`;
+    document.getElementById("statStreakLoss").textContent = `${maxLossStreak} giorni`;
+
+    const targetDateEl = document.getElementById("statTargetDate");
+    if (project.status === 'completed' || stats.goalRemaining <= 0) {
+        targetDateEl.textContent = "🏆 Obiettivo già raggiunto!";
+        targetDateEl.className = "green";
+    } else if (project.status === 'abandoned') {
+        targetDateEl.textContent = "🛑 Progetto archiviato";
+        targetDateEl.className = "red";
+    } else if (avgDailyProfit > 0) {
+        const daysToGoal = Math.ceil(stats.goalRemaining / avgDailyProfit);
+        const projectedDate = new Date();
+        projectedDate.setDate(projectedDate.getDate() + daysToGoal);
+        targetDateEl.textContent = `📅 ${projectedDate.toLocaleDateString("it-IT", { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        targetDateEl.className = "green";
+    } else {
+        targetDateEl.textContent = "⚠️ Ritmo attuale non sufficiente";
+        targetDateEl.className = "red";
+    }
 }
 
 function goToPage(pageId) {
@@ -1591,6 +1658,10 @@ function goToPage(pageId) {
 
     updateAll();
     window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function goBackFromDetail() {
+    goToPage('projects');
 }
 
 function toggleNewProjectForm() {
@@ -1613,6 +1684,7 @@ function createProject() {
     projects.push({
         id: Date.now(),
         name, capital, goal, endDate,
+        status: 'active',
         movements: [],
         createdAt: new Date().toISOString()
     });
@@ -1628,62 +1700,113 @@ function createProject() {
 
 function renderProjects() {
     const projects = window.loadProjects();
-    const container = document.getElementById("projectsList");
+    const activeProjects = projects.filter(p => !p.status || p.status === 'active');
+    const closedProjects = projects.filter(p => p.status === 'completed' || p.status === 'abandoned');
+    
+    const containerActive = document.getElementById("projectsList");
+    const containerClosed = document.getElementById("closedProjectsList");
 
-    if (!projects.length) {
-        container.innerHTML = `
+    // RENDERING PROGETTI APERTI
+    if (!activeProjects.length) {
+        containerActive.innerHTML = `
             <div class="empty">
-                💼 Non hai ancora creato nessun progetto.<br><br>
-                Premi <strong>➕ Nuovo progetto</strong> per iniziare.
+                💼 Non hai progetti in corso.<br><br>
+                Premi <strong>➕ Nuovo</strong> per iniziare.
             </div>`;
-        return;
+    } else {
+        containerActive.innerHTML = activeProjects.map(project => {
+            const stats = calculateProject(project);
+            const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
+            const progress = Math.max(0, Math.min(100, stats.goalProgress));
+
+            return `
+                <div class="list-item" onclick="openProject(${project.id}, 'projects')">
+                    <div class="page-header" style="margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}</h2>
+                            <p class="small">🎯 ${euro(project.goal)} incasso netto · 📅 ${formatDate(project.endDate)}</p>
+                        </div>
+                        <button class="danger delete-btn" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                    </div>
+                    <div class="grid">
+                        <div>
+                            <div class="small">Saldo</div>
+                            <strong>${euro(stats.balance)}</strong>
+                        </div>
+                        <div>
+                            <div class="small">Risultato netto</div>
+                            <strong class="${resultClass}">${euro(stats.result)}</strong>
+                        </div>
+                        <div>
+                            <div class="small">Progresso incassato</div>
+                            <strong class="blue">${stats.goalProgress.toFixed(1)}%</strong>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width:${progress}%;"></div>
+                    </div>
+                </div>`;
+        }).join("");
     }
 
-    container.innerHTML = projects.map(project => {
-        const stats = calculateProject(project);
-        const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
-        const progress = Math.max(0, Math.min(100, stats.goalProgress));
-
-        return `
-            <div class="list-item">
-                <div class="page-header">
-                    <div>
-                        <h2>💼 ${escapeHTML(project.name)}</h2>
-                        <p class="small">🎯 ${euro(project.goal)} incasso netto · 📅 ${formatDate(project.endDate)}</p>
-                    </div>
-                    <button class="danger" onclick="deleteProject(${project.id})">🗑️</button>
-                </div>
-                <div class="grid">
-                    <div>
-                        <div class="small">Saldo</div>
-                        <strong>${euro(stats.balance)}</strong>
-                    </div>
-                    <div>
-                        <div class="small">Risultato netto</div>
-                        <strong class="${resultClass}">${euro(stats.result)}</strong>
-                    </div>
-                    <div>
-                        <div class="small">Progresso incassato</div>
-                        <strong class="blue">${stats.goalProgress.toFixed(1)}%</strong>
-                    </div>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width:${progress}%;"></div>
-                </div>
-                <button class="primary" style="margin-top:18px;" onclick="openProject(${project.id})">📂 Apri progetto</button>
+    // RENDERING PROGETTI CHIUSI
+    if (!closedProjects.length) {
+        containerClosed.innerHTML = `
+            <div class="empty" style="padding: 20px;">
+                Nessun progetto archiviato.
             </div>`;
-    }).join("");
+    } else {
+        containerClosed.innerHTML = closedProjects.map(project => {
+            const stats = calculateProject(project);
+            const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
+            const progress = Math.max(0, Math.min(100, stats.goalProgress));
+            
+            let statusBadge = project.status === 'completed' 
+                ? `<span style="background: rgba(34,197,94,.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;">🏆 Raggiunto</span>`
+                : `<span style="background: rgba(239,68,68,.15); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;">🛑 Interrotto</span>`;
+
+            return `
+                <div class="list-item" onclick="openProject(${project.id}, 'projects')">
+                    <div class="page-header" style="margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin-bottom:4px;">🗄️ ${escapeHTML(project.name)}</h2>
+                            <div style="margin-top: 6px;">${statusBadge}</div>
+                        </div>
+                        <button class="danger delete-btn" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                    </div>
+                    <div class="grid">
+                        <div>
+                            <div class="small">Saldo finale</div>
+                            <strong>${euro(stats.balance)}</strong>
+                        </div>
+                        <div>
+                            <div class="small">Risultato netto</div>
+                            <strong class="${resultClass}">${euro(stats.result)}</strong>
+                        </div>
+                        <div>
+                            <div class="small">Data Chiusura</div>
+                            <strong class="blue">${new Date(project.closedAt || project.endDate).toLocaleDateString('it-IT')}</strong>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width:${progress}%;"></div>
+                    </div>
+                </div>`;
+        }).join("");
+    }
 }
 
 function deleteProject(id) {
-    if (!confirm("Vuoi eliminare questo progetto e tutto il suo storico?")) return;
+    if (!confirm("Vuoi eliminare questo progetto e tutto il suo storico in modo permanente?")) return;
     const projects = window.loadProjects().filter(project => project.id !== id);
     window.saveProjects(projects);
     if (currentProjectId === id) currentProjectId = null;
+    updateAll();
 }
 
-function openProject(id) {
+function openProject(id, srcPage = 'projects') {
     currentProjectId = id;
+    sourcePage = srcPage;
     const project = getProject(id);
     if (project) updateProjectStartState(project);
     goToPage("projectDetail");
@@ -1692,7 +1815,7 @@ function openProject(id) {
 
 function showOperationForm(type) {
     const project = getProject(currentProjectId);
-    if (!project) return;
+    if (!project || (project.status === 'completed' || project.status === 'abandoned')) return;
 
     const movements = Array.isArray(project.movements) ? project.movements : [];
     const hasFirstDeposit = movements.some(m => m.type === "deposit");
@@ -1747,7 +1870,7 @@ function closeOperationForm() {
 function saveOperation(type) {
     const projects = window.loadProjects();
     const project = projects.find(p => p.id === currentProjectId);
-    if (!project) return;
+    if (!project || (project.status === 'completed' || project.status === 'abandoned')) return;
 
     const hasFirstDeposit = project.movements.some(m => m.type === "deposit");
     if (!hasFirstDeposit && type !== "deposit") {
@@ -1784,6 +1907,11 @@ function deleteMovement(id) {
     const projects = window.loadProjects();
     const project = projects.find(p => p.id === currentProjectId);
     if (!project) return;
+    
+    if (project.status === 'completed' || project.status === 'abandoned') {
+        alert("Non puoi modificare i movimenti di un progetto archiviato.");
+        return;
+    }
 
     project.movements = project.movements.filter(m => m.id !== id);
     window.saveProjects(projects);
@@ -1795,8 +1923,9 @@ function renderProjectDetail() {
 
     updateProjectStartState(project);
     const stats = calculateProject(project);
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
 
-    document.getElementById("detailProjectName").textContent = "💼 " + project.name;
+    document.getElementById("detailProjectName").textContent = (isClosed ? "🗄️ " : "💼 ") + project.name;
     document.getElementById("detailBalance").textContent = euro(stats.balance);
 
     const resultElement = document.getElementById("detailResult");
@@ -1823,13 +1952,45 @@ function renderProjectDetail() {
     document.getElementById("goalProgress").textContent = stats.goalProgress.toFixed(2) + "%";
     document.getElementById("goalRemaining").textContent = euro(stats.goalRemaining);
     document.getElementById("goalEndDate").textContent = formatDate(project.endDate);
-    document.getElementById("goalDaysRemaining").textContent = stats.daysRemaining >= 0 ? stats.daysRemaining : "Scaduto";
+    
+    if (isClosed) {
+        document.getElementById("situazioneLabel").textContent = "finale";
+        document.getElementById("saldoLabel").textContent = "💰 Saldo finale";
+        document.getElementById("daysRemainingLabel").textContent = "Giorni effettivi impiegati";
+        document.getElementById("goalDaysRemaining").textContent = stats.elapsedDays;
+        document.getElementById("expectedLabel").textContent = "Risultato previsto alla chiusura";
+        
+        document.getElementById("operationsCardBlock").style.display = "none";
+        document.getElementById("archivedBannerBlock").style.display = "block";
+        document.getElementById("archivedIcon").textContent = project.status === 'completed' ? '🏆' : '🛑';
+        document.getElementById("archivedTitle").textContent = project.status === 'completed' ? 'Obiettivo Raggiunto' : 'Progetto Interrotto';
+        document.getElementById("btnCloseProjectHeader").style.display = "none";
+        
+    } else {
+        document.getElementById("situazioneLabel").textContent = "attuale";
+        document.getElementById("saldoLabel").textContent = "💰 Saldo attuale";
+        document.getElementById("daysRemainingLabel").textContent = "Giorni rimanenti";
+        document.getElementById("goalDaysRemaining").textContent = stats.daysRemaining >= 0 ? stats.daysRemaining : "Scaduto";
+        document.getElementById("expectedLabel").textContent = "Risultato previsto oggi";
+        
+        document.getElementById("operationsCardBlock").style.display = "block";
+        document.getElementById("archivedBannerBlock").style.display = "none";
+        document.getElementById("btnCloseProjectHeader").style.display = "block";
+    }
+    
     document.getElementById("goalProgressBar").style.width = Math.max(0, Math.min(100, stats.goalProgress)) + "%";
 
     const goalStatus = document.getElementById("goalStatus");
     goalStatus.className = "goal-status";
-    if (stats.realizedResult >= project.goal) {
-        goalStatus.textContent = "🏆 Obiettivo raggiunto";
+    
+    if (project.status === 'completed') {
+        goalStatus.textContent = "🏆 Raggiunto";
+        goalStatus.classList.add("completed");
+    } else if (project.status === 'abandoned') {
+        goalStatus.textContent = "🛑 Interrotto";
+        goalStatus.classList.add("delayed");
+    } else if (stats.realizedResult >= project.goal) {
+        goalStatus.textContent = "🏆 Obiettivo virtuale superato";
         goalStatus.classList.add("completed");
     } else if (stats.daysRemaining < 0) {
         goalStatus.textContent = "⚠️ Scadenza superata";
@@ -1859,18 +2020,18 @@ function renderProjectDetail() {
     const roadmapStatus = document.getElementById("roadmapStatus");
     if (Math.abs(stats.daysDifference) < 1) {
         roadmapStatus.className = "roadmap-status inline";
-        roadmapStatus.innerHTML = `<strong>🎯 Sei perfettamente in linea con la tabella di marcia.</strong>`;
+        roadmapStatus.innerHTML = `<strong>🎯 ${isClosed ? 'Eri perfettamente' : 'Sei perfettamente'} in linea con la tabella di marcia.</strong>`;
     } else if (stats.roadmapDifference > 0) {
         roadmapStatus.className = "roadmap-status ahead";
-        roadmapStatus.innerHTML = `<strong class="green">🚀 Sei in anticipo sulla tabella di marcia!</strong><br><br>Hai <strong>${euro(stats.roadmapDifference)}</strong> in più rispetto al risultato previsto oggi.<br>Circa <strong>${roundedDays} giorni di anticipo.</strong>`;
+        roadmapStatus.innerHTML = `<strong class="green">🚀 ${isClosed ? 'Eri in anticipo' : 'Sei in anticipo'} sulla tabella di marcia!</strong><br><br>Hai <strong>${euro(stats.roadmapDifference)}</strong> in più rispetto al risultato previsto.<br>Circa <strong>${roundedDays} giorni di anticipo.</strong>`;
     } else {
         roadmapStatus.className = "roadmap-status behind";
-        roadmapStatus.innerHTML = `<strong class="red">⚠️ Sei indietro rispetto alla tabella di marcia.</strong><br><br>Ti mancano <strong>${euro(Math.abs(stats.roadmapDifference))}</strong> rispetto al risultato previsto oggi.<br>Circa <strong>${roundedDays} giorni di ritardo.</strong>`;
+        roadmapStatus.innerHTML = `<strong class="red">⚠️ ${isClosed ? 'Eri indietro' : 'Sei indietro'} rispetto alla tabella di marcia.</strong><br><br>Ti mancano <strong>${euro(Math.abs(stats.roadmapDifference))}</strong> rispetto al risultato previsto.<br>Circa <strong>${roundedDays} giorni di ritardo.</strong>`;
     }
 
-    document.getElementById("dailyNeeded").textContent = euro(stats.dailyNeeded);
-    document.getElementById("weeklyNeeded").textContent = euro(stats.weeklyNeeded);
-    document.getElementById("monthlyNeeded").textContent = euro(stats.monthlyNeeded);
+    document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
+    document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
+    document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
 
     renderHistory(project, stats);
     setTimeout(() => { drawProjectChart(project, stats); }, 50);
@@ -1886,9 +2047,12 @@ function renderHistory(project, stats) {
     const historyMap = {};
     stats.history.forEach(item => { historyMap[item.id] = item; });
     const movements = [...project.movements].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
 
     container.innerHTML = movements.map(movement => {
         let badge = "", value = "";
+        const item = historyMap[movement.id];
+
         if (movement.type === "deposit") {
             badge = `<span class="badge deposit">📥 Deposito</span>`;
             value = `<strong class="green">+${euro(movement.amount)}</strong>`;
@@ -1899,20 +2063,33 @@ function renderHistory(project, stats) {
         }
         if (movement.type === "day") {
             badge = `<span class="badge day">📅 Saldo registrato</span>`;
-            value = `<strong>${euro(movement.balance)}</strong>`;
+            const diff = (item && item.dayDiff !== null && item.dayDiff !== undefined) ? item.dayDiff : 0;
+            const diffSign = diff > 0 ? "+" : "";
+            const diffClass = diff > 0 ? "green" : diff < 0 ? "red" : "";
+            
+            value = `
+                <div style="text-align:right;">
+                    <strong class="${diffClass}">${diffSign}${euro(diff)}</strong>
+                    <div class="small" style="font-size:11px; margin-top:2px;">Saldo: ${euro(movement.balance)}</div>
+                </div>`;
         }
 
-        const item = historyMap[movement.id];
+        const diffText = (movement.type === "day" && item && item.dayDiff !== null && item.dayDiff !== undefined)
+            ? ` · G/P: <strong class="${item.dayDiff > 0 ? 'green' : item.dayDiff < 0 ? 'red' : ''}">${item.dayDiff > 0 ? '+' : ''}${euro(item.dayDiff)}</strong>`
+            : '';
+
+        const deleteBtn = isClosed ? '' : `<button class="delete-btn" onclick="deleteMovement(${movement.id})">🗑️</button>`;
+
         return `
             <div class="history-item">
                 <div>
                     ${badge}
                     <div class="small" style="margin-top:7px;">${new Date(movement.date).toLocaleString("it-IT")}</div>
-                    <div class="small" style="margin-top:5px;">Saldo: <strong>${euro(item ? item.balanceAfter : 0)}</strong> · Risultato netto: <strong>${euro(item ? item.resultAfter : 0)}</strong></div>
+                    <div class="small" style="margin-top:5px;">Saldo: <strong>${euro(item ? item.balanceAfter : 0)}</strong> · Risultato netto: <strong>${euro(item ? item.resultAfter : 0)}</strong>${diffText}</div>
                 </div>
                 <div class="history-right">
                     ${value}
-                    <button class="delete-btn" onclick="deleteMovement(${movement.id})">🗑️</button>
+                    ${deleteBtn}
                 </div>
             </div>`;
     }).join("");
@@ -2079,13 +2256,20 @@ function drawProjectChart(project, stats) {
 
 function updateDashboard() {
     const projects = window.loadProjects();
-    let totalBalance = 0, totalResult = 0, completed = 0;
+    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0;
 
     projects.forEach(project => {
         const stats = calculateProject(project);
-        totalBalance += stats.balance;
-        totalResult += stats.result;
-        if (stats.realizedResult >= project.goal) completed++;
+        
+        if (!project.status || project.status === 'active') {
+            totalBalance += stats.balance;
+            totalResult += stats.result;
+            countActive++;
+        }
+        
+        if (project.status === 'completed' || (!project.status && stats.realizedResult >= project.goal)) {
+            completed++;
+        }
     });
 
     document.getElementById("totalBalance").textContent = euro(totalBalance);
@@ -2096,7 +2280,7 @@ function updateDashboard() {
     if (totalResult > 0) resultElement.classList.add("green");
     if (totalResult < 0) resultElement.classList.add("red");
 
-    document.getElementById("projectCount").textContent = projects.length;
+    document.getElementById("projectCount").textContent = countActive;
     document.getElementById("completedProjects").textContent = completed;
 }
 
@@ -2126,234 +2310,6 @@ function updateProjectStartState(project) {
     const hasFirstDeposit = movements.some(m => m.type === "deposit");
     detailPage.classList.toggle("project-not-started", !hasFirstDeposit);
 }
-
-
-/* =========================
-   STATISTICHE DEL PROGETTO
-========================= */
-
-function openStatistics() {
-    if (!currentProjectId) return;
-    goToPage("statistics");
-    renderStatistics();
-}
-
-function getDailyStatistics(project) {
-    const movements = [...(project.movements || [])]
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    let previousDayBalance = 0;
-    let depositsSinceLastDay = 0;
-    let withdrawalsSinceLastDay = 0;
-    const days = [];
-
-    movements.forEach(movement => {
-        if (movement.type === "deposit") {
-            depositsSinceLastDay += Number(movement.amount || 0);
-            return;
-        }
-
-        if (movement.type === "withdraw") {
-            withdrawalsSinceLastDay += Number(movement.amount || 0);
-            return;
-        }
-
-        if (movement.type === "day") {
-            const currentBalance = Number(movement.balance || 0);
-
-            // Risultato puro della giornata:
-            // saldo nuovo - saldo precedente - depositi + prelievi.
-            // In questo modo i movimenti di denaro non falsano win/loss.
-            const result =
-                currentBalance
-                - previousDayBalance
-                - depositsSinceLastDay
-                + withdrawalsSinceLastDay;
-
-            days.push({
-                id: movement.id,
-                date: movement.date,
-                result,
-                balance: currentBalance
-            });
-
-            previousDayBalance = currentBalance;
-            depositsSinceLastDay = 0;
-            withdrawalsSinceLastDay = 0;
-        }
-    });
-
-    return days;
-}
-
-function renderStatistics() {
-    const project = getProject(currentProjectId);
-    if (!project) return;
-
-    const setText = (id, value) => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-    };
-
-    setText("statisticsProjectName", "💼 " + project.name);
-
-    const days = getDailyStatistics(project);
-    const wins = days.filter(day => day.result > 0);
-    const losses = days.filter(day => day.result < 0);
-    const breakEven = days.filter(day => day.result === 0);
-
-    const grossProfit = wins.reduce((sum, day) => sum + day.result, 0);
-    const grossLoss = losses.reduce((sum, day) => sum + Math.abs(day.result), 0);
-
-    const averageWin = wins.length ? grossProfit / wins.length : 0;
-    const averageLoss = losses.length ? grossLoss / losses.length : 0;
-
-    const totalDailyResult = days.reduce((sum, day) => sum + day.result, 0);
-    const dailyAverage = days.length
-        ? totalDailyResult / days.length
-        : 0;
-
-    const winRateBase = wins.length + losses.length;
-    const winRate = winRateBase
-        ? (wins.length / winRateBase) * 100
-        : 0;
-
-    let positiveStreak = 0;
-    let negativeStreak = 0;
-    let maxPositiveStreak = 0;
-    let maxNegativeStreak = 0;
-
-    days.forEach(day => {
-        if (day.result > 0) {
-            positiveStreak++;
-            negativeStreak = 0;
-            maxPositiveStreak = Math.max(
-                maxPositiveStreak,
-                positiveStreak
-            );
-        } else if (day.result < 0) {
-            negativeStreak++;
-            positiveStreak = 0;
-            maxNegativeStreak = Math.max(
-                maxNegativeStreak,
-                negativeStreak
-            );
-        } else {
-            positiveStreak = 0;
-            negativeStreak = 0;
-        }
-    });
-
-    const signedEuro = value => {
-        if (value > 0) return "+" + euro(value);
-        if (value < 0) return "−" + euro(Math.abs(value));
-        return euro(0);
-    };
-
-    setText(
-        "statAverageWin",
-        wins.length ? "+" + euro(averageWin) : "--"
-    );
-
-    setText(
-        "statAverageLoss",
-        losses.length ? "−" + euro(averageLoss) : "--"
-    );
-
-    let profitFactor = "--";
-    if (grossLoss > 0) {
-        profitFactor = (grossProfit / grossLoss).toFixed(2);
-    } else if (grossProfit > 0) {
-        profitFactor = "∞";
-    }
-
-    setText("statProfitFactor", profitFactor);
-    setText(
-        "statDailyAverage",
-        days.length ? signedEuro(dailyAverage) : "--"
-    );
-
-    setText("statPositiveDays", wins.length);
-    setText("statNegativeDays", losses.length);
-    setText("statBreakEvenDays", breakEven.length);
-    setText("statWinRate", winRate.toFixed(1) + "%");
-
-    setText(
-        "statBestDay",
-        days.length
-            ? signedEuro(Math.max(...days.map(day => day.result)))
-            : "--"
-    );
-
-    setText(
-        "statWorstDay",
-        days.length
-            ? signedEuro(Math.min(...days.map(day => day.result)))
-            : "--"
-    );
-
-    setText(
-        "statPositiveStreak",
-        maxPositiveStreak +
-        (maxPositiveStreak === 1 ? " giorno" : " giorni")
-    );
-
-    setText(
-        "statNegativeStreak",
-        maxNegativeStreak +
-        (maxNegativeStreak === 1 ? " giorno" : " giorni")
-    );
-
-    // PREVISIONE
-    // Il progetto attuale considera l'obiettivo raggiunto tramite
-    // "netti già prelevati". Per non inventare una certezza impossibile,
-    // la previsione usa il ritmo medio giornaliero e segnala chiaramente
-    // che il prelievo effettivo resta necessario per l'obiettivo ufficiale.
-    const stats = calculateProject(project);
-    const remainingForOverallGoal = Number(project.goal || 0) - Number(stats.result || 0);
-
-    let prediction = "Dati insufficienti";
-    let note =
-        "Servono aggiornamenti giornalieri sufficienti per stimare il ritmo effettivo.";
-
-    if (Number(project.goal || 0) > 0 && stats.realizedResult >= Number(project.goal || 0)) {
-        prediction = "🎉 Obiettivo già raggiunto";
-        note =
-            "I netti già prelevati hanno raggiunto l'obiettivo ufficiale del progetto.";
-    } else if (
-        Number(project.goal || 0) > 0 &&
-        dailyAverage > 0 &&
-        days.length > 0
-    ) {
-        const remaining = Math.max(0, remainingForOverallGoal);
-        const estimatedDays = Math.ceil(remaining / dailyAverage);
-        const estimatedDate = new Date();
-        estimatedDate.setHours(0, 0, 0, 0);
-        estimatedDate.setDate(estimatedDate.getDate() + estimatedDays);
-
-        prediction = estimatedDate.toLocaleDateString(
-            "it-IT",
-            {
-                day: "2-digit",
-                month: "long",
-                year: "numeric"
-            }
-        );
-
-        note =
-            "Stima basata sulla media giornaliera effettiva di " +
-            signedEuro(dailyAverage) +
-            ". Il raggiungimento ufficiale dell'obiettivo resta legato ai netti effettivamente prelevati.";
-    } else if (days.length > 0 && dailyAverage <= 0) {
-        prediction = "Non stimabile";
-        note =
-            "Con una media giornaliera attuale pari o negativa non è possibile stimare una data di raggiungimento.";
-    }
-
-    setText("statPredictedDate", prediction);
-    setText("statPredictionNote", note);
-}
-
 </script>
 
 </body>
