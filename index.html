@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Andrea Suite</title>
+
+<!-- Link per trasformare la suite in una PWA installabile senza barre -->
 <link rel="manifest" href="manifest.json">
+
 <!-- Libreria per l'effetto coriandoli -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -316,7 +319,7 @@ h2 {
     grid-template-columns: 1fr 1fr 0.9fr;
     gap: 16px;
     margin-top: 16px;
-    align-items: start; /* Evita che i blocchi si stirino verticalmente */
+    align-items: start;
 }
 
 .console-card {
@@ -582,6 +585,13 @@ canvas { width: 100%; height: 100%; display: block; }
 }
 
 .chart-tooltip strong { display: block; margin-bottom: 5px; }
+
+/* Storico con limite e scorrimento verticale */
+.history-scroll-container {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
 
 .history-item {
     display: flex;
@@ -870,7 +880,7 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
         </div>
 
-        <!-- 2. Operazioni (Apertura integrata senza sbalzi) -->
+        <!-- 2. Operazioni -->
         <div class="console-card" id="operationsCardBlock">
             <div class="operations-title">
                 <h2>⚡ Operazioni</h2>
@@ -945,7 +955,7 @@ canvas { width: 100%; height: 100%; display: block; }
                 <div class="progress-bar" id="goalProgressBar" style="width:0%;"></div>
             </div>
 
-            <div class="grid" style="margin-top:16px;">
+            <div class="grid" style="margin-top:20px;">
                 <div>
                     <div class="small">Progresso incassato</div>
                     <strong class="blue" id="goalProgress">0%</strong>
@@ -981,7 +991,7 @@ canvas { width: 100%; height: 100%; display: block; }
 
     <h2 class="section-title">📜 Storico movimenti</h2>
     <div class="card">
-        <div id="projectHistory"></div>
+        <div id="projectHistory" class="history-scroll-container"></div>
     </div>
 </section>
 
