@@ -313,7 +313,7 @@ h2 {
     line-height: 1.5;
 }
 
-/* LAYOUT CONSOLE STABILE */
+/* LAYOUT CONSOLE STABILE - AGGIORNATO */
 .detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 0.9fr;
@@ -352,7 +352,11 @@ h2 {
     border: 1px solid var(--border);
     border-radius: 18px;
     padding: 22px;
-    grid-column: 1 / -1;
+    grid-column: 1 / 3; /* Si allunga coprendo colonna 1 e 2 */
+}
+
+.salary-card {
+    grid-column: 3; /* Si posiziona sotto la Tabella di Marcia */
 }
 
 .grid {
@@ -551,9 +555,10 @@ label { font-size: 12px; color: var(--muted); }
 
 .roadmap-status {
     margin-bottom: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    font-size: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .roadmap-status.ahead { background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.3); }
@@ -626,6 +631,7 @@ canvas { width: 100%; height: 100%; display: block; }
     .header-ritmo { justify-self: start; justify-content: flex-start; gap: 12px; }
     
     .detail-grid { grid-template-columns: 1fr; }
+    .goal-card, .salary-card { grid-column: 1 / -1; }
     .roadmap-grid { grid-template-columns: 1fr 1fr; }
     
     .history-item { flex-direction: column; align-items: flex-start; }
@@ -689,8 +695,8 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p><strong>Saldo:</strong> Giacenza liquida.<br><strong>Risultato:</strong> Guadagno/perdita totale.</p>
             </div>
             <div class="guide-box">
-                <h4>⏱️ Ritmo Necessario</h4>
-                <p>La quota calcolata dividendo ciò che <strong>manca all'obiettivo reale (Obiettivo - Risultato Netto)</strong> per i <strong>giorni rimanenti</strong>.</p>
+                <h4>⏱️ Medie Reali (In alto)</h4>
+                <p>Indicano la media effettiva dei tuoi profitti passati (giornaliera, settimanale e mensile) basata sullo storico reale.</p>
             </div>
             <div class="guide-box">
                 <h4>🗺️ Tabella di Marcia</h4>
@@ -833,19 +839,19 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
-        <!-- RITMO CALCOLATO SUL RISULTATO NETTO EFFETTIVO -->
+        <!-- MEDIE REALI NELL'HEADER -->
         <div class="header-ritmo">
             <span class="header-ritmo-item">
-                <span class="small">📅 Al giorno</span>
-                <strong class="blue" id="dailyNeeded">€ 0,00</strong>
+                <span class="small">📅 Media giorno</span>
+                <strong class="blue" id="dailyActual">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">📆 Alla settimana</span>
-                <strong class="blue" id="weeklyNeeded">€ 0,00</strong>
+                <span class="small">📆 Media settimana</span>
+                <strong class="blue" id="weeklyActual">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">🗓️ Al mese</span>
-                <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
+                <span class="small">🗓️ Media mese</span>
+                <strong class="blue" id="monthlyActual">€ 0,00</strong>
             </span>
         </div>
 
@@ -855,7 +861,7 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
     </div>
 
-    <!-- CONSOLE A 3 COLONNE COMPATTE -->
+    <!-- CONSOLE A GRIGLIA AVANZATA -->
     <div class="detail-grid">
         
         <!-- 1. Situazione Attuale -->
@@ -937,7 +943,7 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
         </div>
 
-        <!-- 4. Obiettivo Orizzontale -->
+        <!-- 4. Obiettivo Orizzontale (Lunga come le prime due card) -->
         <div class="goal-card">
             <div class="goal-header">
                 <div>
@@ -973,6 +979,14 @@ canvas { width: 100%; height: 100%; display: block; }
                     <div class="small" id="daysRemainingLabel">Giorni rimanenti</div>
                     <strong id="goalDaysRemaining">--</strong>
                 </div>
+            </div>
+        </div>
+
+        <!-- 5. Stipendio del Trader (Sotto la Tabella di Marcia) -->
+        <div class="console-card salary-card">
+            <h2>💼 Stipendio del trader</h2>
+            <div id="salaryStatus" style="margin-top:10px; flex-grow:1; display: flex; flex-direction: column; justify-content: center;">
+                <!-- Contenuto stipendio iniettato via JS -->
             </div>
         </div>
         
@@ -1322,15 +1336,12 @@ function calculateProject(project) {
         });
     });
 
-    // Risultato Netto Reale = Giacenza Attuale + Denaro Ritirato - Versamenti
     const result = balance + withdrawals - deposits;
     const realizedResult = withdrawals - deposits;
 
     const percentage = project.capital > 0 ? (result / project.capital) * 100 : 0;
     const goal = Number(project.goal || 0);
     const goalProgress = goal > 0 ? (realizedResult / goal) * 100 : 0;
-    
-    // Quota effettivamente mancante al traguardo finale (inclusa la cassa liquida attuale)
     const goalRemaining = Math.max(0, goal - result);
 
     const startDate = new Date(project.createdAt);
@@ -1346,26 +1357,20 @@ function calculateProject(project) {
     const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDate, referenceDateForElapsed) + 1));
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(today, endDate) + 1);
 
+    const activeDaysCount = Math.max(1, daysBetween(startDate, referenceDateForElapsed) + 1);
+    const dailyActual = result / activeDaysCount;
+    const weeklyActual = dailyActual * 7;
+    const monthlyActual = dailyActual * 30.44;
+
     const originalDaily = goal / totalDays;
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
 
-    // RITMO NECESSARIO: Calcolato dividendo il residuo reale per i giorni rimanenti
-    let dailyNeeded = 0;
-    let weeklyNeeded = 0;
-    let monthlyNeeded = 0;
-
-    if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
-        dailyNeeded = goalRemaining / daysRemaining;
-        weeklyNeeded = dailyNeeded * 7;
-        monthlyNeeded = dailyNeeded * 30.44;
-    }
-
     return {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, startDate, endDate, totalDays,
-        elapsedDays, daysRemaining, dailyNeeded, weeklyNeeded, monthlyNeeded,
+        elapsedDays, daysRemaining, dailyActual, weeklyActual, monthlyActual,
         expectedToday, roadmapDifference, daysDifference, history
     };
 }
@@ -1860,10 +1865,30 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
-    // RITMO NECESSARIO AGGIORNATO AL RISULTATO NETTO
-    document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
-    document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
-    document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
+    // GESTIONE DELLA CARD "STIPENDIO DEL TRADER"
+    const salaryStatus = document.getElementById("salaryStatus");
+    if (salaryStatus) {
+        if (stats.result > 0) {
+            const stipendio = stats.result * 0.30;
+            salaryStatus.innerHTML = `
+                <div class="roadmap-status inline" style="border-color: var(--green); background: rgba(34,197,94,.10); border-radius:12px;">
+                    <strong class="green">🟢 Sei in utile!</strong><br><br>
+                    Risultato netto: <strong>${euro(stats.result)}</strong>.<br>
+                    Cedola maturata (30%):<br>
+                    <strong class="green" style="font-size:24px; display:block; margin-top:8px;">${euro(stipendio)}</strong>
+                </div>
+            `;
+        } else {
+            const daRecuperare = Math.abs(stats.result);
+            salaryStatus.innerHTML = `
+                <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px;">
+                    <strong class="red">🔴 Cedola bloccata</strong><br><br>
+                    Il bilancio netto è in negativo.<br>
+                    Devi recuperare <strong>${euro(daRecuperare)}</strong> per tornare in pari e sbloccare lo stipendio.
+                </div>
+            `;
+        }
+    }
 
     resetOperationCard();
     renderHistory(project, stats);
