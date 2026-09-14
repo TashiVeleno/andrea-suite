@@ -689,8 +689,8 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p><strong>Saldo:</strong> Giacenza liquida.<br><strong>Risultato:</strong> Guadagno/perdita totale.</p>
             </div>
             <div class="guide-box">
-                <h4>⏱️ Ritmo Necessario</h4>
-                <p>La media giornaliera, settimanale e mensile calcolata dividendo ciò che <strong>manca da prelevare</strong> per i <strong>giorni rimanenti</strong> alla scadenza.</p>
+                <h4>⏱️ Medie Reali (In alto)</h4>
+                <p>Indicano la media effettiva dei tuoi profitti passati (giornaliera, settimanale e mensile) basata sullo storico reale.</p>
             </div>
             <div class="guide-box">
                 <h4>🗺️ Tabella di Marcia</h4>
@@ -833,18 +833,19 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
+        <!-- MEDIE REALI NELL'HEADER -->
         <div class="header-ritmo">
             <span class="header-ritmo-item">
-                <span class="small">📅 Al giorno</span>
-                <strong class="blue" id="dailyNeeded">€ 0,00</strong>
+                <span class="small">📅 Media giorno</span>
+                <strong class="blue" id="dailyActual">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">📆 Alla settimana</span>
-                <strong class="blue" id="weeklyNeeded">€ 0,00</strong>
+                <span class="small">📆 Media settimana</span>
+                <strong class="blue" id="weeklyActual">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">🗓️ Al mese</span>
-                <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
+                <span class="small">🗓️ Media mese</span>
+                <strong class="blue" id="monthlyActual">€ 0,00</strong>
             </span>
         </div>
 
@@ -1342,25 +1343,21 @@ function calculateProject(project) {
     const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDate, referenceDateForElapsed) + 1));
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(today, endDate) + 1);
 
+    // CALCOLO DELLE MEDIE REALI STORICHE (basate sul tempo trascorso)
+    const activeDaysCount = Math.max(1, daysBetween(startDate, referenceDateForElapsed) + 1);
+    const dailyActual = result / activeDaysCount;
+    const weeklyActual = dailyActual * 7;
+    const monthlyActual = dailyActual * 30.44;
+
     const originalDaily = goal / totalDays;
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
 
-    let dailyNeeded = 0;
-    let weeklyNeeded = 0;
-    let monthlyNeeded = 0;
-
-    if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
-        dailyNeeded = goalRemaining / daysRemaining;
-        weeklyNeeded = dailyNeeded * 7;
-        monthlyNeeded = dailyNeeded * 30.44;
-    }
-
     return {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, startDate, endDate, totalDays,
-        elapsedDays, daysRemaining, dailyNeeded, weeklyNeeded, monthlyNeeded,
+        elapsedDays, daysRemaining, dailyActual, weeklyActual, monthlyActual,
         expectedToday, roadmapDifference, daysDifference, history
     };
 }
@@ -1855,9 +1852,10 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
-    document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
-    document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
-    document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
+    // AGGIORNAMENTO DELLE MEDIE REALI NELL'HEADER
+    document.getElementById("dailyActual").textContent = euro(stats.dailyActual);
+    document.getElementById("weeklyActual").textContent = euro(stats.weeklyActual);
+    document.getElementById("monthlyActual").textContent = euro(stats.monthlyActual);
 
     resetOperationCard();
     renderHistory(project, stats);
