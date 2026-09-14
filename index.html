@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andrea Suite</title>
 
 <!-- Link per trasformare la suite in una PWA installabile senza barre -->
@@ -435,14 +435,14 @@ h2 {
 
 input {
     width: 100%;
-    padding: 9px 11px;
-    margin-top: 3px;
+    padding: 11px;
+    margin-top: 4px;
     margin-bottom: 10px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: #0d131d;
     color: white;
-    font-size: 14px;
+    font-size: 16px; /* Evita lo zoom automatico su iOS e migliora il tocco */
 }
 
 input:focus { outline: none; border-color: var(--accent); }
@@ -1580,39 +1580,41 @@ function showOperationForm(type) {
                 <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
                     <div>
                         <label>Data e Ora</label>
-                        <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                        <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
                     </div>
                     <div>
                         <label>Saldo attuale (€) *</label>
-                        <input id="operationBalance" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 250" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                        <input id="operationBalance" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 250" style="margin-top:2px; margin-bottom:0; padding:8px;">
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                         <div>
                             <label>Prelievi (€)</label>
-                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
                         </div>
                         <div>
                             <label>Depositi (€)</label>
-                            <input id="operationDayDeposit" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                            <input id="operationDayDeposit" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
                         </div>
                     </div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                    <button class="primary" style="flex:1; padding:6px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
-                    <button class="secondary" style="flex:1; padding:6px; font-size:13px;" onclick="resetOperationCard()">✕</button>
+                    <button class="primary" style="flex:1; padding:8px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                    <button class="secondary" style="flex:1; padding:8px; font-size:13px;" onclick="resetOperationCard()">✕</button>
                 </div>
             </div>`;
             
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
+        
+        // Forzatura nativa focus per tastiera mobile
         setTimeout(() => { 
             const balanceInput = document.getElementById("operationBalance");
             if (balanceInput) {
                 balanceInput.focus();
                 balanceInput.click();
             }
-        }, 100);
+        }, 150);
         return;
     } 
     
@@ -1628,29 +1630,30 @@ function showOperationForm(type) {
             <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
                 <div>
                     <label>Data e Ora</label>
-                    <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                    <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
                 </div>
                 <div>
                     <label>${label}</label>
-                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:2px; margin-bottom:0; padding:6px;">
+                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:2px; margin-bottom:0; padding:8px;">
                 </div>
             </div>
             <div style="display: flex; gap: 6px;">
-                <button class="primary" style="flex:1; padding:6px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
-                <button class="secondary" style="flex:1; padding:6px; font-size:13px;" onclick="resetOperationCard()">✕</button>
+                <button class="primary" style="flex:1; padding:8px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                <button class="secondary" style="flex:1; padding:8px; font-size:13px;" onclick="resetOperationCard()">✕</button>
             </div>
         </div>`;
 
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
+    
     setTimeout(() => { 
         const targetInput = document.getElementById(inputId);
         if (targetInput) {
             targetInput.focus();
             targetInput.click();
         }
-    }, 100);
+    }, 150);
 }
 
 function resetOperationCard() {
