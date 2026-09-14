@@ -387,10 +387,11 @@ h2 {
     transform: translateY(-3px);
     border-color: var(--accent);
 }
-/* Evita che il click sul cestino apra la card */
-.delete-btn {
+.action-btns-container {
     position: relative;
     z-index: 2;
+    display: flex;
+    gap: 8px;
 }
 
 .card h3 {
@@ -942,6 +943,31 @@ canvas {
     </div>
 </div>
 
+<!-- MODALE MODIFICA PROGETTO -->
+<div class="modal-overlay" id="editProjectModal" onclick="closeEditProjectModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>✏️ Modifica Progetto</h3>
+            <button class="modal-close-btn" onclick="closeEditProjectModal()">✕</button>
+        </div>
+        <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
+            <label>Nome progetto</label>
+            <input id="editProjectName" placeholder="Es. Investimento Sportivo">
+
+            <label>Capitale iniziale (€)</label>
+            <input id="editProjectCapital" type="number" step="0.01" min="0.01">
+
+            <label>🎯 Obiettivo netto prelevato (€)</label>
+            <input id="editProjectGoal" type="number" step="0.01" min="0.01">
+
+            <label>📅 Data finale</label>
+            <input id="editProjectEndDate" type="date">
+
+            <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveEditedProject()">💾 Salva Modifiche</button>
+        </div>
+    </div>
+</div>
+
 <main class="container">
 
 <section id="dashboard" class="page active">
@@ -1035,6 +1061,8 @@ canvas {
         <div class="header-back">
             <button class="secondary" onclick="goBackFromDetail()">← Indietro</button>
             <button class="secondary" onclick="openStatsModal()">📊 Statistiche</button>
+            <!-- Pulsante Modifica -->
+            <button class="secondary" id="btnEditProjectHeader" onclick="openEditProjectModal(currentProjectId)">✏️ Modifica</button>
             <button class="danger" id="btnCloseProjectHeader" onclick="openCloseProjectModal()">Concludi</button>
         </div>
 
@@ -1396,6 +1424,7 @@ loadLocalData();
 
 <script>
 let currentProjectId = null;
+let editingProjectId = null;
 let chartPoints = [];
 let sourcePage = 'projects';
 
@@ -1432,6 +1461,51 @@ function closeCloseProjectModalOnOverlay(event) {
     if (event.target.id === "closeProjectModal") closeCloseProjectModal();
 }
 
+// Funzioni Modifica Progetto
+function openEditProjectModal(id) {
+    const project = getProject(id);
+    if (!project) return;
+    editingProjectId = id;
+    
+    document.getElementById("editProjectName").value = project.name;
+    document.getElementById("editProjectCapital").value = project.capital;
+    document.getElementById("editProjectGoal").value = project.goal;
+    document.getElementById("editProjectEndDate").value = project.endDate;
+    
+    document.getElementById("editProjectModal").classList.add("active");
+}
+function closeEditProjectModal() {
+    document.getElementById("editProjectModal").classList.remove("active");
+    editingProjectId = null;
+}
+function closeEditProjectModalOnOverlay(event) {
+    if (event.target.id === "editProjectModal") closeEditProjectModal();
+}
+function saveEditedProject() {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === editingProjectId);
+    if (!project) return;
+
+    const name = document.getElementById("editProjectName").value.trim();
+    const capital = Number(document.getElementById("editProjectCapital").value);
+    const goal = Number(document.getElementById("editProjectGoal").value);
+    const endDate = document.getElementById("editProjectEndDate").value;
+
+    if (!name || capital <= 0 || goal <= 0 || !endDate) {
+        alert("Verifica di aver compilato tutti i campi correttamente.");
+        return;
+    }
+
+    project.name = name;
+    project.capital = capital;
+    project.goal = goal;
+    project.endDate = endDate;
+
+    window.saveProjects(projects);
+    closeEditProjectModal();
+    updateAll();
+}
+
 function confirmCloseProject(status) {
     const projects = window.loadProjects();
     const project = projects.find(p => p.id === currentProjectId);
@@ -1442,7 +1516,7 @@ function confirmCloseProject(status) {
     
     window.saveProjects(projects);
     closeCloseProjectModal();
-    goToPage('projects'); // Torna alla lista principale dove si vedono aperti/chiusi
+    goToPage('projects'); 
 }
 
 function euro(value) {
@@ -1726,7 +1800,10 @@ function renderProjects() {
                             <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}</h2>
                             <p class="small">🎯 ${euro(project.goal)} incasso netto · 📅 ${formatDate(project.endDate)}</p>
                         </div>
-                        <button class="danger delete-btn" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        <div class="action-btns-container">
+                            <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
+                            <button class="danger delete-btn" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        </div>
                     </div>
                     <div class="grid">
                         <div>
@@ -1772,7 +1849,10 @@ function renderProjects() {
                             <h2 style="margin-bottom:4px;">🗄️ ${escapeHTML(project.name)}</h2>
                             <div style="margin-top: 6px;">${statusBadge}</div>
                         </div>
-                        <button class="danger delete-btn" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        <div class="action-btns-container">
+                            <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
+                            <button class="danger delete-btn" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        </div>
                     </div>
                     <div class="grid">
                         <div>
@@ -1848,17 +1928,26 @@ function showOperationForm(type) {
     container.innerHTML = `
         <div class="operation-form">
             <h3 style="margin-bottom:14px;">${title}</h3>
-            <div class="operation-form-row">
-                <div class="operation-form-input">
-                    <label>${label}</label>
-                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}">
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                <div>
+                    <label>Data e Ora operazione</label>
+                    <input id="operationDate" type="datetime-local" style="margin-top:4px; margin-bottom:0;">
                 </div>
-                <div class="operation-form-actions">
-                    <button class="primary" onclick="saveOperation('${type}')">💾 Salva</button>
-                    <button class="secondary" onclick="closeOperationForm()">✕</button>
+                <div>
+                    <label>${label}</label>
+                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:4px; margin-bottom:0;">
                 </div>
             </div>
+            <div class="operation-form-actions">
+                <button class="primary" style="flex:1;" onclick="saveOperation('${type}')">💾 Salva</button>
+                <button class="secondary" style="flex:1;" onclick="closeOperationForm()">✕</button>
+            </div>
         </div>`;
+
+    // Data e ora attuale di default per l'input datetime-local
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
 
     setTimeout(() => { document.getElementById(inputId)?.focus(); }, 50);
 }
@@ -1880,20 +1969,37 @@ function saveOperation(type) {
     }
 
     let movement;
+    
+    const dateVal = document.getElementById("operationDate").value;
+    const finalDate = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
+
     if (type === "day") {
         const input = document.getElementById("operationBalance");
         if (input.value === "" || Number(input.value) < 0) { alert("Inserisci un saldo valido."); return; }
-        movement = { id: Date.now(), type: "day", balance: Number(input.value), date: new Date().toISOString() };
+        movement = { id: Date.now(), type: "day", balance: Number(input.value), date: finalDate };
     } else {
         const input = document.getElementById("operationAmount");
         const amount = Number(input.value);
         if (input.value === "" || amount <= 0 || isNaN(amount)) { alert("Inserisci un importo valido."); return; }
+        
         const stats = calculateProject(project);
+        
+        // CONTROLLO DEPOSITO MASSIMO
+        if (type === "deposit") {
+            const netCapital = stats.deposits - stats.withdrawals;
+            const remainingSpace = project.capital - netCapital;
+            
+            if (amount > remainingSpace) {
+                alert(`Limite superato!\n\nIl capitale iniziale impostato per questo progetto è di ${euro(project.capital)}.\nAttualmente hai ${euro(netCapital)} di capitale netto versato in gioco.\n\nPuoi depositare al massimo altri ${euro(remainingSpace > 0 ? remainingSpace : 0)}.`);
+                return;
+            }
+        }
+        
         if (type === "withdraw" && amount > stats.balance) {
             alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
             return;
         }
-        movement = { id: Date.now(), type, amount, date: new Date().toISOString() };
+        movement = { id: Date.now(), type, amount, date: finalDate };
     }
 
     project.movements.push(movement);
@@ -1965,6 +2071,7 @@ function renderProjectDetail() {
         document.getElementById("archivedIcon").textContent = project.status === 'completed' ? '🏆' : '🛑';
         document.getElementById("archivedTitle").textContent = project.status === 'completed' ? 'Obiettivo Raggiunto' : 'Progetto Interrotto';
         document.getElementById("btnCloseProjectHeader").style.display = "none";
+        document.getElementById("btnEditProjectHeader").style.display = "none";
         
     } else {
         document.getElementById("situazioneLabel").textContent = "attuale";
@@ -1976,6 +2083,7 @@ function renderProjectDetail() {
         document.getElementById("operationsCardBlock").style.display = "block";
         document.getElementById("archivedBannerBlock").style.display = "none";
         document.getElementById("btnCloseProjectHeader").style.display = "block";
+        document.getElementById("btnEditProjectHeader").style.display = "block";
     }
     
     document.getElementById("goalProgressBar").style.width = Math.max(0, Math.min(100, stats.goalProgress)) + "%";
