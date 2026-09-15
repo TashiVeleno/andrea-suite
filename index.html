@@ -761,6 +761,13 @@ canvas { width: 100%; height: 100%; display: block; }
             <div class="guide-box"><div class="small">🟢 Record positivo</div><strong class="big-number" style="font-size:18px;" id="statStreakWin">0 giorni</strong></div>
             <div class="guide-box"><div class="small">🔴 Record negativo</div><strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong></div>
         </div>
+        
+        <!-- NUOVA SEZIONE: GESTIONE RISCHIO -->
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">🛡️ GESTIONE RISCHIO</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box"><div class="small">📉 Max Drawdown (€)</div><strong class="red big-number" style="font-size:18px;" id="statMaxDrawdownEur">-€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">📉 Max Drawdown (%)</div><strong class="red big-number" style="font-size:18px;" id="statMaxDrawdownPerc">0%</strong></div>
+        </div>
     </div>
 </div>
 
@@ -789,7 +796,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="editProjectName">
             <label>Capitale iniziale (€)</label>
             <input id="editProjectCapital" type="number" step="0.01">
-            <label>🎯 Obiettivo di guadagno netto (€)</label>
+            <label>🎯 Obiettivo netto (€)</label>
             <input id="editProjectGoal" type="number" step="0.01">
             <label>📅 Data finale</label>
             <input id="editProjectEndDate" type="date">
@@ -803,7 +810,7 @@ canvas { width: 100%; height: 100%; display: block; }
 <!-- DASHBOARD UNIFICATA -->
 <section id="main-dashboard" class="page active">
     
-    <div class="grid" style="margin-top: 10px; margin-bottom: 40px;">
+    <div class="grid" style="margin-top: 10px; margin-bottom: 40px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr));">
         <div class="card">
             <h3>💰 Saldo attivo</h3>
             <div class="big-number blue" id="totalBalance">€ 0,00</div>
@@ -811,6 +818,11 @@ canvas { width: 100%; height: 100%; display: block; }
         <div class="card">
             <h3>📈 Risultato netto attivo</h3>
             <div class="big-number" id="totalResult">€ 0,00</div>
+        </div>
+        <!-- NUOVA CARD: CASSAFORTE GLOBALE -->
+        <div class="card">
+            <h3>🏦 Cassaforte (Netti estratti)</h3>
+            <div class="big-number green" id="totalSafe">€ 0,00</div>
         </div>
         <div class="card">
             <h3>📂 Progetti attivi</h3>
@@ -837,7 +849,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="projectName" placeholder="Es. Investimento Sportivo">
             <label>Capitale iniziale (€)</label>
             <input id="projectCapital" type="number" step="0.01" min="0.01">
-            <label>🎯 Obiettivo di guadagno netto (€)</label>
+            <label>🎯 Obiettivo netto (€)</label>
             <input id="projectGoal" type="number" step="0.01" min="0.01">
             <label>📅 Data finale</label>
             <input id="projectEndDate" type="date">
@@ -883,6 +895,15 @@ canvas { width: 100%; height: 100%; display: block; }
             <p class="subtitle">Monitoraggio completo del progetto.</p>
         </div>
     </div>
+    
+    <!-- BANNER HARD STOP PSICOLOGICO (Nascosto di default) -->
+    <div id="tiltWarningBanner" style="display:none; background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px; align-items: center; gap: 16px;">
+        <div style="font-size: 28px;">🛑</div>
+        <div>
+            <strong class="red" style="font-size: 16px;">Hard Stop Consigliato</strong>
+            <div class="small" style="margin-top: 4px; font-size: 13px; color: #f5f7fa;" id="tiltWarningText"></div>
+        </div>
+    </div>
 
     <div class="detail-grid">
         
@@ -919,7 +940,6 @@ canvas { width: 100%; height: 100%; display: block; }
                 👋 <strong>Registra il primo deposito.</strong>
             </div>
 
-            <!-- Div del Blocco di fine mese -->
             <div id="endOfMonthBlock" style="display:none; flex-grow:1; flex-direction:column; justify-content:center;">
                 <div class="roadmap-status inline" style="border-color: var(--accent); background: rgba(79,140,255,.10); border-radius:12px; margin:0; text-align:center;">
                     <strong class="blue" style="font-size:16px;">📅 Fine del Mese!</strong><br><br>
@@ -1191,7 +1211,7 @@ loadLocalData();
 let currentProjectId = null;
 let editingProjectId = null;
 let chartPoints = [];
-let cedolaBaseValue = 0; // Il valore su cui calcolare il 30%
+let cedolaBaseValue = 0;
 
 function openGuideModal() { document.getElementById("guideModal").classList.add("active"); }
 function closeGuideModal() { document.getElementById("guideModal").classList.remove("active"); }
@@ -1390,8 +1410,6 @@ function calculateProject(project) {
 
     const percentage = project.capital > 0 ? (result / project.capital) * 100 : 0;
     const goal = Number(project.goal || 0);
-    
-    // OBIETTIVO ALLINEATO AL RISULTATO NETTO (STRADA B)
     const goalProgress = goal > 0 ? (result / goal) * 100 : 0;
     const goalRemaining = Math.max(0, goal - result);
 
@@ -1411,7 +1429,6 @@ function calculateProject(project) {
     const originalDaily = goal / totalDays;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
 
-    // RITMO NECESSARIO: (Obiettivo - Risultato Netto) / Giorni Rimanenti
     let dailyNeeded = 0;
     let weeklyNeeded = 0;
     let monthlyNeeded = 0;
@@ -1422,7 +1439,6 @@ function calculateProject(project) {
         monthlyNeeded = dailyNeeded * 30.44;
     }
     
-    // CALCOLO UTILE MENSILE PER CEDOLA
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -1447,7 +1463,7 @@ function calculateProject(project) {
 
 function min(a, b) { return a < b ? a : b; }
 
-// Sblocco operazioni salvato nel localStorage per il mese corrente
+// Funzione sblocco operazioni persistente (memoria locale)
 window.unlockOperations = function() {
     const today = new Date();
     const storageKey = `sblocco_${today.getFullYear()}_${today.getMonth()}`;
@@ -1469,8 +1485,7 @@ window.updateSalaryDisplay = function() {
     
     const percent = Number(select.value) / 100;
     
-    // Si preleva solo se il bilancio totale è in utile, calcolando sul profitto di questo mese
-    // cedolaBaseValue = il minimo tra il profitto generato questo mese e il risultato netto totale
+    // Calcolo Cedola: Minimo tra il profitto del mese e il Risultato Netto Totale
     cedolaBaseValue = Math.min(stats.profitThisMonth, stats.result);
     
     if (stats.result <= 0) {
@@ -1479,7 +1494,7 @@ window.updateSalaryDisplay = function() {
             <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px; margin:0;">
                 <strong class="red">🔴 Bloccata</strong><br><br>
                 Il bilancio totale è in negativo.<br>
-                Devi recuperare <strong>${euro(daRecuperare)}</strong> per poter staccare una cedola.
+                Devi recuperare <strong>${euro(daRecuperare)}</strong> per sbloccare i profitti.
             </div>
         `;
     } else if (stats.profitThisMonth <= 0) {
@@ -1543,6 +1558,23 @@ function popolaStatisticheProgetto(project) {
     const profitFactor = lossSum > 0 ? (winSum / lossSum).toFixed(2) : (winSum > 0 ? "∞" : "0,00");
     const avgDailyProfit = totalDays > 0 ? (winSum - lossSum) / totalDays : 0;
 
+    // CALCOLO MAX DRAWDOWN SULLA EQUITY CURVE
+    let peak = project.capital;
+    let maxDrawdownEur = 0;
+    let maxDrawdownPerc = 0;
+
+    stats.history.forEach(item => {
+        let currentEquity = project.capital + item.resultAfter;
+        if (currentEquity > peak) {
+            peak = currentEquity;
+        }
+        let drawdown = peak - currentEquity;
+        let ddPerc = (drawdown / peak) * 100;
+        
+        if (drawdown > maxDrawdownEur) maxDrawdownEur = drawdown;
+        if (ddPerc > maxDrawdownPerc) maxDrawdownPerc = ddPerc;
+    });
+
     document.getElementById("statAvgWin").textContent = `+${euro(avgWin)}`;
     document.getElementById("statAvgLoss").textContent = `-${euro(avgLoss)}`;
     document.getElementById("statProfitFactor").textContent = profitFactor;
@@ -1558,6 +1590,9 @@ function popolaStatisticheProgetto(project) {
     document.getElementById("statWorstDay").textContent = worstDay !== Infinity ? `-${euro(Math.abs(worstDay))}` : "€ 0,00";
     document.getElementById("statStreakWin").textContent = `${maxWinStreak} giorni`;
     document.getElementById("statStreakLoss").textContent = `${maxLossStreak} giorni`;
+
+    document.getElementById("statMaxDrawdownEur").textContent = `-${euro(maxDrawdownEur)}`;
+    document.getElementById("statMaxDrawdownPerc").textContent = `-${maxDrawdownPerc.toFixed(2)}%`;
 }
 
 function goToPage(pageId) {
@@ -1631,7 +1666,7 @@ function renderProjects() {
                         </div>
                     </div>
                     <div class="grid">
-                        <div><div class="small">Saldo liquido</div><strong>${euro(stats.balance)}</strong></div>
+                        <div><div class="small">Saldo</div><strong>${euro(stats.balance)}</strong></div>
                         <div><div class="small">Risultato netto</div><strong class="${resultClass}">${euro(stats.result)}</strong></div>
                         <div><div class="small">Progresso</div><strong class="blue">${stats.goalProgress.toFixed(1)}%</strong></div>
                     </div>
@@ -1909,7 +1944,6 @@ function renderProjectDetail() {
     if (stats.percentage > 0) percentageElement.classList.add("green");
     if (stats.percentage < 0) percentageElement.classList.add("red");
 
-    // RIMESSO I NETTI PRELEVATI COME NELLO SCREENSHOT ORIGINALE
     const realizedElement = document.getElementById("detailRealized");
     if (realizedElement) {
         realizedElement.textContent = euro(stats.realizedResult);
@@ -1923,13 +1957,42 @@ function renderProjectDetail() {
     document.getElementById("goalRemaining").textContent = euro(stats.goalRemaining);
     document.getElementById("goalEndDate").textContent = formatDate(project.endDate);
 
-    // RIMOSSA GAMIFICATION E BADGE DOPAMINERGICI
     let badgeHtml = "";
     if (stats.goalProgress >= 100) { badgeHtml = "Completato"; document.getElementById("milestoneBadge").style.color = "var(--green)"; document.getElementById("milestoneBadge").style.borderColor = "var(--green)"; }
     else if (stats.goalProgress > 0) { badgeHtml = "In progresso"; document.getElementById("milestoneBadge").style.color = "var(--accent)"; document.getElementById("milestoneBadge").style.borderColor = "var(--accent)"; }
     else { badgeHtml = "Iniziale"; document.getElementById("milestoneBadge").style.color = "var(--muted)"; document.getElementById("milestoneBadge").style.borderColor = "var(--border)"; }
     document.getElementById("milestoneBadge").textContent = badgeHtml;
     
+    // LOGICA HARD STOP (TILT WARNING)
+    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
+    const last3 = dayMovements.slice(-3);
+    let isTilt = false;
+    let tiltReason = "";
+
+    if (last3.length === 3 && last3.every(m => m.dayDiff < 0)) {
+        isTilt = true;
+        tiltReason = "Hai registrato 3 giornate in perdita consecutive. Considera 24 ore di pausa per recuperare la lucidità e prevenire l'overtrading.";
+    } else if (dayMovements.length > 0) {
+        const lastMove = dayMovements[dayMovements.length - 1];
+        if (lastMove.dayDiff < 0) {
+            const currentEquity = project.capital + lastMove.resultAfter;
+            const prevEquity = currentEquity - lastMove.dayDiff;
+            // Se perdi oltre il 15% in un giorno
+            if (prevEquity > 0 && Math.abs(lastMove.dayDiff) / prevEquity > 0.15) {
+                isTilt = true;
+                tiltReason = "Hai appena subito una perdita superiore al 15% del capitale. Fai un bel respiro, chiudi i mercati e stacca per oggi.";
+            }
+        }
+    }
+
+    const tiltBanner = document.getElementById("tiltWarningBanner");
+    if (isTilt && !isClosed) {
+        document.getElementById("tiltWarningText").textContent = tiltReason;
+        tiltBanner.style.display = "flex";
+    } else {
+        tiltBanner.style.display = "none";
+    }
+
     // GESTIONE DEL BLOCCO OPERAZIONI A FINE MESE
     const today = new Date();
     const isEndOfMonth = (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate());
@@ -1959,7 +2022,6 @@ function renderProjectDetail() {
         document.getElementById("archivedBannerBlock").style.display = "none";
         document.getElementById("btnCloseProjectHeader").style.display = "inline-flex";
 
-        // Applica il blocco operazioni se è fine mese e non è stato salvato lo sblocco
         if (isEndOfMonth && !isUnlockedInStorage) {
             document.getElementById("operationInnerContainer").style.display = "none";
             document.getElementById("endOfMonthBlock").style.display = "flex";
@@ -1976,7 +2038,7 @@ function renderProjectDetail() {
     
     if (project.status === 'completed') { goalStatus.textContent = "🏆 Raggiunto"; goalStatus.classList.add("completed"); }
     else if (project.status === 'abandoned') { goalStatus.textContent = "🛑 Interrotto"; goalStatus.classList.add("delayed"); }
-    else if (stats.result >= project.goal) { goalStatus.textContent = "🏆 Obiettivo raggiunto"; goalStatus.classList.add("completed"); }
+    else if (stats.result >= project.goal) { goalStatus.textContent = "🏆 Obiettivo superato"; goalStatus.classList.add("completed"); }
     else if (stats.daysRemaining < 0) { goalStatus.textContent = "⚠️ Scadenza superata"; goalStatus.classList.add("delayed"); }
     else { goalStatus.textContent = "🎯 In corso"; }
 
@@ -2007,7 +2069,6 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
-    // RIPRISTINO DEL RITMO NECESSARIO NELL'HEADER
     document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
     document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
     document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
@@ -2108,7 +2169,6 @@ function drawProjectChart(project, stats) {
 
     const points = [{ date: new Date(project.createdAt), value: 0, balance: 0 }];
     stats.history.forEach(item => {
-        // Grafico torna a tracciare il Risultato Netto
         points.push({ date: new Date(item.date), value: item.resultAfter, balance: item.balanceAfter });
     });
 
@@ -2247,10 +2307,13 @@ function drawProjectChart(project, stats) {
 
 function updateDashboard() {
     const projects = window.loadProjects();
-    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0;
+    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0, globalSafe = 0;
 
     projects.forEach(project => {
         const stats = calculateProject(project);
+        
+        // La cassaforte calcola tutti i soldi netti "estratti" (prelievi - depositi) globalmente
+        globalSafe += stats.realizedResult;
         
         if (!project.status || project.status === 'active') {
             totalBalance += stats.balance;
@@ -2258,7 +2321,7 @@ function updateDashboard() {
             countActive++;
         }
         
-        if (project.status === 'completed' || (!project.status && stats.realizedResult >= project.goal)) {
+        if (project.status === 'completed' || (!project.status && stats.result >= project.goal)) {
             completed++;
         }
     });
@@ -2270,6 +2333,13 @@ function updateDashboard() {
 
     if (totalResult > 0) resultElement.classList.add("green");
     if (totalResult < 0) resultElement.classList.add("red");
+    
+    // Aggiornamento Cassaforte
+    const safeElement = document.getElementById("totalSafe");
+    safeElement.textContent = euro(globalSafe);
+    safeElement.className = "big-number";
+    if (globalSafe > 0) safeElement.classList.add("green");
+    if (globalSafe < 0) safeElement.classList.add("red");
 
     document.getElementById("projectCount").textContent = countActive;
     document.getElementById("completedProjects").textContent = completed;
