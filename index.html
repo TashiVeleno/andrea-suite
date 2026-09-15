@@ -368,7 +368,7 @@ h2 {
 }
 
 .salary-header h2 {
-    font-size: 21px; /* PIÙ GRANDE COME RICHIESTO */
+    font-size: 21px;
     margin: 0;
 }
 
@@ -723,12 +723,12 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p><strong>Saldo:</strong> Giacenza liquida.<br><strong>Risultato:</strong> Guadagno/perdita totale.</p>
             </div>
             <div class="guide-box">
-                <h4>⏱️ Medie Storiche</h4>
-                <p>Mostrano la media effettiva dei tuoi profitti passati (giornaliera, settimanale e mensile) basata sui resoconti reali.</p>
+                <h4>⏱️ Ritmo Necessario (In alto)</h4>
+                <p>Calcolato dividendo i soldi che ti mancano (<code>Obiettivo - Risultato Netto</code>) per i <strong>giorni rimanenti</strong> alla scadenza.</p>
             </div>
             <div class="guide-box">
-                <h4>🗺️ Tabella di Marcia</h4>
-                <p>Confronta il Risultato Netto con la crescita ideale di oggi.</p>
+                <h4>💸 Cedola</h4>
+                <p>Puoi prelevare lo stipendio mensile solo se il Risultato Netto è in attivo.</p>
             </div>
         </div>
     </div>
@@ -869,16 +869,16 @@ canvas { width: 100%; height: 100%; display: block; }
 
         <div class="header-ritmo">
             <span class="header-ritmo-item">
-                <span class="small">📅 Media giorno</span>
-                <strong class="blue" id="dailyActual">€ 0,00</strong>
+                <span class="small">📅 Al giorno</span>
+                <strong class="blue" id="dailyNeeded">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">📆 Media settimana</span>
-                <strong class="blue" id="weeklyActual">€ 0,00</strong>
+                <span class="small">📆 Alla settimana</span>
+                <strong class="blue" id="weeklyNeeded">€ 0,00</strong>
             </span>
             <span class="header-ritmo-item">
-                <span class="small">🗓️ Media mese</span>
-                <strong class="blue" id="monthlyActual">€ 0,00</strong>
+                <span class="small">🗓️ Al mese</span>
+                <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
             </span>
         </div>
 
@@ -928,8 +928,8 @@ canvas { width: 100%; height: 100%; display: block; }
             <div id="endOfMonthBlock" style="display:none; flex-grow:1; flex-direction:column; justify-content:center;">
                 <div class="roadmap-status inline" style="border-color: var(--accent); background: rgba(79,140,255,.10); border-radius:12px; margin:0; text-align:center;">
                     <strong class="blue" style="font-size:16px;">📅 Fine del Mese!</strong><br><br>
-                    È arrivato il momento di controllare la tua cedola. Hai staccato i profitti?<br><br>
-                    <button class="primary" style="width:100%; font-size:13px; padding:10px;" onclick="unlockOperations()">Sì, ho gestito la cedola. Sblocca operazioni</button>
+                    Hai controllato la cedola a destra?<br><br>
+                    <button class="primary" style="width:100%; font-size:13px; padding:10px;" onclick="unlockOperations()">Fatto! Sblocca operazioni</button>
                 </div>
             </div>
 
@@ -1045,7 +1045,7 @@ canvas { width: 100%; height: 100%; display: block; }
     <div class="card chart-card">
         <h2>📈 Andamento del progetto</h2>
         <p class="small" style="margin-top:6px;">
-            Linea blu: risultato netto reale. Linea verde: tabella di marcia.
+            Linea blu: risultato netto. Linea verde: tabella di marcia.
         </p>
 
         <div class="chart-container">
@@ -1198,7 +1198,7 @@ let currentProjectId = null;
 let editingProjectId = null;
 let chartPoints = [];
 let lastCalculatedResult = 0;
-let operationsUnlocked = false; // Stato sblocco operazioni
+let operationsUnlocked = false;
 
 function openGuideModal() { document.getElementById("guideModal").classList.add("active"); }
 function closeGuideModal() { document.getElementById("guideModal").classList.remove("active"); }
@@ -1313,11 +1313,6 @@ function euro(value) {
     return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
 
-function formatDate(dateString) {
-    if (!dateString) return "--";
-    return new Date(dateString + "T00:00:00").toLocaleDateString("it-IT");
-}
-
 function getToday() {
     const date = new Date();
     date.setHours(0,0,0,0);
@@ -1339,6 +1334,11 @@ function daysBetween(startStr, endStr) {
     a.setHours(0,0,0,0);
     b.setHours(0,0,0,0);
     return Math.round((b - a) / 86400000);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return "--";
+    return new Date(dateString + "T00:00:00").toLocaleDateString("it-IT");
 }
 
 function escapeHTML(text) {
@@ -1391,7 +1391,7 @@ function calculateProject(project) {
             id: movement.id,
             date: movement.date,
             balanceAfter: balance,
-            resultAfter,
+            resultAfter: resultAfter,
             type: movement.type,
             dayDiff: dayDiff
         });
@@ -1415,27 +1415,34 @@ function calculateProject(project) {
     const elapsedDays = Math.max(1, min(totalDays, daysBetween(startDateStr, referenceDateStr) + 1));
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(new Date().toISOString(), endDateStr) + 1);
 
-    const activeDaysCount = Math.max(1, daysBetween(startDateStr, referenceDateStr) + 1);
-    const dailyActual = result / activeDaysCount;
-    const weeklyActual = dailyActual * 7;
-    const monthlyActual = dailyActual * 30.44;
-
-    const originalDaily = goal / totalDays;
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
+    
+    const originalDaily = goal / totalDays;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
+
+    // RITMO NECESSARIO BASATO SUL RISULTATO NETTO: (Obiettivo - Risultato Netto) / Giorni Rimanenti
+    let dailyNeeded = 0;
+    let weeklyNeeded = 0;
+    let monthlyNeeded = 0;
+
+    if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
+        dailyNeeded = goalRemaining / daysRemaining;
+        weeklyNeeded = dailyNeeded * 7;
+        monthlyNeeded = dailyNeeded * 30.44;
+    }
 
     return {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
-        dailyActual, weeklyActual, monthlyActual, expectedToday, roadmapDifference, 
+        dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
         daysDifference, history
     };
 }
 
 function min(a, b) { return a < b ? a : b; }
 
-// Funzione chiamata dal menu a tendina
+// Aggiorna dinamicamente la card della Cedola
 window.updateSalaryDisplay = function() {
     const salaryStatus = document.getElementById("salaryStatus");
     const select = document.getElementById("salaryPercentSelect");
@@ -1978,10 +1985,10 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
-    // STORICHE REALI NELL'HEADER
-    document.getElementById("dailyActual").textContent = euro(stats.dailyActual);
-    document.getElementById("weeklyActual").textContent = euro(stats.weeklyActual);
-    document.getElementById("monthlyActual").textContent = euro(stats.monthlyActual);
+    // RIPRISTINO DEL RITMO NECESSARIO NELL'HEADER: (Obiettivo - Risultato Netto) / Giorni Rimanenti
+    document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
+    document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
+    document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
 
     // INIZIALIZZA LA CEDOLA AL CARICAMENTO
     updateSalaryDisplay();
