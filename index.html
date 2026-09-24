@@ -814,10 +814,10 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="modal-close-btn" onclick="closeRealLifeModal()">✕</button>
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
-            <p class="small" style="margin-bottom: 15px;">Puoi inserire un valore manuale per i soldi usciti ed entrati dalla tua banca, utile per registrare movimentazioni pregresse indipendenti dai progetti attivi.</p>
-            <label>Soldi totali versati di tasca tua (€)</label>
+            <p class="small" style="margin-bottom: 15px;">Aggiungi qui eventuali movimentazioni <strong>passate o esterne</strong> ai progetti attuali. Questi valori verranno <strong>sommati in automatico</strong> a tutti i depositi/prelievi che stai registrando nei tuoi progetti attivi.</p>
+            <label>➕ Aggiungi versamenti pregressi extra (€)</label>
             <input id="manualDeposits" type="number" step="0.01" min="0">
-            <label>Soldi totali prelevati e rientrati in tasca tua (€)</label>
+            <label>➕ Aggiungi prelievi pregressi extra (€)</label>
             <input id="manualWithdrawals" type="number" step="0.01" min="0">
             <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRealLifeManual()">💾 Salva Allineamento</button>
         </div>
@@ -2399,10 +2399,10 @@ function updateDashboard() {
         }
     });
     
-    // Calcolo Bilancio Vita Reale (somma movimenti + correzione manuale eventuale)
+    // Calcolo Bilancio Vita Reale: SOMMA dei progetti attivi + extra manuali
     const manual = getManualRealLife();
-    const finalDep = (manual.deposits > 0) ? manual.deposits : autoDep;
-    const finalWit = (manual.withdrawals > 0) ? manual.withdrawals : autoWit;
+    const finalDep = manual.deposits + autoDep;
+    const finalWit = manual.withdrawals + autoWit;
     const netCash = finalWit - finalDep;
 
     document.getElementById("realLifeDeposits").textContent = euro(finalDep);
