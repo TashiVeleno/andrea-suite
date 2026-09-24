@@ -8,6 +8,9 @@
 <!-- Link per trasformare la suite in una PWA installabile senza barre -->
 <link rel="manifest" href="manifest.json">
 
+<!-- Libreria per l'effetto coriandoli -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <style>
 :root {
     --bg: #0b0f17;
@@ -711,20 +714,20 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
         <div class="guide-grid">
             <div class="guide-box">
-                <h4>🎯 Obiettivo e Grafico</h4>
-                <p>La barra di completamento e il grafico seguono il <strong>Risultato Netto</strong> (Utile/Perdita complessiva), misurando la crescita del capitale.</p>
+                <h4>🌍 Bilancio Vita Reale</h4>
+                <p>È il tuo estratto conto puro. Traccia i soldi fisici che versi (escono dalla tasca) e che prelevi (rientrano in tasca). Rimane intatto anche se cancelli un progetto.</p>
             </div>
             <div class="guide-box">
-                <h4>📊 Situazione Attuale</h4>
-                <p>Tiene traccia del saldo liquido, dell'utile puro generato e, come dato statico, dei netti prelevati finora.</p>
+                <h4>📊 Saldo & Risultato</h4>
+                <p><strong>Saldo:</strong> Giacenza liquida in quel progetto.<br><strong>Risultato Netto:</strong> Guadagno/perdita totale del progetto.</p>
             </div>
             <div class="guide-box">
                 <h4>⏱️ Ritmo Necessario</h4>
-                <p>Calcolato dividendo i soldi che ti mancano (<code>Obiettivo - Risultato Netto</code>) per i <strong>giorni rimanenti</strong> alla scadenza.</p>
+                <p>La quota giornaliera calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
             </div>
             <div class="guide-box">
                 <h4>💸 Cedola Mensile</h4>
-                <p>Isola il profitto generato <strong>nel mese in corso</strong>. Calcolata solo se sei in utile totale per garantire solidità (High Watermark).</p>
+                <p>Isola il profitto generato <strong>nel mese in corso</strong>. Calcolata solo se il progetto è in utile totale per garantirti sicurezza.</p>
             </div>
         </div>
     </div>
@@ -762,7 +765,6 @@ canvas { width: 100%; height: 100%; display: block; }
             <div class="guide-box"><div class="small">🔴 Record negativo</div><strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong></div>
         </div>
         
-        <!-- NUOVA SEZIONE: GESTIONE RISCHIO -->
         <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">🛡️ GESTIONE RISCHIO</h4>
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="guide-box"><div class="small">📉 Max Drawdown (€)</div><strong class="red big-number" style="font-size:18px;" id="statMaxDrawdownEur">-€ 0,00</strong></div>
@@ -805,24 +807,60 @@ canvas { width: 100%; height: 100%; display: block; }
     </div>
 </div>
 
+<!-- MODALE CORREZIONE BILANCIO VITA REALE -->
+<div class="modal-overlay" id="globalCashflowModal" onclick="closeGlobalCashflowModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>✏️ Modifica Bilancio Vita Reale</h3>
+            <button class="modal-close-btn" onclick="closeGlobalCashflowModal()">✕</button>
+        </div>
+        <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
+            <p class="small" style="margin-bottom: 16px;">Usa questa funzione per allineare i contatori storici con la realtà se hai uno storico pregresso o hai fatto modifiche manuali.</p>
+            <label>Totale soldi VERSATI di tasca tua (usciti) in €</label>
+            <input id="editGlobalDep" type="number" step="0.01" min="0">
+            <label>Totale soldi PRELEVATI in tasca tua (rientrati) in €</label>
+            <input id="editGlobalWit" type="number" step="0.01" min="0">
+            <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveGlobalCashflow()">💾 Salva Impostazioni</button>
+        </div>
+    </div>
+</div>
+
 <main class="container">
 
 <!-- DASHBOARD UNIFICATA -->
 <section id="main-dashboard" class="page active">
     
-    <div class="grid" style="margin-top: 10px; margin-bottom: 40px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr));">
+    <!-- BILANCIO VITA REALE GLOBALE -->
+    <div style="background: var(--card); border: 1px solid var(--accent); border-radius: 18px; padding: 22px; margin-top: 10px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(79,140,255,.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="font-size: 20px; margin:0; color: #a8c5ff;">🌍 Bilancio Vita Reale</h2>
+            <button class="secondary" style="padding: 6px 12px; font-size:12px;" onclick="openGlobalCashflowModal()">✏️ Correggi Storico</button>
+        </div>
+        <p class="subtitle" style="margin-bottom: 20px; font-size: 14px;">I soldi veri usciti e rientrati nelle tue tasche da sempre. Resiste all'eliminazione dei progetti e non tiene conto del profitto virtuale.</p>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px;">
+            <div>
+                <div class="small">⬇️ Usciti (Versati)</div>
+                <strong class="red big-number" id="globalDep" style="font-size: 22px;">€ 0,00</strong>
+            </div>
+            <div>
+                <div class="small">⬆️ Rientrati (Prelevati)</div>
+                <strong class="green big-number" id="globalWit" style="font-size: 22px;">€ 0,00</strong>
+            </div>
+            <div>
+                <div class="small">⚖️ Tasca Netta</div>
+                <strong class="big-number" id="globalNet" style="font-size: 26px;">€ 0,00</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-bottom: 40px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr));">
         <div class="card">
-            <h3>💰 Saldo attivo</h3>
+            <h3>💰 Saldo sui progetti</h3>
             <div class="big-number blue" id="totalBalance">€ 0,00</div>
         </div>
         <div class="card">
-            <h3>📈 Risultato netto attivo</h3>
+            <h3>📈 Risultato netto progetti</h3>
             <div class="big-number" id="totalResult">€ 0,00</div>
-        </div>
-        <!-- NUOVA CARD: CASSAFORTE GLOBALE -->
-        <div class="card">
-            <h3>🏦 Cassaforte (Netti estratti)</h3>
-            <div class="big-number green" id="totalSafe">€ 0,00</div>
         </div>
         <div class="card">
             <h3>📂 Progetti attivi</h3>
@@ -896,7 +934,6 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
     </div>
     
-    <!-- BANNER HARD STOP PSICOLOGICO (Nascosto di default) -->
     <div id="tiltWarningBanner" style="display:none; background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px; align-items: center; gap: 16px;">
         <div style="font-size: 28px;">🛑</div>
         <div>
@@ -907,7 +944,6 @@ canvas { width: 100%; height: 100%; display: block; }
 
     <div class="detail-grid">
         
-        <!-- 1. Situazione Attuale -->
         <div class="console-card">
             <h2>📊 Situazione <span id="situazioneLabel">attuale</span></h2>
             <div class="situazione-grid">
@@ -925,12 +961,11 @@ canvas { width: 100%; height: 100%; display: block; }
                 </div>
                 <div>
                     <h3>💵 Netti prelevati</h3>
-                    <div class="big-number red" id="detailRealized" style="color: var(--muted);">-€ 0,00</div>
+                    <div class="big-number" id="detailRealized">€ 0,00</div>
                 </div>
             </div>
         </div>
 
-        <!-- 2. Operazioni -->
         <div class="console-card" id="operationsCardBlock">
             <div class="operations-title">
                 <h2>⚡ Operazioni</h2>
@@ -969,7 +1004,6 @@ canvas { width: 100%; height: 100%; display: block; }
             <p class="subtitle" style="margin-top:4px;">Questo progetto è chiuso.</p>
         </div>
 
-        <!-- 3. Tabella di Marcia -->
         <div class="console-card">
             <h2>🗺️ Tabella di marcia</h2>
 
@@ -979,7 +1013,7 @@ canvas { width: 100%; height: 100%; display: block; }
 
             <div class="roadmap-grid">
                 <div>
-                    <div class="small" id="expectedLabel">Traguardo cumulativo</div>
+                    <div class="small" id="expectedLabel">Traguardo ideale ad oggi</div>
                     <strong id="expectedToday" style="font-size: 15px;">€ 0,00</strong>
                 </div>
                 <div>
@@ -993,7 +1027,6 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
         </div>
 
-        <!-- 4. Obiettivo Orizzontale -->
         <div class="goal-card">
             <div class="goal-header">
                 <div>
@@ -1032,7 +1065,6 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
         </div>
 
-        <!-- 5. Cedola del Trader -->
         <div class="console-card salary-card">
             <div class="salary-header">
                 <h2>💸 Cedola</h2>
@@ -1050,7 +1082,6 @@ canvas { width: 100%; height: 100%; display: block; }
                 </select>
             </div>
             <div id="salaryStatus" style="flex-grow:1; display: flex; flex-direction: column; justify-content: center;">
-                <!-- Contenuto iniettato via JS -->
             </div>
         </div>
         
@@ -1093,6 +1124,7 @@ const firebaseConfig = {
 let auth, db, provider;
 let currentUser = null;
 let localProjects = [];
+let globalCashflow = { deposits: 0, withdrawals: 0 };
 let unsubscribeCloud = null;
 
 const STORAGE_KEY = "andrea_suite_projects_v7";
@@ -1166,6 +1198,7 @@ function syncWithCloud(uid) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             localProjects = data.projects || [];
+            globalCashflow = data.globalCashflow || { deposits: 0, withdrawals: 0 };
             saveToLocalStorage();
             updateAll();
         } else { pushToCloud(); }
@@ -1176,20 +1209,41 @@ async function pushToCloud() {
     if (!currentUser || !db) return;
     try {
         await setDoc(doc(db, "users", currentUser.uid), {
-            projects: loadProjects(),
+            projects: localProjects,
+            globalCashflow: globalCashflow,
             updatedAt: new Date().toISOString()
         }, { merge: true });
     } catch (e) { console.error(e); }
 }
 
 function loadLocalData() {
-    try { localProjects = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } 
-    catch { localProjects = []; }
+    try { 
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+            localProjects = [];
+            globalCashflow = { deposits: 0, withdrawals: 0 };
+            updateAll();
+            return;
+        }
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) {
+            // Retrocompatibilità vecchia versione array puro
+            localProjects = data;
+            globalCashflow = { deposits: 0, withdrawals: 0 };
+        } else {
+            localProjects = data.projects || [];
+            globalCashflow = data.globalCashflow || { deposits: 0, withdrawals: 0 };
+        }
+    } 
+    catch { localProjects = []; globalCashflow = { deposits: 0, withdrawals: 0 }; }
     updateAll();
 }
 
 function saveToLocalStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localProjects));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        projects: localProjects,
+        globalCashflow: globalCashflow
+    }));
 }
 
 window.loadProjects = () => localProjects;
@@ -1284,6 +1338,29 @@ function confirmCloseProject(status) {
     window.saveProjects(projects);
     closeCloseProjectModal();
     goToPage('main-dashboard'); 
+}
+
+// GESTIONE MODALE BILANCIO GLOBALE
+window.openGlobalCashflowModal = function() {
+    document.getElementById("editGlobalDep").value = globalCashflow.deposits.toFixed(2);
+    document.getElementById("editGlobalWit").value = globalCashflow.withdrawals.toFixed(2);
+    document.getElementById("globalCashflowModal").classList.add("active");
+}
+window.closeGlobalCashflowModal = function() {
+    document.getElementById("globalCashflowModal").classList.remove("active");
+}
+window.closeGlobalCashflowModalOnOverlay = function(event) {
+    if (event.target.id === "globalCashflowModal") closeGlobalCashflowModal();
+}
+window.saveGlobalCashflow = function() {
+    const dep = Number(document.getElementById("editGlobalDep").value) || 0;
+    const wit = Number(document.getElementById("editGlobalWit").value) || 0;
+    globalCashflow.deposits = Math.max(0, dep);
+    globalCashflow.withdrawals = Math.max(0, wit);
+    
+    window.saveProjects(window.loadProjects());
+    closeGlobalCashflowModal();
+    updateDashboard();
 }
 
 window.exportProjectToCSV = function() {
@@ -1877,6 +1954,10 @@ function saveOperation(type) {
         
         movement = { id: Date.now(), type: "day", balance: Number(inputBal), deposit: dep, withdraw: wit, date: finalDate };
         
+        // AGGIORNAMENTO GLOBALE
+        globalCashflow.deposits += dep;
+        globalCashflow.withdrawals += wit;
+        
     } else {
         const input = document.getElementById("operationAmount");
         const amount = Number(input.value);
@@ -1891,12 +1972,19 @@ function saveOperation(type) {
                 alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
                 return;
             }
+            // AGGIORNAMENTO GLOBALE
+            globalCashflow.deposits += amount;
         }
         
-        if (type === "withdraw" && amount > stats.balance) {
-            alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
-            return;
+        if (type === "withdraw") {
+            if (amount > stats.balance) {
+                alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
+                return;
+            }
+            // AGGIORNAMENTO GLOBALE
+            globalCashflow.withdrawals += amount;
         }
+        
         movement = { id: Date.now(), type, amount, date: finalDate };
     }
 
@@ -1917,6 +2005,18 @@ function deleteMovement(id) {
         return;
     }
 
+    const mov = project.movements.find(m => m.id === id);
+    if(mov) {
+        if(mov.type === 'deposit') globalCashflow.deposits -= mov.amount;
+        if(mov.type === 'withdraw') globalCashflow.withdrawals -= mov.amount;
+        if(mov.type === 'day') {
+            globalCashflow.deposits -= (mov.deposit || 0);
+            globalCashflow.withdrawals -= (mov.withdraw || 0);
+        }
+        if(globalCashflow.deposits < 0) globalCashflow.deposits = 0;
+        if(globalCashflow.withdrawals < 0) globalCashflow.withdrawals = 0;
+    }
+
     project.movements = project.movements.filter(m => m.id !== id);
     window.saveProjects(projects);
 }
@@ -1927,6 +2027,7 @@ function renderProjectDetail() {
 
     updateProjectStartState(project);
     const stats = calculateProject(project);
+    
     const isClosed = project.status === 'completed' || project.status === 'abandoned';
 
     document.getElementById("detailProjectName").textContent = (isClosed ? "🗄️ " : "💼 ") + project.name;
@@ -1948,8 +2049,14 @@ function renderProjectDetail() {
     if (realizedElement) {
         realizedElement.textContent = euro(stats.realizedResult);
         realizedElement.className = "big-number";
-        if (stats.realizedResult > 0) realizedElement.classList.add("green");
-        if (stats.realizedResult < 0) realizedElement.classList.add("red");
+        realizedElement.style.color = ""; 
+        if (stats.realizedResult > 0) {
+            realizedElement.classList.add("green");
+        } else if (stats.realizedResult < 0) {
+            realizedElement.classList.add("red");
+        } else {
+            realizedElement.style.color = "var(--muted)";
+        }
     }
 
     document.getElementById("detailGoal").textContent = euro(project.goal);
@@ -1963,7 +2070,6 @@ function renderProjectDetail() {
     else { badgeHtml = "Iniziale"; document.getElementById("milestoneBadge").style.color = "var(--muted)"; document.getElementById("milestoneBadge").style.borderColor = "var(--border)"; }
     document.getElementById("milestoneBadge").textContent = badgeHtml;
     
-    // LOGICA HARD STOP (TILT WARNING)
     const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
     const last3 = dayMovements.slice(-3);
     let isTilt = false;
@@ -1977,7 +2083,6 @@ function renderProjectDetail() {
         if (lastMove.dayDiff < 0) {
             const currentEquity = project.capital + lastMove.resultAfter;
             const prevEquity = currentEquity - lastMove.dayDiff;
-            // Se perdi oltre il 15% in un giorno
             if (prevEquity > 0 && Math.abs(lastMove.dayDiff) / prevEquity > 0.15) {
                 isTilt = true;
                 tiltReason = "Hai appena subito una perdita superiore al 15% del capitale. Fai un bel respiro, chiudi i mercati e stacca per oggi.";
@@ -1993,7 +2098,6 @@ function renderProjectDetail() {
         tiltBanner.style.display = "none";
     }
 
-    // GESTIONE DEL BLOCCO OPERAZIONI A FINE MESE
     const today = new Date();
     const isEndOfMonth = (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate());
     const storageKey = `sblocco_${today.getFullYear()}_${today.getMonth()}`;
@@ -2016,7 +2120,7 @@ function renderProjectDetail() {
         document.getElementById("saldoLabel").textContent = "💰 Saldo attuale";
         document.getElementById("daysRemainingLabel").textContent = "Giorni rimanenti";
         document.getElementById("goalDaysRemaining").textContent = stats.daysRemaining >= 0 ? stats.daysRemaining : "Scaduto";
-        document.getElementById("expectedLabel").textContent = "Previsto oggi";
+        document.getElementById("expectedLabel").textContent = "Traguardo ideale ad oggi";
         
         document.getElementById("operationsCardBlock").style.display = "flex";
         document.getElementById("archivedBannerBlock").style.display = "none";
@@ -2073,7 +2177,6 @@ function renderProjectDetail() {
     document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
     document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
 
-    // INIZIALIZZA LA CEDOLA AL CARICAMENTO
     updateSalaryDisplay();
 
     resetOperationCard();
@@ -2307,13 +2410,10 @@ function drawProjectChart(project, stats) {
 
 function updateDashboard() {
     const projects = window.loadProjects();
-    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0, globalSafe = 0;
+    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0;
 
     projects.forEach(project => {
         const stats = calculateProject(project);
-        
-        // La cassaforte calcola tutti i soldi netti "estratti" (prelievi - depositi) globalmente
-        globalSafe += stats.realizedResult;
         
         if (!project.status || project.status === 'active') {
             totalBalance += stats.balance;
@@ -2325,6 +2425,17 @@ function updateDashboard() {
             completed++;
         }
     });
+    
+    // GESTIONE BILANCIO VITA REALE
+    const netCash = globalCashflow.withdrawals - globalCashflow.deposits;
+    document.getElementById("globalDep").textContent = euro(globalCashflow.deposits);
+    document.getElementById("globalWit").textContent = euro(globalCashflow.withdrawals);
+    
+    const globalNetEl = document.getElementById("globalNet");
+    globalNetEl.textContent = euro(netCash);
+    globalNetEl.className = "big-number";
+    if (netCash > 0) globalNetEl.classList.add("green");
+    if (netCash < 0) globalNetEl.classList.add("red");
 
     document.getElementById("totalBalance").textContent = euro(totalBalance);
     const resultElement = document.getElementById("totalResult");
@@ -2333,13 +2444,6 @@ function updateDashboard() {
 
     if (totalResult > 0) resultElement.classList.add("green");
     if (totalResult < 0) resultElement.classList.add("red");
-    
-    // Aggiornamento Cassaforte
-    const safeElement = document.getElementById("totalSafe");
-    safeElement.textContent = euro(globalSafe);
-    safeElement.className = "big-number";
-    if (globalSafe > 0) safeElement.classList.add("green");
-    if (globalSafe < 0) safeElement.classList.add("red");
 
     document.getElementById("projectCount").textContent = countActive;
     document.getElementById("completedProjects").textContent = completed;
