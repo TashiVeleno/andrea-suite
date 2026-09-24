@@ -618,7 +618,6 @@ canvas { width: 100%; height: 100%; display: block; }
 
 .chart-tooltip strong { display: block; margin-bottom: 5px; }
 
-/* Storico con limite e scorrimento verticale */
 .history-scroll-container {
     max-height: 420px;
     overflow-y: auto;
@@ -715,19 +714,19 @@ canvas { width: 100%; height: 100%; display: block; }
         <div class="guide-grid">
             <div class="guide-box">
                 <h4>🌍 Bilancio Vita Reale</h4>
-                <p>È il tuo estratto conto puro. Traccia i soldi fisici che versi (escono dalla tasca) e che prelevi (rientrano in tasca). Rimane intatto anche se cancelli un progetto.</p>
+                <p>Mostra i soldi che mancano fisicamente dalle tue tasche (Depositi reali - Prelievi reali). Non viene ingannato dai guadagni virtuali del bookmaker.</p>
             </div>
             <div class="guide-box">
                 <h4>📊 Saldo & Risultato</h4>
-                <p><strong>Saldo:</strong> Giacenza liquida in quel progetto.<br><strong>Risultato Netto:</strong> Guadagno/perdita totale del progetto.</p>
+                <p><strong>Saldo:</strong> Giacenza liquida attuale.<br><strong>Risultato Netto:</strong> Guadagno o perdita pura del progetto.</p>
             </div>
             <div class="guide-box">
                 <h4>⏱️ Ritmo Necessario</h4>
-                <p>La quota giornaliera calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
+                <p>La quota calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
             </div>
             <div class="guide-box">
-                <h4>💸 Cedola Mensile</h4>
-                <p>Isola il profitto generato <strong>nel mese in corso</strong>. Calcolata solo se il progetto è in utile totale per garantirti sicurezza.</p>
+                <h4>💸 Cedola</h4>
+                <p>Calcola la percentuale che puoi incassare sul profitto reale generato nel mese, purché il bilancio totale sia in positivo.</p>
             </div>
         </div>
     </div>
@@ -807,20 +806,20 @@ canvas { width: 100%; height: 100%; display: block; }
     </div>
 </div>
 
-<!-- MODALE CORREZIONE BILANCIO VITA REALE -->
-<div class="modal-overlay" id="globalCashflowModal" onclick="closeGlobalCashflowModalOnOverlay(event)">
-    <div class="modal-content" style="max-width: 450px;">
+<!-- MODALE BILANCIO VITA REALE -->
+<div class="modal-overlay" id="realLifeModal" onclick="closeRealLifeModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 480px;">
         <div class="modal-header">
-            <h3>✏️ Modifica Bilancio Vita Reale</h3>
-            <button class="modal-close-btn" onclick="closeGlobalCashflowModal()">✕</button>
+            <h3>✏️ Allinea Bilancio Vita Reale</h3>
+            <button class="modal-close-btn" onclick="closeRealLifeModal()">✕</button>
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
-            <p class="small" style="margin-bottom: 16px;">Usa questa funzione per allineare i contatori storici con la realtà se hai uno storico pregresso o hai fatto modifiche manuali.</p>
-            <label>Totale soldi VERSATI di tasca tua (usciti) in €</label>
-            <input id="editGlobalDep" type="number" step="0.01" min="0">
-            <label>Totale soldi PRELEVATI in tasca tua (rientrati) in €</label>
-            <input id="editGlobalWit" type="number" step="0.01" min="0">
-            <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveGlobalCashflow()">💾 Salva Impostazioni</button>
+            <p class="small" style="margin-bottom: 15px;">Puoi inserire un valore manuale per i soldi usciti ed entrati dalla tua banca, utile per registrare movimentazioni pregresse indipendenti dai progetti attivi.</p>
+            <label>Soldi totali versati di tasca tua (€)</label>
+            <input id="manualDeposits" type="number" step="0.01" min="0">
+            <label>Soldi totali prelevati e rientrati in tasca tua (€)</label>
+            <input id="manualWithdrawals" type="number" step="0.01" min="0">
+            <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRealLifeManual()">💾 Salva Allineamento</button>
         </div>
     </div>
 </div>
@@ -830,32 +829,34 @@ canvas { width: 100%; height: 100%; display: block; }
 <!-- DASHBOARD UNIFICATA -->
 <section id="main-dashboard" class="page active">
     
-    <!-- BILANCIO VITA REALE GLOBALE -->
-    <div style="background: var(--card); border: 1px solid var(--accent); border-radius: 18px; padding: 22px; margin-top: 10px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(79,140,255,.05);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-            <h2 style="font-size: 20px; margin:0; color: #a8c5ff;">🌍 Bilancio Vita Reale</h2>
-            <button class="secondary" style="padding: 6px 12px; font-size:12px;" onclick="openGlobalCashflowModal()">✏️ Correggi Storico</button>
+    <!-- CARD PRINCIPALE: BILANCIO VITA REALE -->
+    <div style="background: var(--card); border: 1px solid rgba(79,140,255,0.4); border-radius: 18px; padding: 22px; margin-top: 10px; margin-bottom: 25px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <h2 style="font-size: 20px; margin:0; color: #a8c5ff;">🌍 Bilancio Vita Reale (Soldi di Tasca)</h2>
+            <button class="secondary" style="padding: 5px 10px; font-size:12px;" onclick="openRealLifeModal()">✏️ Allinea storico</button>
         </div>
-        <p class="subtitle" style="margin-bottom: 20px; font-size: 14px;">I soldi veri usciti e rientrati nelle tue tasche da sempre. Resiste all'eliminazione dei progetti e non tiene conto del profitto virtuale.</p>
-        <div class="grid" style="grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px;">
+        <p class="subtitle" style="font-size: 13px; margin-bottom: 18px;">
+            Monitora quanti soldi sono usciti ed entrati dal tuo conto corrente reale, senza considerare il profitto virtuale interno ai siti di scommessa o trading.
+        </p>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px;">
             <div>
-                <div class="small">⬇️ Usciti (Versati)</div>
-                <strong class="red big-number" id="globalDep" style="font-size: 22px;">€ 0,00</strong>
+                <div class="small">⬇️ Soldi versati (Usciti)</div>
+                <strong class="red big-number" id="realLifeDeposits">€ 0,00</strong>
             </div>
             <div>
-                <div class="small">⬆️ Rientrati (Prelevati)</div>
-                <strong class="green big-number" id="globalWit" style="font-size: 22px;">€ 0,00</strong>
+                <div class="small">⬆️ Soldi prelevati (Rientrati)</div>
+                <strong class="green big-number" id="realLifeWithdrawals">€ 0,00</strong>
             </div>
             <div>
-                <div class="small">⚖️ Tasca Netta</div>
-                <strong class="big-number" id="globalNet" style="font-size: 26px;">€ 0,00</strong>
+                <div class="small">⚖️ Tasca Netta Effettiva</div>
+                <strong class="big-number" id="realLifeNet">€ 0,00</strong>
             </div>
         </div>
     </div>
 
     <div class="grid" style="margin-bottom: 40px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr));">
         <div class="card">
-            <h3>💰 Saldo sui progetti</h3>
+            <h3>💰 Saldo nei progetti</h3>
             <div class="big-number blue" id="totalBalance">€ 0,00</div>
         </div>
         <div class="card">
@@ -1124,7 +1125,6 @@ const firebaseConfig = {
 let auth, db, provider;
 let currentUser = null;
 let localProjects = [];
-let globalCashflow = { deposits: 0, withdrawals: 0 };
 let unsubscribeCloud = null;
 
 const STORAGE_KEY = "andrea_suite_projects_v7";
@@ -1197,8 +1197,7 @@ function syncWithCloud(uid) {
     unsubscribeCloud = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            localProjects = data.projects || [];
-            globalCashflow = data.globalCashflow || { deposits: 0, withdrawals: 0 };
+            localProjects = Array.isArray(data.projects) ? data.projects : (data.projects?.projects || []);
             saveToLocalStorage();
             updateAll();
         } else { pushToCloud(); }
@@ -1210,7 +1209,6 @@ async function pushToCloud() {
     try {
         await setDoc(doc(db, "users", currentUser.uid), {
             projects: localProjects,
-            globalCashflow: globalCashflow,
             updatedAt: new Date().toISOString()
         }, { merge: true });
     } catch (e) { console.error(e); }
@@ -1221,35 +1219,32 @@ function loadLocalData() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) {
             localProjects = [];
-            globalCashflow = { deposits: 0, withdrawals: 0 };
-            updateAll();
-            return;
-        }
-        const data = JSON.parse(raw);
-        if (Array.isArray(data)) {
-            // Retrocompatibilità vecchia versione array puro
-            localProjects = data;
-            globalCashflow = { deposits: 0, withdrawals: 0 };
         } else {
-            localProjects = data.projects || [];
-            globalCashflow = data.globalCashflow || { deposits: 0, withdrawals: 0 };
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                localProjects = parsed;
+            } else if (parsed && Array.isArray(parsed.projects)) {
+                localProjects = parsed.projects;
+            } else {
+                localProjects = [];
+            }
         }
-    } 
-    catch { localProjects = []; globalCashflow = { deposits: 0, withdrawals: 0 }; }
+    } catch {
+        localProjects = [];
+    }
     updateAll();
 }
 
 function saveToLocalStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        projects: localProjects,
-        globalCashflow: globalCashflow
-    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(localProjects));
 }
 
-window.loadProjects = () => localProjects;
+window.loadProjects = () => {
+    return Array.isArray(localProjects) ? localProjects : [];
+};
 
 window.saveProjects = (projects) => {
-    localProjects = projects;
+    localProjects = Array.isArray(projects) ? projects : [];
     saveToLocalStorage();
     if (currentUser) pushToCloud();
     else updateAll();
@@ -1302,6 +1297,31 @@ function closeEditProjectModal() {
 }
 function closeEditProjectModalOnOverlay(event) { if (event.target.id === "editProjectModal") closeEditProjectModal(); }
 
+function openRealLifeModal() {
+    const manual = getManualRealLife();
+    document.getElementById("manualDeposits").value = manual.deposits || "";
+    document.getElementById("manualWithdrawals").value = manual.withdrawals || "";
+    document.getElementById("realLifeModal").classList.add("active");
+}
+function closeRealLifeModal() { document.getElementById("realLifeModal").classList.remove("active"); }
+function closeRealLifeModalOnOverlay(event) { if (event.target.id === "realLifeModal") closeRealLifeModal(); }
+
+function getManualRealLife() {
+    try {
+        return JSON.parse(localStorage.getItem("andrea_suite_manual_reallife")) || { deposits: 0, withdrawals: 0 };
+    } catch {
+        return { deposits: 0, withdrawals: 0 };
+    }
+}
+
+function saveRealLifeManual() {
+    const dep = parseFloat(document.getElementById("manualDeposits").value) || 0;
+    const wit = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    localStorage.setItem("andrea_suite_manual_reallife", JSON.stringify({ deposits: dep, withdrawals: wit }));
+    closeRealLifeModal();
+    updateDashboard();
+}
+
 function saveEditedProject() {
     const projects = window.loadProjects();
     const project = projects.find(p => p.id === editingProjectId);
@@ -1338,29 +1358,6 @@ function confirmCloseProject(status) {
     window.saveProjects(projects);
     closeCloseProjectModal();
     goToPage('main-dashboard'); 
-}
-
-// GESTIONE MODALE BILANCIO GLOBALE
-window.openGlobalCashflowModal = function() {
-    document.getElementById("editGlobalDep").value = globalCashflow.deposits.toFixed(2);
-    document.getElementById("editGlobalWit").value = globalCashflow.withdrawals.toFixed(2);
-    document.getElementById("globalCashflowModal").classList.add("active");
-}
-window.closeGlobalCashflowModal = function() {
-    document.getElementById("globalCashflowModal").classList.remove("active");
-}
-window.closeGlobalCashflowModalOnOverlay = function(event) {
-    if (event.target.id === "globalCashflowModal") closeGlobalCashflowModal();
-}
-window.saveGlobalCashflow = function() {
-    const dep = Number(document.getElementById("editGlobalDep").value) || 0;
-    const wit = Number(document.getElementById("editGlobalWit").value) || 0;
-    globalCashflow.deposits = Math.max(0, dep);
-    globalCashflow.withdrawals = Math.max(0, wit);
-    
-    window.saveProjects(window.loadProjects());
-    closeGlobalCashflowModal();
-    updateDashboard();
 }
 
 window.exportProjectToCSV = function() {
@@ -1497,7 +1494,7 @@ function calculateProject(project) {
     const referenceDateStr = project.closedAt || new Date().toISOString();
     
     const totalDays = Math.max(1, daysBetween(startDateStr, endDateStr) + 1);
-    const elapsedDays = Math.max(1, min(totalDays, daysBetween(startDateStr, referenceDateStr) + 1));
+    const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDateStr, referenceDateStr) + 1));
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(new Date().toISOString(), endDateStr) + 1);
 
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
@@ -1538,8 +1535,6 @@ function calculateProject(project) {
     };
 }
 
-function min(a, b) { return a < b ? a : b; }
-
 // Funzione sblocco operazioni persistente (memoria locale)
 window.unlockOperations = function() {
     const today = new Date();
@@ -1561,8 +1556,6 @@ window.updateSalaryDisplay = function() {
     const stats = calculateProject(project);
     
     const percent = Number(select.value) / 100;
-    
-    // Calcolo Cedola: Minimo tra il profitto del mese e il Risultato Netto Totale
     cedolaBaseValue = Math.min(stats.profitThisMonth, stats.result);
     
     if (stats.result <= 0) {
@@ -1635,7 +1628,6 @@ function popolaStatisticheProgetto(project) {
     const profitFactor = lossSum > 0 ? (winSum / lossSum).toFixed(2) : (winSum > 0 ? "∞" : "0,00");
     const avgDailyProfit = totalDays > 0 ? (winSum - lossSum) / totalDays : 0;
 
-    // CALCOLO MAX DRAWDOWN SULLA EQUITY CURVE
     let peak = project.capital;
     let maxDrawdownEur = 0;
     let maxDrawdownPerc = 0;
@@ -1788,7 +1780,7 @@ function renderProjects() {
 }
 
 function deleteProject(id) {
-    if (!confirm("Vuoi eliminare questo progetto e tutto il suo storico in modo permanente?")) return;
+    if (!confirm("Vuoi eliminare questo progetto? Il bilancio generale dei versamenti e prelievi di tasca tua rimarrà conservato.")) return;
     const projects = window.loadProjects().filter(project => project.id !== id);
     window.saveProjects(projects);
     if (currentProjectId === id) currentProjectId = null;
@@ -1954,10 +1946,6 @@ function saveOperation(type) {
         
         movement = { id: Date.now(), type: "day", balance: Number(inputBal), deposit: dep, withdraw: wit, date: finalDate };
         
-        // AGGIORNAMENTO GLOBALE
-        globalCashflow.deposits += dep;
-        globalCashflow.withdrawals += wit;
-        
     } else {
         const input = document.getElementById("operationAmount");
         const amount = Number(input.value);
@@ -1972,19 +1960,12 @@ function saveOperation(type) {
                 alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
                 return;
             }
-            // AGGIORNAMENTO GLOBALE
-            globalCashflow.deposits += amount;
         }
         
-        if (type === "withdraw") {
-            if (amount > stats.balance) {
-                alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
-                return;
-            }
-            // AGGIORNAMENTO GLOBALE
-            globalCashflow.withdrawals += amount;
+        if (type === "withdraw" && amount > stats.balance) {
+            alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
+            return;
         }
-        
         movement = { id: Date.now(), type, amount, date: finalDate };
     }
 
@@ -2003,18 +1984,6 @@ function deleteMovement(id) {
     if (project.status === 'completed' || project.status === 'abandoned') {
         alert("Non puoi modificare i movimenti di un progetto archiviato.");
         return;
-    }
-
-    const mov = project.movements.find(m => m.id === id);
-    if(mov) {
-        if(mov.type === 'deposit') globalCashflow.deposits -= mov.amount;
-        if(mov.type === 'withdraw') globalCashflow.withdrawals -= mov.amount;
-        if(mov.type === 'day') {
-            globalCashflow.deposits -= (mov.deposit || 0);
-            globalCashflow.withdrawals -= (mov.withdraw || 0);
-        }
-        if(globalCashflow.deposits < 0) globalCashflow.deposits = 0;
-        if(globalCashflow.withdrawals < 0) globalCashflow.withdrawals = 0;
     }
 
     project.movements = project.movements.filter(m => m.id !== id);
@@ -2411,9 +2380,13 @@ function drawProjectChart(project, stats) {
 function updateDashboard() {
     const projects = window.loadProjects();
     let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0;
+    let autoDep = 0, autoWit = 0;
 
     projects.forEach(project => {
         const stats = calculateProject(project);
+        
+        autoDep += stats.deposits;
+        autoWit += stats.withdrawals;
         
         if (!project.status || project.status === 'active') {
             totalBalance += stats.balance;
@@ -2426,16 +2399,20 @@ function updateDashboard() {
         }
     });
     
-    // GESTIONE BILANCIO VITA REALE
-    const netCash = globalCashflow.withdrawals - globalCashflow.deposits;
-    document.getElementById("globalDep").textContent = euro(globalCashflow.deposits);
-    document.getElementById("globalWit").textContent = euro(globalCashflow.withdrawals);
+    // Calcolo Bilancio Vita Reale (somma movimenti + correzione manuale eventuale)
+    const manual = getManualRealLife();
+    const finalDep = (manual.deposits > 0) ? manual.deposits : autoDep;
+    const finalWit = (manual.withdrawals > 0) ? manual.withdrawals : autoWit;
+    const netCash = finalWit - finalDep;
+
+    document.getElementById("realLifeDeposits").textContent = euro(finalDep);
+    document.getElementById("realLifeWithdrawals").textContent = euro(finalWit);
     
-    const globalNetEl = document.getElementById("globalNet");
-    globalNetEl.textContent = euro(netCash);
-    globalNetEl.className = "big-number";
-    if (netCash > 0) globalNetEl.classList.add("green");
-    if (netCash < 0) globalNetEl.classList.add("red");
+    const realNetEl = document.getElementById("realLifeNet");
+    realNetEl.textContent = euro(netCash);
+    realNetEl.className = "big-number";
+    if (netCash > 0) realNetEl.classList.add("green");
+    if (netCash < 0) realNetEl.classList.add("red");
 
     document.getElementById("totalBalance").textContent = euro(totalBalance);
     const resultElement = document.getElementById("totalResult");
