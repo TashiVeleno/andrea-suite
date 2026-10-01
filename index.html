@@ -714,7 +714,7 @@ canvas { width: 100%; height: 100%; display: block; }
         <div class="guide-grid">
             <div class="guide-box">
                 <h4>🌍 Bilancio Vita Reale</h4>
-                <p>Mostra i soldi che mancano fisicamente dalle tue tasche (Depositi reali - Prelievi reali). Non viene ingannato dai guadagni virtuali del bookmaker.</p>
+                <p>Mostra la tua tasca netta reale (Prelievi reali - Depositi reali): se è in rosso, è quanto ti manca ancora. Non viene ingannato dai guadagni virtuali del bookmaker.</p>
             </div>
             <div class="guide-box">
                 <h4>📊 Saldo & Risultato</h4>
@@ -723,6 +723,10 @@ canvas { width: 100%; height: 100%; display: block; }
             <div class="guide-box">
                 <h4>⏱️ Ritmo Necessario</h4>
                 <p>La quota calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
+            </div>
+            <div class="guide-box">
+                <h4>📍 Arrivo Stimato</h4>
+                <p>Prende il tuo ritmo degli <strong>ultimi 30 giorni</strong> (o da inizio progetto, se è più giovane) e calcola quando arrivi all'obiettivo continuando così, recuperando anche eventuali perdite. La data finale resta fissa: vedi di quanti giorni arrivi in anticipo o in ritardo.</p>
             </div>
             <div class="guide-box">
                 <h4>💸 Cedola</h4>
@@ -815,6 +819,7 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
             <p class="small" style="margin-bottom: 15px;">Aggiungi qui eventuali movimentazioni <strong>passate o esterne</strong> ai progetti attuali. Questi valori verranno <strong>sommati in automatico</strong> a tutti i depositi/prelievi che stai registrando nei tuoi progetti attivi.</p>
+            <p class="small" id="deletedProjectsNote" style="display:none; margin-bottom: 15px;"></p>
             <label>➕ Aggiungi versamenti pregressi extra (€)</label>
             <input id="manualDeposits" type="number" step="0.01" min="0">
             <label>➕ Aggiungi prelievi pregressi extra (€)</label>
@@ -1064,6 +1069,8 @@ canvas { width: 100%; height: 100%; display: block; }
                     <strong id="goalDaysRemaining">--</strong>
                 </div>
             </div>
+
+            <div id="projectionStatus" class="roadmap-status inline" style="display:none; margin-top:16px; margin-bottom:0;"></div>
         </div>
 
         <div class="console-card salary-card">
@@ -1128,6 +1135,35 @@ let localProjects = [];
 let unsubscribeCloud = null;
 
 const STORAGE_KEY = "andrea_suite_projects_v7";
+
+// Bilancio Vita Reale: extra manuali ("Allinea storico") + totali dei progetti eliminati.
+// Viene salvato nel cloud insieme ai progetti, così è uguale su tutti i dispositivi.
+const REAL_LIFE_KEY = "andrea_suite_manual_reallife";
+const round2 = v => Math.round((Number(v) || 0) * 100) / 100;
+
+function normalizeRealLife(r) {
+    r = r || {};
+    return {
+        manualDeposits: round2(r.manualDeposits ?? r.deposits),        // "deposits"/"withdrawals" = vecchio formato locale
+        manualWithdrawals: round2(r.manualWithdrawals ?? r.withdrawals),
+        deletedDeposits: round2(r.deletedDeposits),
+        deletedWithdrawals: round2(r.deletedWithdrawals)
+    };
+}
+
+function readLocalRealLife() {
+    try { return normalizeRealLife(JSON.parse(localStorage.getItem(REAL_LIFE_KEY))); }
+    catch { return normalizeRealLife(null); }
+}
+
+function saveRealLifeToStorage() {
+    localStorage.setItem(REAL_LIFE_KEY, JSON.stringify(localRealLife));
+}
+
+let localRealLife = readLocalRealLife();
+// Il bilancio va scritto nel cloud solo quando è "noto": arrivato dal cloud, salvato da te,
+// oppure con valori locali da caricare. Così un dispositivo vuoto non azzera quelli di un altro.
+let realLifeReady = Object.values(localRealLife).some(v => v !== 0);
 
 try {
     const app = initializeApp(firebaseConfig);
@@ -1199,6 +1235,13 @@ function syncWithCloud(uid) {
             const data = docSnap.data();
             localProjects = Array.isArray(data.projects) ? data.projects : (data.projects?.projects || []);
             saveToLocalStorage();
+            if (data.realLife) {
+                localRealLife = normalizeRealLife(data.realLife);
+                realLifeReady = true;
+                saveRealLifeToStorage();
+            } else if (realLifeReady) {
+                pushToCloud(); // primo avvio: porta nel cloud il bilancio salvato finora solo su questo dispositivo
+            }
             updateAll();
         } else { pushToCloud(); }
     });
@@ -1207,10 +1250,9 @@ function syncWithCloud(uid) {
 async function pushToCloud() {
     if (!currentUser || !db) return;
     try {
-        await setDoc(doc(db, "users", currentUser.uid), {
-            projects: localProjects,
-            updatedAt: new Date().toISOString()
-        }, { merge: true });
+        const payload = { projects: localProjects, updatedAt: new Date().toISOString() };
+        if (realLifeReady) payload.realLife = localRealLife;
+        await setDoc(doc(db, "users", currentUser.uid), payload, { merge: true });
     } catch (e) { console.error(e); }
 }
 
@@ -1243,12 +1285,22 @@ window.loadProjects = () => {
     return Array.isArray(localProjects) ? localProjects : [];
 };
 
-window.saveProjects = (projects) => {
+window.loadRealLife = () => ({ ...localRealLife });
+
+// realLife è facoltativo: se c'è, progetti e bilancio vengono salvati insieme (una sola scrittura nel cloud)
+window.saveProjects = (projects, realLife) => {
     localProjects = Array.isArray(projects) ? projects : [];
     saveToLocalStorage();
+    if (realLife) {
+        localRealLife = normalizeRealLife(realLife);
+        realLifeReady = true;
+        saveRealLifeToStorage();
+    }
     if (currentUser) pushToCloud();
     else updateAll();
 };
+
+window.saveRealLife = (realLife) => window.saveProjects(localProjects, realLife);
 
 if (localStorage.getItem("andrea_suite_local_session") === "true") {
     renderAuthUI("Andrea (Locale)", null);
@@ -1298,26 +1350,33 @@ function closeEditProjectModal() {
 function closeEditProjectModalOnOverlay(event) { if (event.target.id === "editProjectModal") closeEditProjectModal(); }
 
 function openRealLifeModal() {
-    const manual = getManualRealLife();
-    document.getElementById("manualDeposits").value = manual.deposits || "";
-    document.getElementById("manualWithdrawals").value = manual.withdrawals || "";
+    const rl = getRealLife();
+    document.getElementById("manualDeposits").value = rl.manualDeposits || "";
+    document.getElementById("manualWithdrawals").value = rl.manualWithdrawals || "";
+
+    const note = document.getElementById("deletedProjectsNote");
+    const hasDeleted = rl.deletedDeposits > 0 || rl.deletedWithdrawals > 0;
+    note.style.display = hasDeleted ? "block" : "none";
+    note.innerHTML = hasDeleted
+        ? `🗑️ Dai progetti eliminati sono già conservati <strong>${euro(rl.deletedDeposits)}</strong> versati e <strong>${euro(rl.deletedWithdrawals)}</strong> prelevati: non serve aggiungerli qui.`
+        : "";
+
     document.getElementById("realLifeModal").classList.add("active");
 }
 function closeRealLifeModal() { document.getElementById("realLifeModal").classList.remove("active"); }
 function closeRealLifeModalOnOverlay(event) { if (event.target.id === "realLifeModal") closeRealLifeModal(); }
 
-function getManualRealLife() {
-    try {
-        return JSON.parse(localStorage.getItem("andrea_suite_manual_reallife")) || { deposits: 0, withdrawals: 0 };
-    } catch {
-        return { deposits: 0, withdrawals: 0 };
-    }
+// Bilancio Vita Reale (extra manuali + progetti eliminati), sincronizzato nel cloud con i progetti
+function getRealLife() {
+    if (window.loadRealLife) return window.loadRealLife();
+    return { manualDeposits: 0, manualWithdrawals: 0, deletedDeposits: 0, deletedWithdrawals: 0 };
 }
 
 function saveRealLifeManual() {
-    const dep = parseFloat(document.getElementById("manualDeposits").value) || 0;
-    const wit = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
-    localStorage.setItem("andrea_suite_manual_reallife", JSON.stringify({ deposits: dep, withdrawals: wit }));
+    const rl = getRealLife();
+    rl.manualDeposits = parseFloat(document.getElementById("manualDeposits").value) || 0;
+    rl.manualWithdrawals = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    if (window.saveRealLife) window.saveRealLife(rl);
     closeRealLifeModal();
     updateDashboard();
 }
@@ -1496,6 +1555,7 @@ function calculateProject(project) {
     const totalDays = Math.max(1, daysBetween(startDateStr, endDateStr) + 1);
     const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDateStr, referenceDateStr) + 1));
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(new Date().toISOString(), endDateStr) + 1);
+    const deadlinePassed = !project.closedAt && daysBetween(new Date().toISOString(), endDateStr) < 0;
 
     const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
@@ -1531,8 +1591,105 @@ function calculateProject(project) {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
         dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
-        daysDifference, history, profitThisMonth
+        daysDifference, history, profitThisMonth, deadlinePassed
     };
+}
+
+// ===== ARRIVO STIMATO =====
+// Calcola quando arrivi all'obiettivo se continui al ritmo recente.
+// La data finale del progetto resta fissa: si misura solo l'anticipo o il ritardo.
+const FINESTRA_RITMO_GIORNI = 30; // giorni usati per il "ritmo attuale"
+const GIORNI_STIMA_STABILE = 7;   // sotto questa soglia la stima è segnalata come instabile
+
+function calculateProjection(project, stats) {
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+    const movements = Array.isArray(project.movements) ? project.movements : [];
+
+    if (isClosed) return { state: "closed" };
+    if (stats.result >= stats.goal) return { state: "reached" };
+    if (!stats.history.length || !movements.some(m => m.type === "day")) return { state: "nodata" };
+
+    const today = getToday();
+    const activeDays = Math.max(1, daysBetween(stats.history[0].date, today.toISOString()) + 1);
+    const windowDays = Math.min(FINESTRA_RITMO_GIORNI, activeDays);
+
+    // Risultato netto all'inizio della finestra (0 se la finestra parte da inizio progetto).
+    // Le perdite già fatte restano in goalRemaining: vanno recuperate prima di arrivare.
+    const windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - (windowDays - 1));
+    let resultAtStart = 0;
+    stats.history.forEach(item => {
+        if (new Date(item.date) < windowStart) resultAtStart = item.resultAfter;
+    });
+
+    const pace = (stats.result - resultAtStart) / windowDays;
+    const base = { pace, windowDays, unstable: activeDays < GIORNI_STIMA_STABILE };
+
+    if (pace <= 0) return { ...base, state: "negative" };
+
+    const daysToGoal = Math.ceil(stats.goalRemaining / pace);
+    if (daysToGoal > 3650) return { ...base, state: "toofar" };
+
+    const projectedDate = new Date(today);
+    projectedDate.setDate(projectedDate.getDate() + daysToGoal);
+
+    let endStr = project.endDate || "";
+    if (endStr && !endStr.includes("T")) endStr += "T00:00:00";
+    const delayDays = daysBetween(endStr, projectedDate.toISOString());
+
+    return { ...base, state: "ok", daysToGoal, projectedDate, delayDays };
+}
+
+function renderProjection(project, stats) {
+    const box = document.getElementById("projectionStatus");
+    if (!box) return;
+
+    const proj = calculateProjection(project, stats);
+
+    if (proj.state === "closed" || proj.state === "reached") {
+        box.style.display = "none";
+        return;
+    }
+    box.style.display = "block";
+
+    if (proj.state === "nodata") {
+        box.className = "roadmap-status inline";
+        box.innerHTML = `📍 L'<strong>arrivo stimato</strong> comparirà dopo il primo resoconto giornaliero.`;
+        return;
+    }
+
+    const giorni = n => `${n} ${n === 1 ? "giorno" : "giorni"}`;
+    const finestra = proj.windowDays >= FINESTRA_RITMO_GIORNI
+        ? `ultimi ${FINESTRA_RITMO_GIORNI} giorni`
+        : `da inizio progetto, ${giorni(proj.windowDays)}`;
+    const ritmo = `<span class="small">Ritmo attuale: <strong>${proj.pace > 0 ? "+" : ""}${euro(proj.pace)}/giorno</strong> (${finestra})</span>`;
+    const nota = proj.unstable ? `<br><span class="small">Stima su pochi giorni di dati: ancora instabile.</span>` : "";
+
+    if (proj.state === "negative") {
+        box.className = "roadmap-status behind";
+        box.innerHTML = `<strong class="red">📍 Arrivo stimato: non raggiungibile</strong><br>Con questo andamento il risultato non cresce.<br>${ritmo}${nota}`;
+        return;
+    }
+
+    if (proj.state === "toofar") {
+        box.className = "roadmap-status behind";
+        box.innerHTML = `<strong class="red">📍 Arrivo stimato: oltre 10 anni</strong><br>Il ritmo attuale è troppo basso per una data sensata.<br>${ritmo}${nota}`;
+        return;
+    }
+
+    let scarto;
+    if (proj.delayDays > 0) {
+        box.className = "roadmap-status behind";
+        scarto = `<strong class="red">${giorni(proj.delayDays)} dopo la scadenza</strong> del ${formatDate(project.endDate)}`;
+    } else if (proj.delayDays < 0) {
+        box.className = "roadmap-status ahead";
+        scarto = `<strong class="green">${giorni(-proj.delayDays)} prima della scadenza</strong> del ${formatDate(project.endDate)}`;
+    } else {
+        box.className = "roadmap-status ahead";
+        scarto = `<strong class="green">Proprio alla scadenza</strong>`;
+    }
+
+    box.innerHTML = `<strong>📍 Arrivo stimato: ${proj.projectedDate.toLocaleDateString("it-IT")}</strong><br>${scarto}<br>${ritmo}${nota}`;
 }
 
 // Funzione sblocco operazioni persistente (memoria locale)
@@ -1781,8 +1938,20 @@ function renderProjects() {
 
 function deleteProject(id) {
     if (!confirm("Vuoi eliminare questo progetto? Il bilancio generale dei versamenti e prelievi di tasca tua rimarrà conservato.")) return;
-    const projects = window.loadProjects().filter(project => project.id !== id);
-    window.saveProjects(projects);
+    const allProjects = window.loadProjects();
+    const project = allProjects.find(p => p.id === id);
+    const projects = allProjects.filter(p => p.id !== id);
+
+    // I soldi versati e prelevati da questo progetto restano nella Tasca Netta
+    let realLife;
+    if (project) {
+        const stats = calculateProject(project);
+        realLife = getRealLife();
+        realLife.deletedDeposits += stats.deposits;
+        realLife.deletedWithdrawals += stats.withdrawals;
+    }
+
+    window.saveProjects(projects, realLife); // un solo salvataggio: progetti e bilancio insieme
     if (currentProjectId === id) currentProjectId = null;
     updateAll();
 }
@@ -2088,7 +2257,7 @@ function renderProjectDetail() {
         document.getElementById("situazioneLabel").textContent = "attuale";
         document.getElementById("saldoLabel").textContent = "💰 Saldo attuale";
         document.getElementById("daysRemainingLabel").textContent = "Giorni rimanenti";
-        document.getElementById("goalDaysRemaining").textContent = stats.daysRemaining >= 0 ? stats.daysRemaining : "Scaduto";
+        document.getElementById("goalDaysRemaining").textContent = stats.deadlinePassed ? "Scaduto" : stats.daysRemaining;
         document.getElementById("expectedLabel").textContent = "Traguardo ideale ad oggi";
         
         document.getElementById("operationsCardBlock").style.display = "flex";
@@ -2112,7 +2281,7 @@ function renderProjectDetail() {
     if (project.status === 'completed') { goalStatus.textContent = "🏆 Raggiunto"; goalStatus.classList.add("completed"); }
     else if (project.status === 'abandoned') { goalStatus.textContent = "🛑 Interrotto"; goalStatus.classList.add("delayed"); }
     else if (stats.result >= project.goal) { goalStatus.textContent = "🏆 Obiettivo superato"; goalStatus.classList.add("completed"); }
-    else if (stats.daysRemaining < 0) { goalStatus.textContent = "⚠️ Scadenza superata"; goalStatus.classList.add("delayed"); }
+    else if (stats.deadlinePassed) { goalStatus.textContent = "⚠️ Scadenza superata"; goalStatus.classList.add("delayed"); }
     else { goalStatus.textContent = "🎯 In corso"; }
 
     document.getElementById("expectedToday").textContent = euro(stats.expectedToday);
@@ -2142,10 +2311,11 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
-    document.getElementById("dailyNeeded").textContent = isClosed ? '--' : euro(stats.dailyNeeded);
-    document.getElementById("weeklyNeeded").textContent = isClosed ? '--' : euro(stats.weeklyNeeded);
-    document.getElementById("monthlyNeeded").textContent = isClosed ? '--' : euro(stats.monthlyNeeded);
+    document.getElementById("dailyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.dailyNeeded);
+    document.getElementById("weeklyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.weeklyNeeded);
+    document.getElementById("monthlyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.monthlyNeeded);
 
+    renderProjection(project, stats);
     updateSalaryDisplay();
 
     resetOperationCard();
@@ -2399,10 +2569,10 @@ function updateDashboard() {
         }
     });
     
-    // Calcolo Bilancio Vita Reale: SOMMA dei progetti attivi + extra manuali
-    const manual = getManualRealLife();
-    const finalDep = manual.deposits + autoDep;
-    const finalWit = manual.withdrawals + autoWit;
+    // Calcolo Bilancio Vita Reale: progetti esistenti (attivi e archiviati) + extra manuali + progetti eliminati
+    const rl = getRealLife();
+    const finalDep = rl.manualDeposits + rl.deletedDeposits + autoDep;
+    const finalWit = rl.manualWithdrawals + rl.deletedWithdrawals + autoWit;
     const netCash = finalWit - finalDep;
 
     document.getElementById("realLifeDeposits").textContent = euro(finalDep);
