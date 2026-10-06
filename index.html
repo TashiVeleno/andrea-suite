@@ -719,6 +719,79 @@ canvas { width: 100%; height: 100%; display: block; }
     padding: 18px;
     font-size: 17px;
 }
+
+/* ALLARMI, MONEY MANAGEMENT E STRATEGIE */
+.alarm-panel { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.alarm-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+}
+.alarm-item .alarm-icon { font-size: 22px; line-height: 1; }
+.alarm-item .alarm-title { font-size: 15px; display: block; margin-bottom: 2px; }
+.alarm-item.lvl-red { background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.35); }
+.alarm-item.lvl-red .alarm-title { color: var(--red); }
+.alarm-item.lvl-yellow { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); }
+.alarm-item.lvl-yellow .alarm-title { color: var(--orange); }
+.alarm-item.ok { background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3); padding: 10px 16px; }
+.alarm-item.ok .alarm-title { color: var(--green); font-size: 14px; display: inline; }
+.alarm-chip { display: inline-block; margin-left: 8px; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; vertical-align: middle; }
+.alarm-chip.red { background: rgba(239,68,68,.15); color: var(--red); }
+.alarm-chip.yellow { background: rgba(245,158,11,.15); color: var(--orange); }
+
+.risk-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; margin-top: 16px; align-items: start; }
+.risk-card { min-height: 0; min-width: 0; }
+.risk-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.mm-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.mm-row:last-child { border-bottom: none; }
+.mm-row .small { font-size: 12px; }
+.mini-bar { width: 100%; height: 6px; background: #0d131d; border-radius: 10px; overflow: hidden; margin-top: 4px; }
+.mini-bar > div { height: 100%; background: var(--green); }
+.mini-bar > div.yellow { background: var(--orange); }
+.mini-bar > div.red { background: var(--red); }
+
+.strategy-table-wrap { overflow-x: auto; }
+.strategy-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.strategy-table th { color: var(--muted); font-weight: normal; text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.strategy-table td { text-align: right; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.strategy-table th:first-child, .strategy-table td:first-child { text-align: left; white-space: normal; }
+.strategy-table tr:last-child td { border-bottom: none; }
+.state-pill { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+.state-pill.ok { background: rgba(34,197,94,.15); color: var(--green); }
+.state-pill.below { background: rgba(239,68,68,.15); color: var(--red); }
+.state-pill.doubt { background: rgba(245,158,11,.15); color: var(--orange); }
+.state-pill.wait { background: rgba(152,162,179,.12); color: var(--muted); }
+
+.field-select {
+    width: 100%; padding: 11px; margin-top: 4px; margin-bottom: 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: #0d131d; color: white; font-size: 16px;
+}
+.rules-section-title { color: var(--accent); font-size: 14px; margin: 18px 0 4px; }
+.rules-section-title:first-child { margin-top: 0; }
+.rules-help { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
+.rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.strategy-edit-row { display: grid; grid-template-columns: 1fr 74px 78px 78px 38px; gap: 6px; align-items: center; }
+.strategy-edit-row input, .strategy-edit-row select { font-size: 14px; padding: 9px 7px; }
+.strategy-edit-row select { margin: 0 0 8px; }
+.strategy-edit-head { margin-bottom: 4px; }
+.strategy-edit-head label { font-size: 11px; }
+.strategy-edit-row input { margin: 0 0 8px; }
+.strategy-edit-row .delete-btn { padding: 9px 0; margin-bottom: 8px; }
+.result-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 10px; }
+.result-toggle button { padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: white; cursor: pointer; font-size: 15px; }
+.result-toggle button.active.win { border-color: var(--green); background: rgba(34,197,94,.15); }
+.result-toggle button.active.loss { border-color: var(--red); background: rgba(239,68,68,.15); }
+.bet-list { max-height: 260px; overflow-y: auto; margin-top: 6px; }
+.bet-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.bet-item:last-child { border-bottom: none; }
+.bet-item .delete-btn { padding: 6px 9px; font-size: 12px; }
+
+@media(max-width:900px) {
+    .risk-grid { grid-template-columns: 1fr; }
+    .rules-grid { grid-template-columns: 1fr; }
+    .strategy-edit-row { grid-template-columns: 1fr 1fr 1fr 38px; padding-top: 4px; border-top: 1px solid var(--border); }
+    .strategy-edit-row > :first-child { grid-column: 1 / -1; }
+    .strategy-edit-head { display: none; }
+}
 </style>
 </head>
 
@@ -770,6 +843,18 @@ canvas { width: 100%; height: 100%; display: block; }
             <div class="guide-box">
                 <h4>💸 Cedola</h4>
                 <p>Calcola la percentuale che puoi incassare sul profitto reale generato nel mese, purché il bilancio totale sia in positivo.</p>
+            </div>
+            <div class="guide-box">
+                <h4>🛡️ Money management</h4>
+                <p>Ti dice quanto puntare per operazione e quanto puoi ancora perdere oggi e questa settimana prima di fermarti. Le regole si cambiano dal pulsante ⚙️ nel progetto.</p>
+            </div>
+            <div class="guide-box">
+                <h4>🎯 Strategie</h4>
+                <p>Registra l'esito di ogni operazione con la sua strategia. Per ognuna vedi la % di vincita e la <strong>soglia di pareggio</strong>: se vinci meno della soglia, quella strategia ti fa perdere soldi.</p>
+            </div>
+            <div class="guide-box">
+                <h4>🔔 Allarmi</h4>
+                <p><strong class="red">Rossi</strong>: fermati (stop raggiunto, calo troppo forte, strategia sotto soglia). <strong class="orange">Gialli</strong>: attenzione (sei indietro sul piano, stai per toccare uno stop, non fai il resoconto da giorni).</p>
             </div>
         </div>
     </div>
@@ -879,6 +964,77 @@ canvas { width: 100%; height: 100%; display: block; }
     </div>
 </div>
 
+<!-- MODALE REGOLE E SOGLIE -->
+<div class="modal-overlay" id="rulesModal" onclick="if (event.target.id === 'rulesModal') closeRulesModal()">
+    <div class="modal-content" style="max-width: 640px;">
+        <div class="modal-header">
+            <h3>⚙️ Regole e soglie</h3>
+            <button class="modal-close-btn" onclick="closeRulesModal()">✕</button>
+        </div>
+
+        <h4 class="rules-section-title">🛡️ Money management</h4>
+        <p class="rules-help">Percentuali sulla banca. Metti <strong>0</strong> per spegnere una regola.</p>
+        <div class="rules-grid">
+            <div><label>Puntata back massima (% del saldo)</label><input id="ruleStakePct" type="number" step="0.1" min="0"></div>
+            <div><label>Responsabilità lay massima (% del saldo)</label><input id="ruleLayPct" type="number" step="0.1" min="0"></div>
+            <div><label>Stop perdita giornaliero (%)</label><input id="ruleDailyStopPct" type="number" step="0.1" min="0"></div>
+            <div><label>Stop perdita settimanale (%)</label><input id="ruleWeeklyStopPct" type="number" step="0.1" min="0"></div>
+            <div><label>Stop perdita mensile (%)</label><input id="ruleMonthlyStopPct" type="number" step="0.1" min="0"></div>
+            <div><label>Commissione Betfair (%)</label><input id="ruleCommissionPct" type="number" step="0.1" min="0" max="100"></div>
+            <div><label>Calo dal picco: riduci puntate (%)</label><input id="ruleDrawdownWarnPct" type="number" step="0.1" min="0"></div>
+            <div><label>Calo dal picco: fermati (%)</label><input id="ruleMaxDrawdownPct" type="number" step="0.1" min="0"></div>
+        </div>
+
+        <h4 class="rules-section-title">⏱️ Obiettivi e tempo</h4>
+        <p class="rules-help">Dopo 3 mesi ti avviso se hai meno del 75% del guadagno previsto dal piano; dopo 6 mesi, allarme rosso sotto il 50% o se sei in perdita.</p>
+        <div class="rules-grid">
+            <div><label>Avvisami se non faccio il resoconto da (giorni)</label><input id="ruleNoReportDays" type="number" step="1" min="0"></div>
+        </div>
+
+        <h4 class="rules-section-title">🎯 Strategie e soglia di pareggio</h4>
+        <p class="rules-help">La <strong>soglia</strong> è la % minima di operazioni vinte per non perdere. Dipende dalla quota: la calcolo dalla <strong>quota media delle tue operazioni</strong> (commissione inclusa); finché non ne hai, uso la quota media del backtest. Scrivi una soglia solo se vuoi forzarla. Nel backtest nessuna strategia giocata su tutte le partite è risultata in guadagno: serve un filtro che dia un vantaggio.</p>
+        <div class="strategy-edit-row strategy-edit-head">
+            <label>Nome strategia</label><label>Tipo</label><label>Quota backtest</label><label>Soglia fissa (%)</label><span></span>
+        </div>
+        <div id="rulesStrategies"></div>
+        <button class="secondary" style="width:100%; margin-bottom:12px;" onclick="addRulesStrategy()">➕ Aggiungi strategia</button>
+        <label>Operazioni minime prima dell'allarme</label>
+        <input id="ruleMinBets" type="number" step="1" min="1">
+
+        <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRules()">💾 Salva regole</button>
+    </div>
+</div>
+
+<!-- MODALE REGISTRA OPERAZIONE (STRATEGIE) -->
+<div class="modal-overlay" id="betModal" onclick="if (event.target.id === 'betModal') closeBetModal()">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3>🎯 Registra operazione</h3>
+            <button class="modal-close-btn" onclick="closeBetModal()">✕</button>
+        </div>
+        <p class="rules-help">Serve per misurare ogni strategia. Con puntata e quota calcolo io la vincita (commissione inclusa). Il saldo del progetto resta quello del resoconto giornaliero.</p>
+        <label>Strategia</label>
+        <select id="betStrategy" class="field-select" onchange="updateBetStakeLabel(); autoFillBetAmount()"></select>
+        <label>Data e Ora</label>
+        <input id="betDate" type="datetime-local">
+        <label>Esito</label>
+        <div class="result-toggle">
+            <button id="betWinBtn" class="win" onclick="setBetResult('win')">✅ Vinta</button>
+            <button id="betLossBtn" class="loss" onclick="setBetResult('loss')">❌ Persa</button>
+        </div>
+        <div class="rules-grid">
+            <div><label id="betStakeLabel">Puntata (€)</label><input id="betStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 20" oninput="autoFillBetAmount()"></div>
+            <div><label>Quota presa</label><input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Es. 1,45" oninput="autoFillBetAmount()"></div>
+        </div>
+        <label>Quanto hai vinto o perso, netto commissione (€)</label>
+        <input id="betAmount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Si calcola da puntata e quota" oninput="betAmountTouched = true">
+        <button class="primary" style="width:100%;" onclick="saveBet()">💾 Salva operazione</button>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 18px 0 4px;">ULTIME OPERAZIONI</h4>
+        <div id="betList" class="bet-list"></div>
+    </div>
+</div>
+
 <main class="container">
 
 <!-- DASHBOARD UNIFICATA -->
@@ -966,6 +1122,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="secondary icon-btn" onclick="goToPage('main-dashboard')" title="Indietro">←</button>
             <button class="secondary icon-btn" onclick="openStatsModal()" title="Statistiche">📊</button>
             <button class="secondary icon-btn" onclick="exportProjectToCSV()" title="Esporta in Excel (CSV)">📗</button>
+            <button class="secondary icon-btn" onclick="openRulesModal()" title="Regole e soglie">⚙️</button>
             <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
@@ -991,13 +1148,7 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
     </div>
     
-    <div id="tiltWarningBanner" style="display:none; background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px; align-items: center; gap: 16px;">
-        <div style="font-size: 28px;">🛑</div>
-        <div>
-            <strong class="red" style="font-size: 16px;">Hard Stop Consigliato</strong>
-            <div class="small" style="margin-top: 4px; font-size: 13px; color: #f5f7fa;" id="tiltWarningText"></div>
-        </div>
-    </div>
+    <div id="alarmPanel" class="alarm-panel"></div>
 
     <div class="detail-grid">
         
@@ -1144,6 +1295,23 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
         </div>
         
+    </div>
+
+    <div class="risk-grid">
+        <div class="console-card risk-card">
+            <div class="risk-card-header">
+                <h2>🛡️ Money management</h2>
+                <button class="secondary" style="padding: 5px 10px; font-size:12px;" onclick="openRulesModal()">⚙️ Regole</button>
+            </div>
+            <div id="mmContent"></div>
+        </div>
+        <div class="console-card risk-card">
+            <div class="risk-card-header">
+                <h2>🎯 Strategie</h2>
+                <button class="primary" id="btnAddBet" style="padding: 6px 12px; font-size:13px;" onclick="openBetModal()">➕ Operazione</button>
+            </div>
+            <div id="strategyContent"></div>
+        </div>
     </div>
 
     <div class="card chart-card">
@@ -1981,6 +2149,661 @@ function popolaStatisticheProgetto(project) {
     document.getElementById("statMaxDrawdownPerc").textContent = `-${maxDrawdownPerc.toFixed(2)}%`;
 }
 
+// ===== MONEY MANAGEMENT, STRATEGIE E ALLARMI =====
+// Regole e strategie sono salvate dentro il progetto (project.rules, project.strategies, project.bets),
+// quindi viaggiano nel cloud insieme al resto. Una regola a 0 è spenta.
+// Valori predefiniti presi dal backtest delle strategie (cartella condivisa "strategie").
+const DEFAULT_RULES = {
+    stakePct: 2,          // puntata back massima, % del saldo
+    layPct: 3,            // responsabilità lay massima, % del saldo
+    dailyStopPct: 5,      // stop perdita giornaliero, % della banca a inizio giornata
+    weeklyStopPct: 0,     // stop perdita settimanale (da lunedì), spento di default
+    monthlyStopPct: 15,   // stop perdita mensile
+    drawdownWarnPct: 20,  // calo dal picco: dimezza le puntate (dal 2% all'1%)
+    maxDrawdownPct: 30,   // calo dal picco: stop a tutte le strategie
+    commissionPct: 4.5,   // commissione Betfair Italia sulle vincite nette
+    noReportDays: 3,      // allarme se non c'è un resoconto da N giorni
+    minBets: 30           // operazioni minime prima di giudicare una strategia
+};
+
+// Ritmo obiettivo: dopo 3 mesi giallo sotto il 75% del piano, dopo 6 mesi rosso sotto il 50% o in perdita
+const RITMO_MESI_GIALLO = 3, RITMO_QUOTA_GIALLO = 0.75;
+const RITMO_MESI_ROSSO = 6, RITMO_QUOTA_ROSSO = 0.5;
+const Z_SOTTO_SOGLIA = -1.64;  // 95%: la strategia è davvero sotto la soglia, non solo sfortuna
+const ROI_ULTIME_N = 100, ROI_MINIMO = -5; // utile delle ultime 100 operazioni sotto il -5% del volume
+const AVVISO_QUASI = 0.75;     // allarme giallo al 75% di uno stop
+
+// Dal backtest: lato, quota media e % minima di vinte per andare in pari (commissione 4,5%).
+const DEFAULT_STRATEGIES = [
+    { id: "lay_sfavorito", name: "Lay sfavorito", side: "lay", refOdds: 5.96, refBreakEven: 78.3, breakEven: null },
+    { id: "back_pareggio", name: "Back pareggio", side: "back", refOdds: 4.27, refBreakEven: 26.3, breakEven: null },
+    { id: "back_over_0_5_primo_tempo", name: "Back Over 0.5 primo tempo", side: "back", refOdds: 1.43, refBreakEven: 71.3, breakEven: null },
+    { id: "back_over_1_5", name: "Back Over 1.5", side: "back", refOdds: 1.33, refBreakEven: 76.8, breakEven: null },
+    { id: "back_under_3_5", name: "Back Under 3.5", side: "back", refOdds: 1.43, refBreakEven: 72.4, breakEven: null },
+    { id: "back_over_2_5", name: "Back Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, breakEven: null },
+    { id: "lay_over_0_5_primo_tempo", name: "Lay Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, breakEven: null },
+    { id: "lay_favorito", name: "Lay favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, breakEven: null },
+    { id: "back_goal_btts_si", name: "Back Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, breakEven: null },
+    { id: "back_favorito", name: "Back favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, breakEven: null },
+    { id: "back_no_goal_btts_no", name: "Back No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, breakEven: null },
+    { id: "lay_over_2_5", name: "Lay Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, breakEven: null },
+    { id: "lay_0_0", name: "Lay 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, breakEven: null },
+    { id: "back_under_2_5", name: "Back Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, breakEven: null },
+    { id: "lay_del_pareggio", name: "Lay del pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, breakEven: null }
+];
+
+function getRules(project) {
+    return { ...DEFAULT_RULES, ...(project.rules || {}) };
+}
+
+function getStrategies(project) {
+    return Array.isArray(project.strategies) ? project.strategies : DEFAULT_STRATEGIES.map(s => ({ ...s }));
+}
+
+function getBets(project) {
+    return Array.isArray(project.bets) ? project.bets : [];
+}
+
+function isProjectClosed(project) {
+    return project.status === 'completed' || project.status === 'abandoned';
+}
+
+function fmtPct(value) {
+    return `${Number(value || 0).toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`;
+}
+
+function fmtOdds(value) {
+    return Number(value).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function dayKey(date) {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+// % minima di operazioni vinte per andare in pari a una certa quota, commissione inclusa
+function breakEvenFromOdds(side, odds, commissionPct) {
+    const q = Number(odds), k = 1 - commissionPct / 100;
+    if (!(q > 1)) return null;
+    return side === "lay" ? (q - 1) / ((q - 1) + k) * 100 : 1 / (1 + (q - 1) * k) * 100;
+}
+
+// Vincita netta di un'operazione vinta. Nel lay la "puntata" è la responsabilità.
+function netWinFromOdds(side, stake, odds, commissionPct) {
+    const k = 1 - commissionPct / 100;
+    if (!(stake > 0) || !(odds > 1)) return null;
+    return side === "lay" ? stake / (odds - 1) * k : stake * (odds - 1) * k;
+}
+
+// Guadagno di un periodo, giorno per giorno: vale il resoconto giornaliero se c'è,
+// altrimenti la somma delle operazioni registrate quel giorno.
+function periodProfit(project, stats, start) {
+    const reports = {}, bets = {};
+    stats.history.forEach(h => {
+        if (h.type === "day" && h.dayDiff !== null) reports[dayKey(h.date)] = (reports[dayKey(h.date)] || 0) + h.dayDiff;
+    });
+    getBets(project).forEach(b => {
+        bets[dayKey(b.date)] = (bets[dayKey(b.date)] || 0) + (Number(b.pl) || 0);
+    });
+
+    let total = 0;
+    new Set([...Object.keys(reports), ...Object.keys(bets)]).forEach(k => {
+        const [y, m, d] = k.split("-").map(Number);
+        if (new Date(y, m - 1, d) >= start) total += (k in reports) ? reports[k] : bets[k];
+    });
+    return total;
+}
+
+function calculateMoneyManagement(project, stats) {
+    const rules = getRules(project);
+    const today = getToday();
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - (today.getDay() + 6) % 7);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const todayPL = periodProfit(project, stats, today);
+    const weekPL = periodProfit(project, stats, weekStart);
+    const monthPL = periodProfit(project, stats, monthStart);
+    const equity = project.capital + stats.result;
+
+    // Il limite si calcola sulla banca a inizio periodo, così non si restringe mentre perdi
+    const limit = (pct, pl) => pct > 0 ? Math.max(0, (equity - pl) * pct / 100) : 0;
+    const used = (lim, pl) => lim > 0 ? Math.max(0, -pl) / lim : 0;
+    const dailyLimit = limit(rules.dailyStopPct, todayPL);
+    const weeklyLimit = limit(rules.weeklyStopPct, weekPL);
+    const monthlyLimit = limit(rules.monthlyStopPct, monthPL);
+
+    let peak = project.capital;
+    stats.history.forEach(h => { peak = Math.max(peak, project.capital + h.resultAfter); });
+    const drawdown = Math.max(0, peak - equity);
+    const drawdownPct = peak > 0 ? drawdown / peak * 100 : 0;
+
+    // Sopra la soglia di "riduci puntate" la puntata consigliata si dimezza
+    const reduced = rules.drawdownWarnPct > 0 && drawdownPct >= rules.drawdownWarnPct;
+    const bank = Math.max(0, stats.balance);
+    const stakePct = reduced ? rules.stakePct / 2 : rules.stakePct;
+    const layPct = reduced ? rules.layPct / 2 : rules.layPct;
+
+    return {
+        rules, todayPL, weekPL, monthPL, equity, peak, drawdown, drawdownPct, reduced,
+        dailyLimit, weeklyLimit, monthlyLimit,
+        dailyUsed: used(dailyLimit, todayPL),
+        weeklyUsed: used(weeklyLimit, weekPL),
+        monthlyUsed: used(monthlyLimit, monthPL),
+        stakePct, layPct,
+        stake: bank * stakePct / 100,
+        layLiability: bank * layPct / 100
+    };
+}
+
+// Per ogni strategia: quota media, % di vincita, soglia di pareggio e quanto è affidabile il confronto.
+function calculateStrategyStats(project) {
+    const rules = getRules(project);
+    const bets = getBets(project);
+
+    return getStrategies(project).map(s => {
+        const list = bets.filter(b => b.strategyId === s.id);
+        let wins = 0, losses = 0, winSum = 0, lossSum = 0, total = 0, oddsSum = 0, oddsCount = 0, beSum = 0;
+        list.forEach(b => {
+            const pl = Number(b.pl) || 0;
+            total += pl;
+            if (pl > 0) { wins++; winSum += pl; }
+            else if (pl < 0) { losses++; lossSum += -pl; }
+            if (Number(b.odds) > 1) {
+                oddsSum += Number(b.odds); oddsCount++;
+                beSum += breakEvenFromOdds(s.side, b.odds, rules.commissionPct);
+            }
+        });
+
+        const n = list.length;
+        const winRate = n ? wins / n * 100 : null;
+        const avgOdds = oddsCount ? oddsSum / oddsCount : null;
+
+        // Soglia: fissa se impostata, altrimenti media delle soglie delle tue operazioni (dalla quota presa),
+        // poi quella del backtest, infine dai tuoi risultati (perdita media / (vincita media + perdita media)).
+        let breakEven = null, source = null;
+        if (s.breakEven !== null && s.breakEven !== undefined && s.breakEven !== "") { breakEven = Number(s.breakEven); source = "fixed"; }
+        else if (oddsCount) { breakEven = beSum / oddsCount; source = "myOdds"; }
+        else if (s.refBreakEven > 0 && rules.commissionPct === DEFAULT_RULES.commissionPct) { breakEven = s.refBreakEven; source = "refOdds"; }
+        else if (s.refOdds > 1) { breakEven = breakEvenFromOdds(s.side, s.refOdds, rules.commissionPct); source = "refOdds"; }
+        else if (winSum > 0 && lossSum > 0) { breakEven = (lossSum / losses) / (winSum / wins + lossSum / losses) * 100; source = "data"; }
+
+        // z: quanto la % di vincita si discosta dalla soglia tenendo conto di quante operazioni hai fatto
+        let z = null;
+        const p = breakEven / 100;
+        if (n && breakEven !== null && p > 0 && p < 1) z = (winRate / 100 - p) / Math.sqrt(p * (1 - p) / n);
+
+        let state;
+        if (!n) state = "nodata";
+        else if (breakEven === null) state = "nothreshold";
+        else if (n < rules.minBets) state = "few";
+        else if (z <= Z_SOTTO_SOGLIA) state = "below";
+        else if (z < 0) state = "doubt";
+        else state = "ok";
+
+        return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets };
+    });
+}
+
+// Elenco allarmi del progetto: rossi = fermati, gialli = attenzione.
+function calculateAlarms(project, stats) {
+    const movements = Array.isArray(project.movements) ? project.movements : [];
+    if (isProjectClosed(project) || !movements.some(m => m.type === "deposit")) return [];
+
+    const alarms = [];
+    const add = (level, icon, title, text) => alarms.push({ level, icon, title, text });
+    const mm = calculateMoneyManagement(project, stats);
+    const r = mm.rules;
+    const bets = getBets(project);
+
+    // Stop di perdita
+    const stopAlarm = (lim, used, pl, pct, nome, periodo, azione) => {
+        if (lim <= 0) return;
+        if (used >= 1) add("red", "🛑", `Stop ${nome} raggiunto`, `${periodo} sei a <strong>${euro(pl)}</strong>, il limite è ${euro(-lim)} (${fmtPct(pct)} della banca). ${azione}`);
+        else if (used >= AVVISO_QUASI) add("yellow", "⚠️", `Vicino allo stop ${nome}`, `${periodo} sei a <strong>${euro(pl)}</strong>. Puoi perdere ancora ${euro(lim + pl)} prima di fermarti.`);
+    };
+    stopAlarm(mm.dailyLimit, mm.dailyUsed, mm.todayPL, r.dailyStopPct, "giornaliero", "Oggi", "Per oggi chiudi i mercati.");
+    stopAlarm(mm.weeklyLimit, mm.weeklyUsed, mm.weekPL, r.weeklyStopPct, "settimanale", "Da lunedì", "Fermati fino a lunedì prossimo.");
+    stopAlarm(mm.monthlyLimit, mm.monthlyUsed, mm.monthPL, r.monthlyStopPct, "mensile", "Questo mese", "Fermati fino al mese prossimo.");
+
+    // Calo dal picco
+    if (r.maxDrawdownPct > 0 && mm.drawdownPct >= r.maxDrawdownPct) {
+        add("red", "📉", "Calo dal picco troppo forte", `Sei sceso di <strong>${euro(mm.drawdown)}</strong> (${fmtPct(mm.drawdownPct)}) dal tuo massimo di ${euro(mm.peak)}. Il limite è ${fmtPct(r.maxDrawdownPct)}: fermati con tutte le strategie e rivedi il piano.`);
+    } else if (mm.reduced) {
+        add("yellow", "📉", "Calo dal picco: riduci le puntate", `Sei sceso del ${fmtPct(mm.drawdownPct)} dal tuo massimo di ${euro(mm.peak)}. Punta al massimo il ${fmtPct(mm.stakePct)} del saldo (${euro(mm.stake)}) finché non recuperi.`);
+    }
+
+    // Puntate di oggi troppo alte
+    const todayKey = dayKey(new Date());
+    const sides = {};
+    getStrategies(project).forEach(s => { sides[s.id] = s.side; });
+    const tooBig = bets.filter(b => dayKey(b.date) === todayKey && b.stake > 0 &&
+        b.stake > (sides[b.strategyId] === "lay" ? mm.layLiability : mm.stake) + 0.005 &&
+        (sides[b.strategyId] === "lay" ? r.layPct : r.stakePct) > 0);
+    if (tooBig.length) {
+        add("yellow", "💶", "Puntata troppo alta", `Oggi ${tooBig.length === 1 ? "un'operazione ha" : tooBig.length + " operazioni hanno"} superato il limite: back max ${euro(mm.stake)}, responsabilità lay max ${euro(mm.layLiability)}. Riduci la puntata.`);
+    }
+
+    // Segnali di tilt sui resoconti
+    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
+    const last3 = dayMovements.slice(-3);
+    if (last3.length === 3 && last3.every(m => m.dayDiff < 0)) {
+        add("yellow", "😤", "3 giornate in perdita di fila", "Considera 24 ore di pausa per recuperare la lucidità e non forzare le operazioni.");
+    } else if (dayMovements.length > 0) {
+        const lastMove = dayMovements[dayMovements.length - 1];
+        const prevEquity = project.capital + lastMove.resultAfter - lastMove.dayDiff;
+        if (lastMove.dayDiff < 0 && prevEquity > 0 && -lastMove.dayDiff / prevEquity > 0.15) {
+            add("red", "🛑", "Perdita oltre il 15% in un giorno", "Fai un bel respiro, chiudi i mercati e stacca per oggi.");
+        }
+    }
+
+    // Obiettivi e tempo
+    const months = stats.elapsedDays / 30.44;
+    if (stats.deadlinePassed && stats.result < stats.goal) {
+        add("red", "⏰", "Scadenza superata", `L'obiettivo era per il ${formatDate(project.endDate)} e mancano ancora ${euro(stats.goalRemaining)}. Sposta la data o chiudi il progetto.`);
+    } else if (stats.result < stats.goal && months >= RITMO_MESI_GIALLO) {
+        const pianoText = `Dopo ${Math.floor(months)} mesi hai ${euro(stats.result)}, il piano ne prevedeva ${euro(stats.expectedToday)}.`;
+        if (months >= RITMO_MESI_ROSSO && (stats.result < 0 || stats.result < stats.expectedToday * RITMO_QUOTA_ROSSO)) {
+            add("red", "⏱️", "Molto indietro sul piano", `${pianoText} Rivedi il piano: banca, volume o strategie.`);
+        } else if (stats.result < stats.expectedToday * RITMO_QUOTA_GIALLO) {
+            add("yellow", "⏱️", "Indietro sul piano", `${pianoText} Controlla quanto stai giocando e il rendimento rispetto al piano.`);
+        }
+    }
+
+    if (r.noReportDays > 0) {
+        const reports = movements.filter(m => m.type === "day");
+        const ref = reports.length
+            ? reports.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b).date
+            : movements.filter(m => m.type === "deposit").reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b).date;
+        const days = daysBetween(ref, getToday().toISOString());
+        if (days >= r.noReportDays) {
+            add("yellow", "📝", "Resoconto mancante", reports.length
+                ? `L'ultimo resoconto giornaliero è di ${days} giorni fa. Aggiornalo per avere calcoli e allarmi giusti.`
+                : `Non hai ancora fatto nessun resoconto giornaliero. Senza resoconti calcoli e allarmi non sono affidabili.`);
+        }
+    }
+
+    // Strategie sotto la soglia di pareggio
+    calculateStrategyStats(project).forEach(s => {
+        const base = `Vinci il <strong>${fmtPct(s.winRate)}</strong> delle operazioni, ne serve il ${fmtPct(s.breakEven)} per non perdere (${s.n} operazioni, totale ${euro(s.total)}).`;
+        if (s.state === "below") add("red", "🎯", `Strategia sotto soglia: ${escapeHTML(s.name)}`, `${base} Non è sfortuna: sospendila e riprovala senza soldi veri.`);
+        else if (s.state === "doubt") add("yellow", "🎯", `Strategia in dubbio: ${escapeHTML(s.name)}`, `${base} Dimezza la puntata finché i numeri non migliorano.`);
+    });
+
+    // Rendimento delle ultime operazioni
+    const withStake = bets.filter(b => b.stake > 0).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-ROI_ULTIME_N);
+    if (withStake.length === ROI_ULTIME_N) {
+        const volume = withStake.reduce((t, b) => t + Number(b.stake), 0);
+        const pl = withStake.reduce((t, b) => t + Number(b.pl), 0);
+        if (volume > 0 && pl / volume * 100 < ROI_MINIMO) {
+            add("yellow", "📊", "Ultime 100 operazioni in perdita", `Hai perso ${euro(-pl)} su ${euro(volume)} giocati (${fmtPct(pl / volume * 100)}). Rivedi filtri e quote che prendi.`);
+        }
+    }
+
+    return alarms.sort((a, b) => (a.level === "red" ? 0 : 1) - (b.level === "red" ? 0 : 1));
+}
+
+function renderRiskSection(project, stats) {
+    const isClosed = isProjectClosed(project);
+    const alarms = calculateAlarms(project, stats);
+    const hasStarted = (project.movements || []).some(m => m.type === "deposit");
+
+    const panel = document.getElementById("alarmPanel");
+    if (isClosed || !hasStarted) {
+        panel.innerHTML = "";
+    } else if (!alarms.length) {
+        panel.innerHTML = `<div class="alarm-item ok"><span class="alarm-icon" style="font-size:16px;">✅</span><div><strong class="alarm-title">Nessun allarme.</strong> Sei dentro tutte le regole.</div></div>`;
+    } else {
+        panel.innerHTML = alarms.map(a => `
+            <div class="alarm-item lvl-${a.level}">
+                <span class="alarm-icon">${a.icon}</span>
+                <div><strong class="alarm-title">${a.title}</strong>${a.text}</div>
+            </div>`).join("");
+    }
+
+    document.getElementById("btnAddBet").style.display = isClosed ? "none" : "";
+    renderMoneyManagement(project, stats, isClosed);
+    renderStrategies(project);
+}
+
+function renderMoneyManagement(project, stats, isClosed) {
+    const box = document.getElementById("mmContent");
+    const mm = calculateMoneyManagement(project, stats);
+    const r = mm.rules;
+    const bar = (used, warnAt = AVVISO_QUASI) => {
+        const cls = used >= 1 ? "red" : used >= warnAt ? "yellow" : "";
+        return `<div class="mini-bar"><div class="${cls}" style="width:${Math.min(100, used * 100)}%;"></div></div>`;
+    };
+    const plClass = v => v > 0 ? "green" : v < 0 ? "red" : "";
+    const sign = v => v > 0 ? "+" : "";
+    const stopRow = (icon, nome, pl, lim, used, fino) => lim > 0 ? `
+        <div class="mm-row" style="display:block;">
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <span>${icon} ${nome} <strong class="${plClass(pl)}">${sign(pl)}${euro(pl)}</strong></span>
+                <span class="small">stop a ${euro(-lim)}</span>
+            </div>
+            ${bar(used)}
+            <div class="small" style="margin-top:4px;">Puoi perdere ancora <strong>${euro(Math.max(0, lim + pl))}</strong> ${fino}.</div>
+        </div>` : "";
+
+    let html = "";
+    if (!isClosed) {
+        const stakeParts = [];
+        if (r.stakePct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.stake)}</strong><div class="small">back (${fmtPct(mm.stakePct)})</div></div>`);
+        if (r.layPct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.layLiability)}</strong><div class="small">resp. lay (${fmtPct(mm.layPct)})</div></div>`);
+        if (stakeParts.length) html += `
+            <div class="mm-row">
+                <div><div>💶 Puntata massima</div><div class="small">sul saldo di ${euro(stats.balance)}${mm.reduced ? " · <span class=\"orange\">dimezzata per il calo</span>" : ""}</div></div>
+                <div style="display:flex; gap:14px;">${stakeParts.join("")}</div>
+            </div>`;
+        html += stopRow("📅", "Oggi", mm.todayPL, mm.dailyLimit, mm.dailyUsed, "oggi");
+        html += stopRow("📆", "Settimana", mm.weekPL, mm.weeklyLimit, mm.weeklyUsed, "fino a domenica");
+        html += stopRow("🗓️", "Mese", mm.monthPL, mm.monthlyLimit, mm.monthlyUsed, "questo mese");
+    }
+    if (r.maxDrawdownPct > 0 || r.drawdownWarnPct > 0) {
+        const limitPct = r.maxDrawdownPct > 0 ? r.maxDrawdownPct : r.drawdownWarnPct;
+        html += `
+            <div class="mm-row" style="display:block;">
+                <div style="display:flex; justify-content:space-between; gap:10px;">
+                    <span>📉 Calo dal picco <strong class="${mm.drawdown > 0 ? "red" : ""}">${fmtPct(mm.drawdownPct)}</strong></span>
+                    <span class="small">${r.drawdownWarnPct > 0 ? `riduci a ${fmtPct(r.drawdownWarnPct)}` : ""}${r.drawdownWarnPct > 0 && r.maxDrawdownPct > 0 ? " · " : ""}${r.maxDrawdownPct > 0 ? `stop a ${fmtPct(r.maxDrawdownPct)}` : ""}</span>
+                </div>
+                ${bar(mm.drawdownPct / limitPct, r.drawdownWarnPct > 0 ? r.drawdownWarnPct / limitPct : AVVISO_QUASI)}
+                <div class="small" style="margin-top:4px;">Massimo raggiunto: ${euro(mm.peak)} · ora ${euro(mm.equity)}</div>
+            </div>`;
+    }
+    if (!isClosed && !stats.deadlinePassed && stats.monthlyNeeded > 0) {
+        html += `
+            <div class="mm-row">
+                <div><div>🎯 Guadagno di questo mese</div><div class="small">Ritmo necessario: ${euro(stats.monthlyNeeded)} al mese</div></div>
+                <strong class="${plClass(stats.profitThisMonth)}">${sign(stats.profitThisMonth)}${euro(stats.profitThisMonth)}</strong>
+            </div>`;
+    }
+    box.innerHTML = html || `<div class="small">Tutte le regole sono spente.</div>`;
+}
+
+let showAllStrategies = false;
+
+function toggleAllStrategies() {
+    showAllStrategies = !showAllStrategies;
+    const project = getProject(currentProjectId);
+    if (project) renderStrategies(project);
+}
+
+function renderStrategies(project) {
+    const box = document.getElementById("strategyContent");
+    const all = calculateStrategyStats(project);
+    const totalBets = getBets(project).length;
+
+    if (!all.length) {
+        box.innerHTML = `<div class="small">Nessuna strategia. Aggiungine una da ⚙️ Regole.</div>`;
+        return;
+    }
+
+    const used = all.filter(s => s.n > 0);
+    const list = showAllStrategies || !used.length ? all : used;
+    const hidden = all.length - list.length;
+
+    const pill = s => {
+        if (s.state === "ok") return `<span class="state-pill ok">Sopra soglia</span>`;
+        if (s.state === "below") return `<span class="state-pill below">Sotto soglia</span>`;
+        if (s.state === "doubt") return `<span class="state-pill doubt">In dubbio</span>`;
+        if (s.state === "few") return `<span class="state-pill wait">Ancora ${s.minBets - s.n} op.</span>`;
+        if (s.state === "nothreshold") return `<span class="state-pill wait">Soglia da impostare</span>`;
+        return `<span class="state-pill wait">Nessuna op.</span>`;
+    };
+    const wrClass = s => s.winRate === null || s.breakEven === null ? "" : s.winRate >= s.breakEven ? "green" : "red";
+    const mark = { fixed: "", myOdds: "", refOdds: "†", data: "*" };
+    const oddsCell = s => s.avgOdds ? fmtOdds(s.avgOdds) : (s.refOdds > 1 ? `<span class="small">${fmtOdds(s.refOdds)}†</span>` : "--");
+
+    box.innerHTML = `
+        ${!used.length ? `<p class="small" style="margin-bottom:8px;">Registra l'esito di ogni operazione con ➕ per vedere se vinci abbastanza. Ecco le soglie del backtest:</p>` : ""}
+        <div class="strategy-table-wrap">
+            <table class="strategy-table">
+                <thead><tr><th>Strategia</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Serve</th><th>Totale</th><th>Stato</th></tr></thead>
+                <tbody>
+                    ${list.map(s => `
+                        <tr>
+                            <td>${escapeHTML(s.name)} <span class="small" style="font-size:11px;">${s.side === "lay" ? "lay" : "back"}</span></td>
+                            <td>${s.n}</td>
+                            <td>${oddsCell(s)}</td>
+                            <td class="${wrClass(s)}">${s.winRate === null ? "--" : fmtPct(s.winRate)}</td>
+                            <td>${s.breakEven === null ? "--" : fmtPct(s.breakEven) + mark[s.source]}</td>
+                            <td class="${s.total > 0 ? "green" : s.total < 0 ? "red" : ""}">${s.n ? euro(s.total) : "--"}</td>
+                            <td>${pill(s)}</td>
+                        </tr>`).join("")}
+                </tbody>
+            </table>
+        </div>
+        <p class="small" style="margin-top:10px; font-size:12px; line-height:1.6;">
+            ${totalBets ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); openBetModal()">${totalBets} operazioni registrate</a> · ` : ""}
+            ${used.length ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); toggleAllStrategies()">${hidden ? `mostra altre ${hidden} strategie` : "mostra solo quelle usate"}</a> · ` : ""}
+            "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. † quota media del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
+        </p>`;
+}
+
+// ----- Modale regole -----
+let rulesDraftStrategies = [];
+const RULE_INPUTS = {
+    stakePct: "ruleStakePct", layPct: "ruleLayPct", dailyStopPct: "ruleDailyStopPct",
+    weeklyStopPct: "ruleWeeklyStopPct", monthlyStopPct: "ruleMonthlyStopPct", commissionPct: "ruleCommissionPct",
+    drawdownWarnPct: "ruleDrawdownWarnPct", maxDrawdownPct: "ruleMaxDrawdownPct",
+    noReportDays: "ruleNoReportDays", minBets: "ruleMinBets"
+};
+
+function openRulesModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const r = getRules(project);
+    Object.entries(RULE_INPUTS).forEach(([key, id]) => { document.getElementById(id).value = r[key]; });
+    rulesDraftStrategies = getStrategies(project).map(s => ({ ...s }));
+    renderRulesStrategies();
+    document.getElementById("rulesModal").classList.add("active");
+}
+
+function closeRulesModal() { document.getElementById("rulesModal").classList.remove("active"); }
+
+function renderRulesStrategies() {
+    document.getElementById("rulesStrategies").innerHTML = rulesDraftStrategies.map((s, i) => `
+        <div class="strategy-edit-row">
+            <input data-strategy-name="${i}" value="${escapeHTML(s.name).replace(/"/g, "&quot;")}" placeholder="Nome strategia">
+            <select data-strategy-side="${i}" class="field-select">
+                <option value="back" ${s.side !== "lay" ? "selected" : ""}>Back</option>
+                <option value="lay" ${s.side === "lay" ? "selected" : ""}>Lay</option>
+            </select>
+            <input data-strategy-odds="${i}" type="number" step="0.01" min="1.01" value="${s.refOdds ?? ""}" placeholder="quota">
+            <input data-strategy-be="${i}" type="number" step="0.1" min="0" max="100" value="${s.breakEven ?? ""}" placeholder="auto">
+            <button class="delete-btn" onclick="removeRulesStrategy(${i})" title="Elimina">🗑️</button>
+        </div>`).join("");
+}
+
+function syncRulesStrategiesFromInputs() {
+    rulesDraftStrategies.forEach((s, i) => {
+        s.name = document.querySelector(`[data-strategy-name="${i}"]`).value.trim();
+        s.side = document.querySelector(`[data-strategy-side="${i}"]`).value;
+        const odds = Number(document.querySelector(`[data-strategy-odds="${i}"]`).value);
+        const newOdds = odds > 1 ? odds : null;
+        if (newOdds !== s.refOdds) delete s.refBreakEven; // la soglia del backtest valeva per la quota di prima
+        s.refOdds = newOdds;
+        const be = document.querySelector(`[data-strategy-be="${i}"]`).value;
+        s.breakEven = be === "" ? null : Math.min(100, Math.max(0, Number(be)));
+    });
+}
+
+function addRulesStrategy() {
+    syncRulesStrategiesFromInputs();
+    rulesDraftStrategies.push({ id: "s" + Date.now(), name: "", side: "back", refOdds: null, breakEven: null });
+    renderRulesStrategies();
+    document.querySelector(`[data-strategy-name="${rulesDraftStrategies.length - 1}"]`).focus();
+}
+
+function removeRulesStrategy(index) {
+    syncRulesStrategiesFromInputs();
+    const s = rulesDraftStrategies[index];
+    const project = getProject(currentProjectId);
+    const count = project ? getBets(project).filter(b => b.strategyId === s.id).length : 0;
+    if (count && !confirm(`"${s.name}" ha ${count} operazioni registrate. Eliminandola, al salvataggio verranno cancellate anche quelle. Continuare?`)) return;
+    rulesDraftStrategies.splice(index, 1);
+    renderRulesStrategies();
+}
+
+function saveRules() {
+    syncRulesStrategiesFromInputs();
+    if (rulesDraftStrategies.some(s => !s.name)) { alert("Dai un nome a tutte le strategie (o elimina quelle vuote)."); return; }
+
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+
+    const rules = {};
+    Object.entries(RULE_INPUTS).forEach(([key, id]) => {
+        const raw = document.getElementById(id).value;
+        const v = Number(raw);
+        rules[key] = raw === "" || isNaN(v) ? DEFAULT_RULES[key] : Math.max(0, v);
+    });
+    rules.commissionPct = Math.min(100, rules.commissionPct);
+    rules.minBets = Math.max(1, Math.round(rules.minBets));
+    project.rules = rules;
+    project.strategies = rulesDraftStrategies;
+    const ids = new Set(project.strategies.map(s => s.id));
+    project.bets = getBets(project).filter(b => ids.has(b.strategyId));
+
+    window.saveProjects(projects);
+    closeRulesModal();
+}
+
+// ----- Modale operazioni per strategia -----
+let betResult = null;
+let betAmountTouched = false;
+
+function openBetModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const strategies = getStrategies(project);
+    if (!strategies.length) { alert("Prima aggiungi una strategia da ⚙️ Regole."); return; }
+
+    const bets = getBets(project);
+    const lastId = bets.length ? bets[bets.length - 1].strategyId : null;
+    document.getElementById("betStrategy").innerHTML = strategies
+        .map(s => `<option value="${escapeHTML(s.id)}" ${s.id === lastId ? "selected" : ""}>${escapeHTML(s.name)}</option>`).join("");
+    resetBetForm();
+    renderBetList(project);
+    document.getElementById("betModal").classList.add("active");
+}
+
+function closeBetModal() { document.getElementById("betModal").classList.remove("active"); }
+
+function currentBetStrategy() {
+    const project = getProject(currentProjectId);
+    if (!project) return null;
+    const id = document.getElementById("betStrategy").value;
+    return getStrategies(project).find(s => s.id === id) || null;
+}
+
+function updateBetStakeLabel() {
+    const s = currentBetStrategy();
+    document.getElementById("betStakeLabel").textContent = s && s.side === "lay" ? "Responsabilità (€)" : "Puntata (€)";
+}
+
+function resetBetForm() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById("betDate").value = now.toISOString().slice(0, 16);
+    document.getElementById("betAmount").value = "";
+    document.getElementById("betStake").value = "";
+    document.getElementById("betOdds").value = "";
+    betAmountTouched = false;
+    setBetResult(null);
+    updateBetStakeLabel();
+}
+
+function setBetResult(result) {
+    betResult = result;
+    document.getElementById("betWinBtn").classList.toggle("active", result === "win");
+    document.getElementById("betLossBtn").classList.toggle("active", result === "loss");
+    autoFillBetAmount();
+}
+
+// Con puntata e quota calcola da solo la vincita (netta di commissione) o la perdita
+function autoFillBetAmount() {
+    if (betAmountTouched || !betResult) return;
+    const project = getProject(currentProjectId);
+    const s = currentBetStrategy();
+    if (!project || !s) return;
+    const stake = Number(document.getElementById("betStake").value);
+    const odds = Number(document.getElementById("betOdds").value);
+    let amount = null;
+    if (betResult === "loss" && stake > 0) amount = stake;
+    if (betResult === "win") amount = netWinFromOdds(s.side, stake, odds, getRules(project).commissionPct);
+    if (amount !== null) document.getElementById("betAmount").value = (Math.round(amount * 100) / 100).toFixed(2);
+}
+
+function saveBet() {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project || isProjectClosed(project)) return;
+
+    const strategyId = document.getElementById("betStrategy").value;
+    const amount = Number(document.getElementById("betAmount").value);
+    const stake = Number(document.getElementById("betStake").value) || 0;
+    const odds = Number(document.getElementById("betOdds").value) || 0;
+    const dateVal = document.getElementById("betDate").value;
+
+    if (!betResult) { alert("Scegli se l'operazione è vinta o persa."); return; }
+    if (!(amount > 0)) { alert("Inserisci quanto hai vinto o perso (oppure puntata e quota)."); return; }
+
+    project.bets = getBets(project);
+    const bet = {
+        id: Date.now(),
+        strategyId,
+        date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString(),
+        pl: betResult === "win" ? amount : -amount,
+        stake
+    };
+    if (odds > 1) bet.odds = odds;
+    project.bets.push(bet);
+    if (!Array.isArray(project.strategies)) project.strategies = getStrategies(project);
+
+    window.saveProjects(projects);
+    resetBetForm();
+    renderBetList(project);
+}
+
+function renderBetList(project) {
+    const strategies = {};
+    getStrategies(project).forEach(s => { strategies[s.id] = s; });
+    const bets = [...getBets(project)].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+    const closed = isProjectClosed(project);
+
+    document.getElementById("betList").innerHTML = bets.length ? bets.map(b => {
+        const s = strategies[b.strategyId];
+        const details = [new Date(b.date).toLocaleString("it-IT")];
+        if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
+        if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
+        return `
+        <div class="bet-item">
+            <div>
+                <div>${escapeHTML(s ? s.name : "Strategia eliminata")}</div>
+                <div class="small" style="font-size:11px;">${details.join(" · ")}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <strong class="${b.pl > 0 ? "green" : "red"}">${b.pl > 0 ? "+" : ""}${euro(b.pl)}</strong>
+                ${closed ? "" : `<button class="delete-btn" onclick="deleteBet(${b.id})">🗑️</button>`}
+            </div>
+        </div>`;
+    }).join("") : `<div class="small">Nessuna operazione registrata.</div>`;
+}
+
+function deleteBet(id) {
+    if (!confirm("Vuoi eliminare questa operazione?")) return;
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    project.bets = getBets(project).filter(b => b.id !== id);
+    window.saveProjects(projects);
+    renderBetList(project);
+}
+
 function goToPage(pageId) {
     document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
     document.getElementById(pageId).classList.add("active");
@@ -2038,12 +2861,16 @@ function renderProjects() {
             const stats = calculateProject(project);
             const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
             const progress = Math.max(0, Math.min(100, stats.goalProgress));
+            const alarms = calculateAlarms(project, stats);
+            const alarmChip = alarms.length
+                ? `<span class="alarm-chip ${alarms.some(a => a.level === "red") ? "red" : "yellow"}">🔔 ${alarms.length} ${alarms.length === 1 ? "allarme" : "allarmi"}</span>`
+                : "";
 
             return `
                 <div class="list-item" onclick="openProject(${project.id})">
                     <div class="page-header" style="margin-bottom:15px;">
                         <div>
-                            <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}</h2>
+                            <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}${alarmChip}</h2>
                             <p class="small">🎯 ${euro(project.goal)} netto · 📅 ${formatDate(project.endDate)}</p>
                         </div>
                         <div class="action-btns-container">
@@ -2375,33 +3202,7 @@ function renderProjectDetail() {
     else { badgeHtml = "Iniziale"; document.getElementById("milestoneBadge").style.color = "var(--muted)"; document.getElementById("milestoneBadge").style.borderColor = "var(--border)"; }
     document.getElementById("milestoneBadge").textContent = badgeHtml;
     
-    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
-    const last3 = dayMovements.slice(-3);
-    let isTilt = false;
-    let tiltReason = "";
-
-    if (last3.length === 3 && last3.every(m => m.dayDiff < 0)) {
-        isTilt = true;
-        tiltReason = "Hai registrato 3 giornate in perdita consecutive. Considera 24 ore di pausa per recuperare la lucidità e prevenire l'overtrading.";
-    } else if (dayMovements.length > 0) {
-        const lastMove = dayMovements[dayMovements.length - 1];
-        if (lastMove.dayDiff < 0) {
-            const currentEquity = project.capital + lastMove.resultAfter;
-            const prevEquity = currentEquity - lastMove.dayDiff;
-            if (prevEquity > 0 && Math.abs(lastMove.dayDiff) / prevEquity > 0.15) {
-                isTilt = true;
-                tiltReason = "Hai appena subito una perdita superiore al 15% del capitale. Fai un bel respiro, chiudi i mercati e stacca per oggi.";
-            }
-        }
-    }
-
-    const tiltBanner = document.getElementById("tiltWarningBanner");
-    if (isTilt && !isClosed) {
-        document.getElementById("tiltWarningText").textContent = tiltReason;
-        tiltBanner.style.display = "flex";
-    } else {
-        tiltBanner.style.display = "none";
-    }
+    renderRiskSection(project, stats);
 
     const today = new Date();
     const isEndOfMonth = (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate());
