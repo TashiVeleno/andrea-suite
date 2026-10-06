@@ -1,0 +1,2794 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Andrea Suite</title>
+
+<!-- Link per trasformare la suite in una PWA installabile senza barre -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Libreria per l'effetto coriandoli -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+:root {
+    --bg: #0b0f17;
+    --bg2: #111827;
+    --card: #161d29;
+    --card2: #1c2635;
+    --text: #f5f7fa;
+    --muted: #98a2b3;
+    --accent: #4f8cff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --border: #293241;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg, var(--bg), var(--bg2));
+    color: var(--text);
+    min-height: 100vh;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11,15,23,.96);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid var(--border);
+}
+
+.header-content {
+    max-width: 1250px;
+    margin: auto;
+    padding: 10px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.logo span {
+    color: var(--accent);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.guide-trigger-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.guide-trigger-btn:hover {
+    color: var(--text);
+    background: var(--card2);
+}
+
+button {
+    font-family: inherit;
+    transition: .2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+.auth-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+}
+
+.container {
+    max-width: 1250px;
+    margin: auto;
+    padding: 20px 22px 60px;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 7px;
+}
+
+h2 {
+    font-size: 21px;
+}
+
+.subtitle,
+.small {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.page-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-header-detail {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.page-header-detail .header-back {
+    justify-self: start;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.page-header-detail .header-name h1 {
+    font-size: 22px;
+    margin-bottom: 2px;
+}
+
+.page-header-detail .header-name .subtitle {
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.page-header-detail .header-name {
+    justify-self: end;
+    text-align: right;
+}
+
+.header-ritmo {
+    justify-self: center;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.header-ritmo-item {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.header-ritmo-item .small {
+    font-size: 13px;
+}
+
+.header-ritmo-item strong {
+    font-size: 20px;
+    margin-left: 4px;
+}
+
+/* MODALI POPUP */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+}
+
+.modal-close-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-btn:hover {
+    color: white;
+    background: rgba(255,255,255,0.15);
+}
+
+.guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.guide-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.guide-box h4 {
+    color: var(--accent);
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.guide-box p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* TABELLA DI MARCIA COMPOSTA */
+.ritmo-info-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    cursor: pointer;
+    align-self: center;
+}
+.marcia-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.marcia-table-wrap { max-height: 50vh; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+.marcia-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.marcia-table th {
+    position: sticky; top: 0; background: var(--card); color: var(--muted);
+    font-weight: normal; text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.marcia-table td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.marcia-table th:first-child, .marcia-table td:first-child { text-align: left; }
+.marcia-table tr.current td { background: rgba(79,140,255,.12); font-weight: bold; }
+.marcia-table tr.year-start td { border-top: 2px solid var(--border); }
+.transfer-check {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--muted);
+    line-height: 1.4; cursor: pointer;
+}
+.transfer-check input { width: auto; margin: 2px 0 0; }
+.badge.transfer { background: rgba(79,140,255,.15); color: #9ec0ff; margin-left: 4px; }
+
+/* LAYOUT CONSOLE STABILE */
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.9fr;
+    gap: 16px;
+    margin-top: 16px;
+    align-items: start;
+}
+
+.console-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 250px;
+}
+
+.situazione-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px 12px;
+    margin-top: 12px;
+}
+
+.roadmap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.goal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    grid-column: 1 / 3;
+}
+
+.salary-card {
+    grid-column: 3;
+}
+
+.salary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.salary-header h2 {
+    font-size: 21px;
+    margin: 0;
+}
+
+.salary-select {
+    background: #0d131d;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.salary-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+    gap: 16px;
+}
+
+.card, .list-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+}
+
+.list-item {
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+}
+.list-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+}
+.action-btns-container {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 8px;
+}
+
+.card h3, .console-card h3 {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.big-number {
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.green { color: var(--green); }
+.red { color: var(--red); }
+.blue { color: var(--accent); }
+.orange { color: var(--orange); }
+
+.section-title {
+    margin: 32px 0 16px;
+    font-size: 18px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.primary,
+.secondary,
+.danger,
+.delete-btn {
+    border: none;
+    border-radius: 11px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    color: white;
+}
+
+.icon-btn {
+    padding: 8px 14px;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+}
+
+.primary { background: var(--accent); }
+.secondary { background: #1d2734; border: 1px solid var(--border); }
+.danger, .delete-btn { background: rgba(239,68,68,.15); color: #ff8d8d; }
+
+input {
+    width: 100%;
+    padding: 11px;
+    margin-top: 4px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0d131d;
+    color: white;
+    font-size: 16px;
+}
+
+input:focus { outline: none; border-color: var(--accent); }
+
+label { font-size: 12px; color: var(--muted); }
+
+.form-card { max-width: 650px; }
+
+.empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+}
+
+.milestone-badge {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #1c2635;
+    border: 1px solid var(--border);
+    display: inline-block;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.progress-container {
+    width: 100%;
+    height: 12px;
+    background: #0d131d;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg,var(--accent),var(--green));
+    transition: width .4s;
+}
+
+.operations-title { margin-bottom: 10px; }
+.operations-title h2 { margin-bottom: 2px; }
+
+.main-operation {
+    width: 100%;
+    border: 1px solid rgba(79,140,255,.45);
+    background: rgba(79,140,255,.12);
+    color: white;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.main-operation strong { display: block; font-size: 15px; }
+
+.secondary-operations {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.operation-btn {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    color: white;
+    text-align: center;
+    background: var(--card2);
+}
+
+.operation-btn strong { display: block; font-size: 13px; }
+
+.deposit-btn:hover { border-color: var(--green); }
+.withdraw-btn:hover { border-color: var(--orange); }
+
+.operation-form {
+    margin-top: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.goal-status {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(79,140,255,.15);
+    color: #a8c5ff;
+}
+
+.goal-status.completed { background: rgba(34,197,94,.15); color: var(--green); }
+.goal-status.delayed { background: rgba(239,68,68,.15); color: var(--red); }
+
+.roadmap-status {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.roadmap-status.ahead { background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.3); }
+.roadmap-status.behind { background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); }
+.roadmap-status.inline { background: rgba(79,140,255,.10); border: 1px solid rgba(79,140,255,.3); }
+
+.chart-card { margin-top: 20px; }
+.chart-container {
+    position: relative;
+    height: 330px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+canvas { width: 100%; height: 100%; display: block; }
+
+.chart-tooltip {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    background: #0d131d;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 13px;
+    min-width: 200px;
+    z-index: 10;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+.chart-tooltip strong { display: block; margin-bottom: 5px; }
+
+.history-scroll-container {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.history-item:last-child { border-bottom: none; }
+.history-right { display: flex; align-items: center; gap: 12px; }
+
+.badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.badge.deposit { background: rgba(34,197,94,.15); color: var(--green); }
+.badge.withdraw { background: rgba(245,158,11,.15); color: var(--orange); }
+.badge.day { background: rgba(79,140,255,.15); color: #9ec0ff; }
+
+@media(max-width:900px) {
+    .header-content { flex-direction: column; align-items: stretch; gap: 16px; }
+    .header-right { justify-content: space-between; }
+    .container { padding: 16px 14px 70px; }
+    
+    .page-header-detail { grid-template-columns: 1fr; justify-items: start; gap: 10px; }
+    .page-header-detail .header-name { justify-self: start; text-align: left; }
+    .header-ritmo { justify-self: start; justify-content: flex-start; gap: 12px; }
+    
+    .detail-grid { grid-template-columns: 1fr; }
+    .goal-card, .salary-card { grid-column: 1 / -1; }
+    .roadmap-grid { grid-template-columns: 1fr 1fr; }
+    
+    .history-item { flex-direction: column; align-items: flex-start; }
+    .history-right { width: 100%; justify-content: space-between; }
+}
+
+.operation-start-message {
+    display: none;
+    margin: 12px 0;
+    padding: 12px 14px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+#projectDetail.project-not-started .operation-start-message { display: block; }
+#projectDetail.project-not-started .operation-day,
+#projectDetail.project-not-started .operation-withdraw { display: none !important; }
+#projectDetail.project-not-started .secondary-operations { display: block; }
+#projectDetail.project-not-started .operation-deposit {
+    display: block !important;
+    width: 100%;
+    padding: 18px;
+    font-size: 17px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-content">
+        <div class="logo">🏠 Andrea <span>Suite</span></div>
+        <div class="header-center" id="todayDate"></div>
+        <div class="header-right">
+            <button class="guide-trigger-btn" onclick="openGuideModal()">
+                ℹ️ <span>Come funziona?</span>
+            </button>
+            <div id="authContainer">
+                <button class="auth-btn" onclick="loginGoogle()">🔑 Accedi</button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- MODALE GUIDA -->
+<div class="modal-overlay" id="guideModal" onclick="closeGuideModalOnOverlay(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>ℹ️ Come funziona il calcolo dei progetti</h3>
+            <button class="modal-close-btn" onclick="closeGuideModal()">✕</button>
+        </div>
+        <div class="guide-grid">
+            <div class="guide-box">
+                <h4>🌍 Bilancio Vita Reale</h4>
+                <p>Mostra la tua tasca netta reale (Prelievi reali - Depositi reali): se è in rosso, è quanto ti manca ancora. Non viene ingannato dai guadagni virtuali del bookmaker.</p>
+            </div>
+            <div class="guide-box">
+                <h4>📊 Saldo & Risultato</h4>
+                <p><strong>Saldo:</strong> Giacenza liquida attuale.<br><strong>Risultato Netto:</strong> Guadagno o perdita pura del progetto.</p>
+            </div>
+            <div class="guide-box">
+                <h4>⏱️ Ritmo Necessario</h4>
+                <p>La quota calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
+            </div>
+            <div class="guide-box">
+                <h4>📈 Tabella di marcia</h4>
+                <p>Il pulsante ℹ️ accanto al ritmo mostra il percorso a <strong>interesse composto</strong>: stessa percentuale ogni giorno, quindi pochi euro all'inizio e molti di più verso la fine, mese per mese.</p>
+            </div>
+            <div class="guide-box">
+                <h4>📍 Arrivo Stimato</h4>
+                <p>Prende il tuo ritmo degli <strong>ultimi 30 giorni</strong> (o da inizio progetto, se è più giovane) e calcola quando arrivi all'obiettivo continuando così, recuperando anche eventuali perdite. La data finale resta fissa: vedi di quanti giorni arrivi in anticipo o in ritardo.</p>
+            </div>
+            <div class="guide-box">
+                <h4>💸 Cedola</h4>
+                <p>Calcola la percentuale che puoi incassare sul profitto reale generato nel mese, purché il bilancio totale sia in positivo.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE TABELLA DI MARCIA -->
+<div class="modal-overlay" id="marciaModal" onclick="if (event.target.id === 'marciaModal') closeMarciaModal()">
+    <div class="modal-content" style="max-width: 720px;">
+        <div class="modal-header">
+            <h3>📈 Tabella di marcia (interesse composto)</h3>
+            <button class="modal-close-btn" onclick="closeMarciaModal()">✕</button>
+        </div>
+        <div id="marciaContent"></div>
+    </div>
+</div>
+
+<!-- MODALE STATISTICHE AVANZATE -->
+<div class="modal-overlay" id="statsModal" onclick="closeStatsModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>📊 Statistiche di Progetto</h3>
+            <button class="modal-close-btn" onclick="closeStatsModal()">✕</button>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 12px 0 8px;">💰 REDDITIVITÀ</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box"><div class="small">📈 Media vincita</div><strong class="green big-number" style="font-size:18px;" id="statAvgWin">+€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">📉 Media perdita</div><strong class="red big-number" style="font-size:18px;" id="statAvgLoss">-€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">💹 Profit Factor</div><strong class="blue big-number" style="font-size:18px;" id="statProfitFactor">0,00</strong></div>
+            <div class="guide-box"><div class="small">📊 Media giornaliera</div><strong class="big-number" style="font-size:18px;" id="statAvgDaily">€ 0,00</strong></div>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">📊 ESITI</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box"><div class="small">🟢 Positive</div><strong class="big-number" style="font-size:18px;" id="statWinCount">0</strong></div>
+            <div class="guide-box"><div class="small">🔴 Negative</div><strong class="big-number" style="font-size:18px;" id="statLossCount">0</strong></div>
+            <div class="guide-box"><div class="small">🟡 In pari</div><strong class="big-number" style="font-size:18px;" id="statEvenCount">0</strong></div>
+            <div class="guide-box"><div class="small">🎯 Win Rate</div><strong class="blue big-number" style="font-size:18px;" id="statWinRate">0%</strong></div>
+        </div>
+
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">🏆 RECORD</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box"><div class="small">🔥 Miglior giorno</div><strong class="green big-number" style="font-size:18px;" id="statBestDay">€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">❄️ Peggior giorno</div><strong class="red big-number" style="font-size:18px;" id="statWorstDay">€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">🟢 Record positivo</div><strong class="big-number" style="font-size:18px;" id="statStreakWin">0 giorni</strong></div>
+            <div class="guide-box"><div class="small">🔴 Record negativo</div><strong class="big-number" style="font-size:18px;" id="statStreakLoss">0 giorni</strong></div>
+        </div>
+        
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 8px;">🛡️ GESTIONE RISCHIO</h4>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="guide-box"><div class="small">📉 Max Drawdown (€)</div><strong class="red big-number" style="font-size:18px;" id="statMaxDrawdownEur">-€ 0,00</strong></div>
+            <div class="guide-box"><div class="small">📉 Max Drawdown (%)</div><strong class="red big-number" style="font-size:18px;" id="statMaxDrawdownPerc">0%</strong></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE CHIUSURA PROGETTO -->
+<div class="modal-overlay" id="closeProjectModal" onclick="closeCloseProjectModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+        <h3 style="margin-bottom: 12px; font-size: 22px;">Archivia Progetto</h3>
+        <p class="subtitle" style="margin-bottom: 24px;">Vuoi archiviare definitivamente il progetto?</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="primary" style="background: var(--green); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('completed')">Archivia (Obiettivo Raggiunto)</button>
+            <button class="primary" style="background: var(--red); padding: 14px; font-size: 16px;" onclick="confirmCloseProject('abandoned')">Archivia (Progetto Interrotto)</button>
+            <button class="secondary" style="margin-top: 8px; padding: 12px;" onclick="closeCloseProjectModal()">Annulla</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE MODIFICA PROGETTO -->
+<div class="modal-overlay" id="editProjectModal" onclick="closeEditProjectModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>✏️ Modifica Progetto</h3>
+            <button class="modal-close-btn" onclick="closeEditProjectModal()">✕</button>
+        </div>
+        <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
+            <label>Nome progetto</label>
+            <input id="editProjectName">
+            <label>Capitale iniziale (€)</label>
+            <input id="editProjectCapital" type="number" step="0.01">
+            <label>🎯 Obiettivo netto (€)</label>
+            <input id="editProjectGoal" type="number" step="0.01">
+            <label>📅 Data finale</label>
+            <input id="editProjectEndDate" type="date">
+            <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveEditedProject()">💾 Salva Modifiche</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE BILANCIO VITA REALE -->
+<div class="modal-overlay" id="realLifeModal" onclick="closeRealLifeModalOnOverlay(event)">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3>✏️ Allinea Bilancio Vita Reale</h3>
+            <button class="modal-close-btn" onclick="closeRealLifeModal()">✕</button>
+        </div>
+        <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
+            <p class="small" style="margin-bottom: 15px;">Aggiungi qui eventuali movimentazioni <strong>passate o esterne</strong> ai progetti attuali. Questi valori verranno <strong>sommati in automatico</strong> a tutti i depositi/prelievi che stai registrando nei tuoi progetti attivi.</p>
+            <p class="small" id="deletedProjectsNote" style="display:none; margin-bottom: 15px;"></p>
+            <label>➕ Aggiungi versamenti pregressi extra (€)</label>
+            <input id="manualDeposits" type="number" step="0.01" min="0">
+            <label>➕ Aggiungi prelievi pregressi extra (€)</label>
+            <input id="manualWithdrawals" type="number" step="0.01" min="0">
+            <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRealLifeManual()">💾 Salva Allineamento</button>
+        </div>
+    </div>
+</div>
+
+<main class="container">
+
+<!-- DASHBOARD UNIFICATA -->
+<section id="main-dashboard" class="page active">
+    
+    <!-- CARD PRINCIPALE: BILANCIO VITA REALE -->
+    <div style="background: var(--card); border: 1px solid rgba(79,140,255,0.4); border-radius: 18px; padding: 22px; margin-top: 10px; margin-bottom: 25px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <h2 style="font-size: 20px; margin:0; color: #a8c5ff;">🌍 Bilancio Vita Reale (Soldi di Tasca)</h2>
+            <button class="secondary" style="padding: 5px 10px; font-size:12px;" onclick="openRealLifeModal()">✏️ Allinea storico</button>
+        </div>
+        <p class="subtitle" style="font-size: 13px; margin-bottom: 18px;">
+            Monitora quanti soldi sono usciti ed entrati dal tuo conto corrente reale, senza considerare il profitto virtuale interno ai siti di scommessa o trading.
+        </p>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px;">
+            <div>
+                <div class="small">⬇️ Soldi versati (Usciti)</div>
+                <strong class="red big-number" id="realLifeDeposits">€ 0,00</strong>
+            </div>
+            <div>
+                <div class="small">⬆️ Soldi prelevati (Rientrati)</div>
+                <strong class="green big-number" id="realLifeWithdrawals">€ 0,00</strong>
+            </div>
+            <div>
+                <div class="small">⚖️ Tasca Netta Effettiva</div>
+                <strong class="big-number" id="realLifeNet">€ 0,00</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-bottom: 40px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr));">
+        <div class="card">
+            <h3>💰 Saldo nei progetti</h3>
+            <div class="big-number blue" id="totalBalance">€ 0,00</div>
+        </div>
+        <div class="card">
+            <h3>📈 Risultato netto progetti</h3>
+            <div class="big-number" id="totalResult">€ 0,00</div>
+        </div>
+        <div class="card">
+            <h3>📂 Progetti attivi</h3>
+            <div class="big-number" id="projectCount">0</div>
+        </div>
+        <div class="card">
+            <h3>🗄️ Progetti archiviati</h3>
+            <div class="big-number" id="completedProjects">0</div>
+        </div>
+    </div>
+
+    <div style="border-top: 1px solid var(--border); padding-top: 30px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+            <h1 style="margin: 0; font-size: 24px;">💼 I miei progetti</h1>
+            <button class="primary" style="padding: 6px 14px; font-size: 13px;" onclick="toggleNewProjectForm()">➕ Nuovo</button>
+        </div>
+        <p class="subtitle" style="margin-bottom: 25px;">I tuoi progetti in corso e archiviati.</p>
+    </div>
+
+    <div id="newProjectContainer" style="display:none; margin-bottom: 30px;">
+        <div class="card form-card">
+            <h2 style="margin-bottom:20px;">➕ Nuovo progetto</h2>
+            <label>Nome progetto</label>
+            <input id="projectName" placeholder="Es. Investimento Sportivo">
+            <label>Capitale iniziale (€)</label>
+            <input id="projectCapital" type="number" step="0.01" min="0.01">
+            <label>🎯 Obiettivo netto (€)</label>
+            <input id="projectGoal" type="number" step="0.01" min="0.01">
+            <label>📅 Data finale</label>
+            <input id="projectEndDate" type="date">
+            <button class="primary" onclick="createProject()">Crea progetto</button>
+            <button class="secondary" style="margin-left:8px;" onclick="toggleNewProjectForm()">Annulla</button>
+        </div>
+    </div>
+
+    <h2 class="section-title" style="margin-top: 10px;">📂 Progetti aperti</h2>
+    <div id="projectsList"></div>
+
+    <h2 class="section-title" style="margin-top: 40px;">🗄️ Progetti chiusi</h2>
+    <div id="closedProjectsList"></div>
+</section>
+
+<!-- DETTAGLIO PROGETTO -->
+<section id="projectDetail" class="page">
+    <div class="page-header page-header-detail">
+        <div class="header-back">
+            <button class="secondary icon-btn" onclick="goToPage('main-dashboard')" title="Indietro">←</button>
+            <button class="secondary icon-btn" onclick="openStatsModal()" title="Statistiche">📊</button>
+            <button class="secondary icon-btn" onclick="exportProjectToCSV()" title="Esporta in Excel (CSV)">📗</button>
+            <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
+        </div>
+
+        <div class="header-ritmo">
+            <span class="header-ritmo-item">
+                <span class="small">📅 Al giorno</span>
+                <strong class="blue" id="dailyNeeded">€ 0,00</strong>
+            </span>
+            <span class="header-ritmo-item">
+                <span class="small">📆 Alla settimana</span>
+                <strong class="blue" id="weeklyNeeded">€ 0,00</strong>
+            </span>
+            <span class="header-ritmo-item">
+                <span class="small">🗓️ Al mese</span>
+                <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
+            </span>
+            <button class="ritmo-info-btn" onclick="openMarciaModal()" title="Tabella di marcia a interesse composto">ℹ️</button>
+        </div>
+
+        <div class="header-name">
+            <h1 id="detailProjectName">💼 Progetto</h1>
+            <p class="subtitle">Monitoraggio completo del progetto.</p>
+        </div>
+    </div>
+    
+    <div id="tiltWarningBanner" style="display:none; background: rgba(239,68,68,.10); border: 1px solid rgba(239,68,68,.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px; align-items: center; gap: 16px;">
+        <div style="font-size: 28px;">🛑</div>
+        <div>
+            <strong class="red" style="font-size: 16px;">Hard Stop Consigliato</strong>
+            <div class="small" style="margin-top: 4px; font-size: 13px; color: #f5f7fa;" id="tiltWarningText"></div>
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        
+        <div class="console-card">
+            <h2>📊 Situazione <span id="situazioneLabel">attuale</span></h2>
+            <div class="situazione-grid">
+                <div>
+                    <h3 id="saldoLabel">💰 Saldo attuale</h3>
+                    <div class="big-number blue" id="detailBalance">€ 0,00</div>
+                </div>
+                <div>
+                    <h3>📈 Risultato netto</h3>
+                    <div class="big-number" id="detailResult">€ 0,00</div>
+                </div>
+                <div>
+                    <h3>📊 Rendimento</h3>
+                    <div class="big-number" id="detailPercentage">0%</div>
+                </div>
+                <div>
+                    <h3>💵 Netti prelevati</h3>
+                    <div class="big-number" id="detailRealized">€ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="console-card" id="operationsCardBlock">
+            <div class="operations-title">
+                <h2>⚡ Operazioni</h2>
+            </div>
+            
+            <div class="operation-start-message">
+                👋 <strong>Registra il primo deposito.</strong>
+            </div>
+
+            <div id="endOfMonthBlock" style="display:none; flex-grow:1; flex-direction:column; justify-content:center;">
+                <div class="roadmap-status inline" style="border-color: var(--accent); background: rgba(79,140,255,.10); border-radius:12px; margin:0; text-align:center;">
+                    <strong class="blue" style="font-size:16px;">📅 Fine del Mese!</strong><br><br>
+                    Hai controllato la cedola a destra?<br><br>
+                    <button class="primary" style="width:100%; font-size:13px; padding:10px;" onclick="unlockOperations()">Fatto! Sblocca operazioni</button>
+                </div>
+            </div>
+
+            <div id="operationInnerContainer" style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                <button class="main-operation operation-day" onclick="showOperationForm('day')">
+                    <strong>📅 Resoconto Giornaliero</strong>
+                </button>
+                <div class="secondary-operations">
+                    <button class="operation-btn deposit-btn operation-deposit" onclick="showOperationForm('deposit')">
+                        <strong>📥 Deposito</strong>
+                    </button>
+                    <button class="operation-btn withdraw-btn operation-withdraw" onclick="showOperationForm('withdraw')">
+                        <strong>📤 Prelievo</strong>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="console-card" id="archivedBannerBlock" style="display:none; text-align:center; justify-content:center;">
+            <div style="font-size: 40px; margin-bottom: 8px;" id="archivedIcon">🗄️</div>
+            <h2 id="archivedTitle">Progetto Archiviato</h2>
+            <p class="subtitle" style="margin-top:4px;">Questo progetto è chiuso.</p>
+        </div>
+
+        <div class="console-card">
+            <h2>🗺️ Tabella di marcia</h2>
+
+            <div id="roadmapStatus" class="roadmap-status inline" style="margin-top:6px;">
+                Calcolo della situazione...
+            </div>
+
+            <div class="roadmap-grid">
+                <div>
+                    <div class="small" id="expectedLabel">Traguardo ideale ad oggi</div>
+                    <strong id="expectedToday" style="font-size: 15px;">€ 0,00</strong>
+                </div>
+                <div>
+                    <div class="small">Diff. piano</div>
+                    <strong id="roadmapDifference" style="font-size: 15px;">€ 0,00</strong>
+                </div>
+            </div>
+            <div style="margin-top: auto; padding-top: 6px; border-top: 1px solid var(--border);">
+                <div class="small">Scostamento temporale</div>
+                <strong id="daysDifference" style="font-size: 14px;">0 giorni</strong>
+            </div>
+        </div>
+
+        <div class="goal-card">
+            <div class="goal-header">
+                <div>
+                    <h2>🎯 Obiettivo del progetto</h2>
+                    <p class="small">
+                        Target di profitto netto:
+                        <strong id="detailGoal">€ 0,00</strong>
+                    </p>
+                </div>
+                <div class="goal-status" id="goalStatus">🎯 In corso</div>
+            </div>
+
+            <div id="milestoneBadge" class="milestone-badge" style="margin-top: 10px;">Iniziale</div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="goalProgressBar" style="width:0%;"></div>
+            </div>
+
+            <div class="grid" style="margin-top:20px;">
+                <div>
+                    <div class="small">Progresso</div>
+                    <strong class="blue" id="goalProgress">0%</strong>
+                </div>
+                <div>
+                    <div class="small">Mancano all'obiettivo</div>
+                    <strong id="goalRemaining">€ 0,00</strong>
+                </div>
+                <div>
+                    <div class="small">Scadenza</div>
+                    <strong id="goalEndDate">--</strong>
+                </div>
+                <div>
+                    <div class="small" id="daysRemainingLabel">Giorni rimanenti</div>
+                    <strong id="goalDaysRemaining">--</strong>
+                </div>
+            </div>
+
+            <div id="projectionStatus" class="roadmap-status inline" style="display:none; margin-top:16px; margin-bottom:0;"></div>
+        </div>
+
+        <div class="console-card salary-card">
+            <div class="salary-header">
+                <h2>💸 Cedola</h2>
+                <select id="salaryPercentSelect" class="salary-select" onchange="updateSalaryDisplay()">
+                    <option value="10">10%</option>
+                    <option value="20">20%</option>
+                    <option value="30" selected>30%</option>
+                    <option value="40">40%</option>
+                    <option value="50">50%</option>
+                    <option value="60">60%</option>
+                    <option value="70">70%</option>
+                    <option value="80">80%</option>
+                    <option value="90">90%</option>
+                    <option value="100">100%</option>
+                </select>
+            </div>
+            <div id="salaryStatus" style="flex-grow:1; display: flex; flex-direction: column; justify-content: center;">
+            </div>
+        </div>
+        
+    </div>
+
+    <div class="card chart-card">
+        <h2>📈 Andamento del progetto</h2>
+        <p class="small" style="margin-top:6px;">
+            Linea blu: risultato netto. Linea verde: tabella di marcia.
+        </p>
+
+        <div class="chart-container">
+            <canvas id="projectChart"></canvas>
+            <div id="chartTooltip" class="chart-tooltip"></div>
+        </div>
+    </div>
+
+    <h2 class="section-title">📜 Storico movimenti</h2>
+    <div class="card">
+        <div id="projectHistory" class="history-scroll-container"></div>
+    </div>
+</section>
+
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBplEyF8WUiJtz-I0w2XpNSUUXmhsDVcgQ",
+  authDomain: "andrea-suite.firebaseapp.com",
+  projectId: "andrea-suite",
+  storageBucket: "andrea-suite.firebasestorage.app",
+  messagingSenderId: "977498522033",
+  appId: "1:977498522033:web:6740aa10603b345bcf3d90"
+};
+
+let auth, db, provider;
+let currentUser = null;
+let localProjects = [];
+let unsubscribeCloud = null;
+
+const STORAGE_KEY = "andrea_suite_projects_v7";
+
+// Bilancio Vita Reale: extra manuali ("Allinea storico") + totali dei progetti eliminati.
+// Viene salvato nel cloud insieme ai progetti, così è uguale su tutti i dispositivi.
+const REAL_LIFE_KEY = "andrea_suite_manual_reallife";
+const round2 = v => Math.round((Number(v) || 0) * 100) / 100;
+
+function normalizeRealLife(r) {
+    r = r || {};
+    return {
+        manualDeposits: round2(r.manualDeposits ?? r.deposits),        // "deposits"/"withdrawals" = vecchio formato locale
+        manualWithdrawals: round2(r.manualWithdrawals ?? r.withdrawals),
+        deletedDeposits: round2(r.deletedDeposits),
+        deletedWithdrawals: round2(r.deletedWithdrawals)
+    };
+}
+
+function readLocalRealLife() {
+    try { return normalizeRealLife(JSON.parse(localStorage.getItem(REAL_LIFE_KEY))); }
+    catch { return normalizeRealLife(null); }
+}
+
+function saveRealLifeToStorage() {
+    localStorage.setItem(REAL_LIFE_KEY, JSON.stringify(localRealLife));
+}
+
+let localRealLife = readLocalRealLife();
+// Il bilancio va scritto nel cloud solo quando è "noto": arrivato dal cloud, salvato da te,
+// oppure con valori locali da caricare. Così un dispositivo vuoto non azzera quelli di un altro.
+let realLifeReady = Object.values(localRealLife).some(v => v !== 0);
+
+try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    provider = new GoogleAuthProvider();
+    setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+    getRedirectResult(auth).catch(e => console.warn("Redirect Auth:", e));
+
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            currentUser = user;
+            renderAuthUI(user.displayName ? user.displayName.split(' ')[0] : 'Andrea', user.photoURL);
+            syncWithCloud(user.uid);
+        } else {
+            currentUser = null;
+            renderAuthUI(null);
+            if (unsubscribeCloud) unsubscribeCloud();
+            loadLocalData();
+        }
+    });
+} catch (e) {
+    console.warn("Firebase offline mode:", e);
+    renderAuthUI(null);
+    loadLocalData();
+}
+
+window.loginGoogle = async () => {
+    if (!auth) { alert("Autenticazione Cloud non disponibile."); return; }
+    try { await signInWithPopup(auth, provider); } 
+    catch (e) {
+        if (e.code === 'auth/unauthorized-domain') activateLocalSession();
+        else { try { await signInWithRedirect(auth, provider); } catch (err) { alert("Errore d'accesso: " + err.message); } }
+    }
+};
+
+window.logoutGoogle = async () => {
+    if (auth && currentUser) await signOut(auth);
+    currentUser = null;
+    localStorage.removeItem("andrea_suite_local_session");
+    renderAuthUI(null);
+    loadLocalData();
+};
+
+function activateLocalSession() {
+    localStorage.setItem("andrea_suite_local_session", "true");
+    renderAuthUI("Andrea (Locale)", null);
+    loadLocalData();
+}
+
+function renderAuthUI(name, photoURL) {
+    const authContainer = document.getElementById("authContainer");
+    if (!authContainer) return;
+
+    if (name) {
+        const avatar = photoURL ? `<img src="${photoURL}" class="user-avatar">` : `<div class="user-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--accent);color:white;font-weight:bold;">A</div>`;
+        authContainer.innerHTML = `<div class="user-profile">${avatar} <span>${name}</span> <button class="secondary" style="padding:4px 8px; font-size:11px;" onclick="logoutGoogle()">Esci</button></div>`;
+    } else {
+        authContainer.innerHTML = `<button class="auth-btn" onclick="loginGoogle()">🔑 Accedi</button>`;
+    }
+}
+
+function syncWithCloud(uid) {
+    if (!db) return;
+    const userDocRef = doc(db, "users", uid);
+    unsubscribeCloud = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            localProjects = Array.isArray(data.projects) ? data.projects : (data.projects?.projects || []);
+            saveToLocalStorage();
+            if (data.realLife) {
+                localRealLife = normalizeRealLife(data.realLife);
+                realLifeReady = true;
+                saveRealLifeToStorage();
+            } else if (realLifeReady) {
+                pushToCloud(); // primo avvio: porta nel cloud il bilancio salvato finora solo su questo dispositivo
+            }
+            updateAll();
+        } else { pushToCloud(); }
+    });
+}
+
+async function pushToCloud() {
+    if (!currentUser || !db) return;
+    try {
+        const payload = { projects: localProjects, updatedAt: new Date().toISOString() };
+        if (realLifeReady) payload.realLife = localRealLife;
+        await setDoc(doc(db, "users", currentUser.uid), payload, { merge: true });
+    } catch (e) { console.error(e); }
+}
+
+function loadLocalData() {
+    try { 
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+            localProjects = [];
+        } else {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                localProjects = parsed;
+            } else if (parsed && Array.isArray(parsed.projects)) {
+                localProjects = parsed.projects;
+            } else {
+                localProjects = [];
+            }
+        }
+    } catch {
+        localProjects = [];
+    }
+    updateAll();
+}
+
+function saveToLocalStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(localProjects));
+}
+
+window.loadProjects = () => {
+    return Array.isArray(localProjects) ? localProjects : [];
+};
+
+window.loadRealLife = () => ({ ...localRealLife });
+
+// realLife è facoltativo: se c'è, progetti e bilancio vengono salvati insieme (una sola scrittura nel cloud)
+window.saveProjects = (projects, realLife) => {
+    localProjects = Array.isArray(projects) ? projects : [];
+    saveToLocalStorage();
+    if (realLife) {
+        localRealLife = normalizeRealLife(realLife);
+        realLifeReady = true;
+        saveRealLifeToStorage();
+    }
+    if (currentUser) pushToCloud();
+    else updateAll();
+};
+
+window.saveRealLife = (realLife) => window.saveProjects(localProjects, realLife);
+
+if (localStorage.getItem("andrea_suite_local_session") === "true") {
+    renderAuthUI("Andrea (Locale)", null);
+}
+loadLocalData();
+</script>
+
+<script>
+let currentProjectId = null;
+let editingProjectId = null;
+let chartPoints = [];
+let cedolaBaseValue = 0;
+
+function openGuideModal() { document.getElementById("guideModal").classList.add("active"); }
+function closeGuideModal() { document.getElementById("guideModal").classList.remove("active"); }
+function closeGuideModalOnOverlay(event) { if (event.target.id === "guideModal") closeGuideModal(); }
+
+function openStatsModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    popolaStatisticheProgetto(project);
+    document.getElementById("statsModal").classList.add("active");
+}
+function closeStatsModal() { document.getElementById("statsModal").classList.remove("active"); }
+function closeStatsModalOnOverlay(event) { if (event.target.id === "statsModal") closeStatsModal(); }
+
+function openCloseProjectModal() { document.getElementById("closeProjectModal").classList.add("active"); }
+function closeCloseProjectModal() { document.getElementById("closeProjectModal").classList.remove("active"); }
+function closeCloseProjectModalOnOverlay(event) { if (event.target.id === "closeProjectModal") closeCloseProjectModal(); }
+
+function openEditProjectModal(id) {
+    const project = getProject(id);
+    if (!project) return;
+    editingProjectId = id;
+    
+    document.getElementById("editProjectName").value = project.name;
+    document.getElementById("editProjectCapital").value = project.capital;
+    document.getElementById("editProjectGoal").value = project.goal;
+    document.getElementById("editProjectEndDate").value = project.endDate;
+    
+    document.getElementById("editProjectModal").classList.add("active");
+}
+function closeEditProjectModal() {
+    document.getElementById("editProjectModal").classList.remove("active");
+    editingProjectId = null;
+}
+function closeEditProjectModalOnOverlay(event) { if (event.target.id === "editProjectModal") closeEditProjectModal(); }
+
+function openRealLifeModal() {
+    const rl = getRealLife();
+    document.getElementById("manualDeposits").value = rl.manualDeposits || "";
+    document.getElementById("manualWithdrawals").value = rl.manualWithdrawals || "";
+
+    const note = document.getElementById("deletedProjectsNote");
+    const hasDeleted = rl.deletedDeposits > 0 || rl.deletedWithdrawals > 0;
+    note.style.display = hasDeleted ? "block" : "none";
+    note.innerHTML = hasDeleted
+        ? `🗑️ Dai progetti eliminati sono già conservati <strong>${euro(rl.deletedDeposits)}</strong> versati e <strong>${euro(rl.deletedWithdrawals)}</strong> prelevati: non serve aggiungerli qui.`
+        : "";
+
+    document.getElementById("realLifeModal").classList.add("active");
+}
+function closeRealLifeModal() { document.getElementById("realLifeModal").classList.remove("active"); }
+function closeRealLifeModalOnOverlay(event) { if (event.target.id === "realLifeModal") closeRealLifeModal(); }
+
+// Bilancio Vita Reale (extra manuali + progetti eliminati), sincronizzato nel cloud con i progetti
+function getRealLife() {
+    if (window.loadRealLife) return window.loadRealLife();
+    return { manualDeposits: 0, manualWithdrawals: 0, deletedDeposits: 0, deletedWithdrawals: 0 };
+}
+
+function saveRealLifeManual() {
+    const rl = getRealLife();
+    rl.manualDeposits = parseFloat(document.getElementById("manualDeposits").value) || 0;
+    rl.manualWithdrawals = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    if (window.saveRealLife) window.saveRealLife(rl);
+    closeRealLifeModal();
+    updateDashboard();
+}
+
+function saveEditedProject() {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === editingProjectId);
+    if (!project) return;
+
+    const name = document.getElementById("editProjectName").value.trim();
+    const capital = Number(document.getElementById("editProjectCapital").value);
+    const goal = Number(document.getElementById("editProjectGoal").value);
+    const endDate = document.getElementById("editProjectEndDate").value;
+
+    if (!name || capital <= 0 || goal <= 0 || !endDate) {
+        alert("Verifica di aver compilato tutti i campi correttamente.");
+        return;
+    }
+
+    project.name = name;
+    project.capital = capital;
+    project.goal = goal;
+    project.endDate = endDate;
+
+    window.saveProjects(projects);
+    closeEditProjectModal();
+    updateAll();
+}
+
+function confirmCloseProject(status) {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    
+    project.status = status;
+    project.closedAt = new Date().toISOString();
+    
+    window.saveProjects(projects);
+    closeCloseProjectModal();
+    goToPage('main-dashboard'); 
+}
+
+window.exportProjectToCSV = function() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const stats = calculateProject(project);
+
+    let csv = "Data;Tipo Movimento;Importo/Saldo (EUR);Guadagno Giorno (EUR);Risultato Netto (EUR)\n";
+    const historyMap = {};
+    stats.history.forEach(item => { historyMap[item.id] = item; });
+    const movements = [...project.movements].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    movements.forEach(m => {
+        const item = historyMap[m.id];
+        const date = new Date(m.date).toLocaleString("it-IT");
+        let type = m.type === 'deposit' ? 'Deposito' : m.type === 'withdraw' ? 'Prelievo' : 'Saldo';
+        let val = m.type === 'day' ? m.balance : m.amount;
+        let diff = (m.type === 'day' && item && item.dayDiff !== null) ? item.dayDiff : 0;
+        let result = item ? item.resultAfter : 0;
+
+        csv += `${date};${type};${val};${diff};${result}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Export_${project.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+function euro(value) {
+    return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
+}
+
+function getToday() {
+    const date = new Date();
+    date.setHours(0,0,0,0);
+    return date;
+}
+
+function parseISODate(dateStr) {
+    if (!dateStr) return getToday();
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return getToday();
+        return d;
+    } catch { return getToday(); }
+}
+
+function daysBetween(startStr, endStr) {
+    const a = parseISODate(startStr);
+    const b = parseISODate(endStr);
+    a.setHours(0,0,0,0);
+    b.setHours(0,0,0,0);
+    return Math.round((b - a) / 86400000);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return "--";
+    return new Date(dateString + "T00:00:00").toLocaleDateString("it-IT");
+}
+
+function escapeHTML(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getProject(id) {
+    return window.loadProjects().find(p => p.id === id);
+}
+
+function calculateProject(project) {
+    let balance = 0;
+    let deposits = 0;
+    let withdrawals = 0;
+    let transferIn = 0;
+
+    const movements = [...(project.movements || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+    const history = [];
+
+    movements.forEach(movement => {
+        const prevBalance = balance;
+        let dayDiff = null;
+
+        if (movement.type === "deposit") {
+            const amount = Number(movement.amount || 0);
+            balance += amount;
+            deposits += amount;
+            if (movement.transfer) transferIn += amount; // saldo arrivato da un altro progetto: non sono soldi nuovi
+        }
+        else if (movement.type === "withdraw") {
+            const amount = Number(movement.amount || 0);
+            balance -= amount;
+            withdrawals += amount;
+        }
+        else if (movement.type === "day") {
+            const currentBalance = Number(movement.balance || 0);
+            const dep = Number(movement.deposit || 0);
+            const wit = Number(movement.withdraw || 0);
+            
+            deposits += dep;
+            withdrawals += wit;
+            
+            dayDiff = (currentBalance - prevBalance) + wit - dep;
+            balance = currentBalance;
+        }
+
+        const resultAfter = balance + withdrawals - deposits;
+
+        history.push({
+            id: movement.id,
+            date: movement.date,
+            balanceAfter: balance,
+            resultAfter: resultAfter,
+            type: movement.type,
+            dayDiff: dayDiff
+        });
+    });
+
+    const result = balance + withdrawals - deposits;
+    const realizedResult = withdrawals - deposits;
+
+    const percentage = project.capital > 0 ? (result / project.capital) * 100 : 0;
+    const goal = Number(project.goal || 0);
+    const goalProgress = goal > 0 ? (result / goal) * 100 : 0;
+    const goalRemaining = Math.max(0, goal - result);
+
+    const startDateStr = project.createdAt || new Date().toISOString();
+    let endDateStr = project.endDate;
+    if (endDateStr && !endDateStr.includes('T')) endDateStr += "T00:00:00";
+    
+    const referenceDateStr = project.closedAt || new Date().toISOString();
+    
+    const totalDays = Math.max(1, daysBetween(startDateStr, endDateStr) + 1);
+    const elapsedDays = Math.max(1, Math.min(totalDays, daysBetween(startDateStr, referenceDateStr) + 1));
+    const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(new Date().toISOString(), endDateStr) + 1);
+    const deadlinePassed = !project.closedAt && daysBetween(new Date().toISOString(), endDateStr) < 0;
+
+    const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
+    const roadmapDifference = result - expectedToday;
+    
+    const originalDaily = goal / totalDays;
+    const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
+
+    let dailyNeeded = 0;
+    let weeklyNeeded = 0;
+    let monthlyNeeded = 0;
+
+    if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
+        dailyNeeded = goalRemaining / daysRemaining;
+        weeklyNeeded = dailyNeeded * 7;
+        monthlyNeeded = dailyNeeded * 30.44;
+    }
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    let previousMonthResult = 0;
+    
+    history.forEach(item => {
+        const d = new Date(item.date);
+        if (d.getFullYear() < currentYear || (d.getFullYear() === currentYear && d.getMonth() < currentMonth)) {
+            previousMonthResult = item.resultAfter;
+        }
+    });
+    
+    const profitThisMonth = result - previousMonthResult;
+
+    return {
+        balance, deposits, withdrawals, result, realizedResult, percentage,
+        goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
+        dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
+        daysDifference, history, profitThisMonth, deadlinePassed,
+        transferIn, realDeposits: deposits - transferIn
+    };
+}
+
+// ===== TABELLA DI MARCIA A INTERESSE COMPOSTO =====
+// Il ritmo in alto è la media lineare. Qui il saldo cresce della stessa percentuale ogni giorno:
+// all'inizio servono pochi euro, verso la fine molti di più. Si ricalcola ogni giorno dal saldo attuale.
+function calculateCompoundPlan(project, stats) {
+    const start = stats.balance;
+    const target = start + stats.goalRemaining;
+    const days = stats.daysRemaining;
+    if (start <= 0 || days <= 0 || stats.goalRemaining <= 0) return null;
+
+    const rate = Math.pow(target / start, 1 / days) - 1;
+    const equityAt = k => start * Math.pow(1 + rate, k); // saldo atteso a fine del giorno k (oggi = giorno 1)
+
+    const today = getToday();
+    const end = new Date(today);
+    end.setDate(end.getDate() + days - 1);
+
+    const months = [];
+    let cursor = new Date(today);
+    while (cursor <= end) {
+        const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+        const last = monthEnd < end ? monthEnd : end;
+        const firstK = daysBetween(today.toISOString(), cursor.toISOString()) + 1;
+        const lastK = daysBetween(today.toISOString(), last.toISOString()) + 1;
+        const equityBefore = equityAt(firstK - 1);
+        const equityAfter = equityAt(lastK);
+        months.push({
+            date: new Date(cursor),
+            days: lastK - firstK + 1,
+            dailyStart: equityBefore * rate,
+            weekly: equityBefore * (Math.pow(1 + rate, 7) - 1),
+            monthGain: equityAfter - equityBefore,
+            equityEnd: equityAfter,
+            resultEnd: stats.result + (equityAfter - start)
+        });
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+
+    return {
+        start, target, days, rate,
+        todayDaily: start * rate,
+        lastDaily: equityAt(days - 1) * rate,
+        monthlyRate: Math.pow(1 + rate, 30.44) - 1,
+        months
+    };
+}
+
+function openMarciaModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const stats = calculateProject(project);
+    const box = document.getElementById("marciaContent");
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+    const plan = isClosed ? null : calculateCompoundPlan(project, stats);
+    const perc = v => (v * 100).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + "%";
+
+    if (!plan) {
+        let why = "Serve un saldo positivo e almeno un giorno prima della scadenza.";
+        if (isClosed) why = "Il progetto è chiuso.";
+        else if (stats.goalRemaining <= 0) why = "Hai già raggiunto l'obiettivo. 🎉";
+        else if (stats.deadlinePassed) why = "La scadenza è superata.";
+        box.innerHTML = `<div class="empty">${why}</div>`;
+    } else {
+        const nowKey = `${getToday().getFullYear()}-${getToday().getMonth()}`;
+        let prevYear = null;
+        const rows = plan.months.map(m => {
+            const key = `${m.date.getFullYear()}-${m.date.getMonth()}`;
+            const label = m.date.toLocaleDateString("it-IT", { month: "short", year: "numeric" });
+            const cls = [key === nowKey ? "current" : "", prevYear !== null && m.date.getFullYear() !== prevYear ? "year-start" : ""].join(" ").trim();
+            prevYear = m.date.getFullYear();
+            return `<tr class="${cls}">
+                <td>${label}${m.days < 28 ? ` <span class="small">(${m.days} gg)</span>` : ""}</td>
+                <td>${euro(m.dailyStart)}</td>
+                <td>${euro(m.weekly)}</td>
+                <td>${euro(m.monthGain)}</td>
+                <td>${euro(m.resultEnd)}</td>
+            </tr>`;
+        }).join("");
+
+        box.innerHTML = `
+            <p class="small" style="margin-bottom:14px;">
+                In alto vedi la <strong>media lineare</strong> (${euro(stats.dailyNeeded)} al giorno, sempre uguale).
+                Qui invece il saldo cresce della <strong>stessa percentuale ogni giorno</strong>, reinvestendo tutto:
+                all'inizio bastano pochi euro, verso la fine ne servono molti di più.
+                Si ricalcola ogni giorno partendo dal saldo di oggi.
+            </p>
+            <div class="marcia-summary">
+                <div class="guide-box"><div class="small">📈 Crescita richiesta</div><strong class="blue" style="font-size:17px;">${perc(plan.rate)} al giorno</strong><div class="small">≈ ${perc(plan.monthlyRate)} al mese</div></div>
+                <div class="guide-box"><div class="small">📅 Oggi</div><strong style="font-size:17px;">${euro(plan.todayDaily)}</strong><div class="small">su un saldo di ${euro(plan.start)}</div></div>
+                <div class="guide-box"><div class="small">🏁 Ultimo giorno</div><strong style="font-size:17px;">${euro(plan.lastDaily)}</strong><div class="small">saldo finale ${euro(plan.target)}</div></div>
+            </div>
+            <div class="marcia-table-wrap">
+                <table class="marcia-table">
+                    <thead><tr><th>Mese</th><th>Al giorno</th><th>Alla settimana</th><th>Nel mese</th><th>Risultato a fine mese</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <p class="small" style="margin-top:10px;">
+                «Al giorno» e «Alla settimana» sono calcolati a inizio mese. Vale se reinvesti tutto:
+                prelievi e cedole riducono il saldo e alzano le cifre dei mesi successivi.
+            </p>`;
+    }
+    document.getElementById("marciaModal").classList.add("active");
+}
+
+function closeMarciaModal() { document.getElementById("marciaModal").classList.remove("active"); }
+
+// ===== ARRIVO STIMATO =====
+// Calcola quando arrivi all'obiettivo se continui al ritmo recente.
+// La data finale del progetto resta fissa: si misura solo l'anticipo o il ritardo.
+const FINESTRA_RITMO_GIORNI = 30; // giorni usati per il "ritmo attuale"
+const GIORNI_STIMA_STABILE = 7;   // sotto questa soglia la stima è segnalata come instabile
+
+function calculateProjection(project, stats) {
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+    const movements = Array.isArray(project.movements) ? project.movements : [];
+
+    if (isClosed) return { state: "closed" };
+    if (stats.result >= stats.goal) return { state: "reached" };
+    if (!stats.history.length || !movements.some(m => m.type === "day")) return { state: "nodata" };
+
+    const today = getToday();
+    const activeDays = Math.max(1, daysBetween(stats.history[0].date, today.toISOString()) + 1);
+    const windowDays = Math.min(FINESTRA_RITMO_GIORNI, activeDays);
+
+    // Risultato netto all'inizio della finestra (0 se la finestra parte da inizio progetto).
+    // Le perdite già fatte restano in goalRemaining: vanno recuperate prima di arrivare.
+    const windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - (windowDays - 1));
+    let resultAtStart = 0;
+    stats.history.forEach(item => {
+        if (new Date(item.date) < windowStart) resultAtStart = item.resultAfter;
+    });
+
+    const pace = (stats.result - resultAtStart) / windowDays;
+    const base = { pace, windowDays, unstable: activeDays < GIORNI_STIMA_STABILE };
+
+    if (pace <= 0) return { ...base, state: "negative" };
+
+    const daysToGoal = Math.ceil(stats.goalRemaining / pace);
+    if (daysToGoal > 3650) return { ...base, state: "toofar" };
+
+    const projectedDate = new Date(today);
+    projectedDate.setDate(projectedDate.getDate() + daysToGoal);
+
+    let endStr = project.endDate || "";
+    if (endStr && !endStr.includes("T")) endStr += "T00:00:00";
+    const delayDays = daysBetween(endStr, projectedDate.toISOString());
+
+    return { ...base, state: "ok", daysToGoal, projectedDate, delayDays };
+}
+
+function renderProjection(project, stats) {
+    const box = document.getElementById("projectionStatus");
+    if (!box) return;
+
+    const proj = calculateProjection(project, stats);
+
+    if (proj.state === "closed" || proj.state === "reached") {
+        box.style.display = "none";
+        return;
+    }
+    box.style.display = "block";
+
+    if (proj.state === "nodata") {
+        box.className = "roadmap-status inline";
+        box.innerHTML = `📍 L'<strong>arrivo stimato</strong> comparirà dopo il primo resoconto giornaliero.`;
+        return;
+    }
+
+    const giorni = n => `${n} ${n === 1 ? "giorno" : "giorni"}`;
+    const finestra = proj.windowDays >= FINESTRA_RITMO_GIORNI
+        ? `ultimi ${FINESTRA_RITMO_GIORNI} giorni`
+        : `da inizio progetto, ${giorni(proj.windowDays)}`;
+    const ritmo = `<span class="small">Ritmo attuale: <strong>${proj.pace > 0 ? "+" : ""}${euro(proj.pace)}/giorno</strong> (${finestra})</span>`;
+    const nota = proj.unstable ? `<br><span class="small">Stima su pochi giorni di dati: ancora instabile.</span>` : "";
+
+    if (proj.state === "negative") {
+        box.className = "roadmap-status behind";
+        box.innerHTML = `<strong class="red">📍 Arrivo stimato: non raggiungibile</strong><br>Con questo andamento il risultato non cresce.<br>${ritmo}${nota}`;
+        return;
+    }
+
+    if (proj.state === "toofar") {
+        box.className = "roadmap-status behind";
+        box.innerHTML = `<strong class="red">📍 Arrivo stimato: oltre 10 anni</strong><br>Il ritmo attuale è troppo basso per una data sensata.<br>${ritmo}${nota}`;
+        return;
+    }
+
+    let scarto;
+    if (proj.delayDays > 0) {
+        box.className = "roadmap-status behind";
+        scarto = `<strong class="red">${giorni(proj.delayDays)} dopo la scadenza</strong> del ${formatDate(project.endDate)}`;
+    } else if (proj.delayDays < 0) {
+        box.className = "roadmap-status ahead";
+        scarto = `<strong class="green">${giorni(-proj.delayDays)} prima della scadenza</strong> del ${formatDate(project.endDate)}`;
+    } else {
+        box.className = "roadmap-status ahead";
+        scarto = `<strong class="green">Proprio alla scadenza</strong>`;
+    }
+
+    box.innerHTML = `<strong>📍 Arrivo stimato: ${proj.projectedDate.toLocaleDateString("it-IT")}</strong><br>${scarto}<br>${ritmo}${nota}`;
+}
+
+// Funzione sblocco operazioni persistente (memoria locale)
+window.unlockOperations = function() {
+    const today = new Date();
+    const storageKey = `sblocco_${today.getFullYear()}_${today.getMonth()}`;
+    localStorage.setItem(storageKey, "true");
+    
+    document.getElementById("endOfMonthBlock").style.display = "none";
+    document.getElementById("operationInnerContainer").style.display = "flex";
+}
+
+// Aggiorna dinamicamente la card della Cedola
+window.updateSalaryDisplay = function() {
+    const salaryStatus = document.getElementById("salaryStatus");
+    const select = document.getElementById("salaryPercentSelect");
+    if (!salaryStatus || !select) return;
+    
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const stats = calculateProject(project);
+    
+    const percent = Number(select.value) / 100;
+    cedolaBaseValue = Math.min(stats.profitThisMonth, stats.result);
+    
+    if (stats.result <= 0) {
+        const daRecuperare = Math.abs(stats.result);
+        salaryStatus.innerHTML = `
+            <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px; margin:0;">
+                <strong class="red">🔴 Bloccata</strong><br><br>
+                Il bilancio totale è in negativo.<br>
+                Devi recuperare <strong>${euro(daRecuperare)}</strong> per sbloccare i profitti.
+            </div>
+        `;
+    } else if (stats.profitThisMonth <= 0) {
+        salaryStatus.innerHTML = `
+            <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px; margin:0;">
+                <strong class="red">🔴 Nessun utile mensile</strong><br><br>
+                In questo mese solare non hai ancora generato profitto.
+            </div>
+        `;
+    } else {
+        const stipendio = cedolaBaseValue * percent;
+        salaryStatus.innerHTML = `
+            <div class="roadmap-status inline" style="border-color: var(--green); background: rgba(34,197,94,.10); border-radius:12px; margin:0;">
+                <strong class="green">🟢 In utile</strong><br><br>
+                Profitto di questo mese: <strong>${euro(stats.profitThisMonth)}</strong><br>
+                Cedola maturata:<br>
+                <strong class="green" style="font-size:24px; display:block; margin-top:8px;">${euro(stipendio)}</strong>
+            </div>
+        `;
+    }
+}
+
+function popolaStatisticheProgetto(project) {
+    const stats = calculateProject(project);
+    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
+
+    let winCount = 0, lossCount = 0, evenCount = 0;
+    let winSum = 0, lossSum = 0;
+    let bestDay = -Infinity, worstDay = Infinity;
+    let curWinStreak = 0, maxWinStreak = 0;
+    let curLossStreak = 0, maxLossStreak = 0;
+
+    dayMovements.forEach(h => {
+        const diff = h.dayDiff;
+        if (diff > 0) {
+            winCount++;
+            winSum += diff;
+            curWinStreak++;
+            curLossStreak = 0;
+            if (curWinStreak > maxWinStreak) maxWinStreak = curWinStreak;
+        } else if (diff < 0) {
+            lossCount++;
+            lossSum += Math.abs(diff);
+            curLossStreak++;
+            curWinStreak = 0;
+            if (curLossStreak > maxLossStreak) maxLossStreak = curLossStreak;
+        } else {
+            evenCount++;
+            curWinStreak = 0;
+            curLossStreak = 0;
+        }
+
+        if (diff > bestDay) bestDay = diff;
+        if (diff < worstDay) worstDay = diff;
+    });
+
+    const totalDays = winCount + lossCount + evenCount;
+    const winRate = totalDays > 0 ? ((winCount / totalDays) * 100).toFixed(0) : "0";
+    const avgWin = winCount > 0 ? (winSum / winCount) : 0;
+    const avgLoss = lossCount > 0 ? (lossSum / lossCount) : 0;
+    const profitFactor = lossSum > 0 ? (winSum / lossSum).toFixed(2) : (winSum > 0 ? "∞" : "0,00");
+    const avgDailyProfit = totalDays > 0 ? (winSum - lossSum) / totalDays : 0;
+
+    let peak = project.capital;
+    let maxDrawdownEur = 0;
+    let maxDrawdownPerc = 0;
+
+    stats.history.forEach(item => {
+        let currentEquity = project.capital + item.resultAfter;
+        if (currentEquity > peak) {
+            peak = currentEquity;
+        }
+        let drawdown = peak - currentEquity;
+        let ddPerc = (drawdown / peak) * 100;
+        
+        if (drawdown > maxDrawdownEur) maxDrawdownEur = drawdown;
+        if (ddPerc > maxDrawdownPerc) maxDrawdownPerc = ddPerc;
+    });
+
+    document.getElementById("statAvgWin").textContent = `+${euro(avgWin)}`;
+    document.getElementById("statAvgLoss").textContent = `-${euro(avgLoss)}`;
+    document.getElementById("statProfitFactor").textContent = profitFactor;
+    document.getElementById("statAvgDaily").textContent = `${avgDailyProfit >= 0 ? '+' : ''}${euro(avgDailyProfit)}`;
+    document.getElementById("statAvgDaily").className = `big-number ${avgDailyProfit >= 0 ? 'green' : 'red'}`;
+
+    document.getElementById("statWinCount").textContent = winCount;
+    document.getElementById("statLossCount").textContent = lossCount;
+    document.getElementById("statEvenCount").textContent = evenCount;
+    document.getElementById("statWinRate").textContent = `${winRate}%`;
+
+    document.getElementById("statBestDay").textContent = bestDay !== -Infinity ? `+${euro(bestDay)}` : "€ 0,00";
+    document.getElementById("statWorstDay").textContent = worstDay !== Infinity ? `-${euro(Math.abs(worstDay))}` : "€ 0,00";
+    document.getElementById("statStreakWin").textContent = `${maxWinStreak} giorni`;
+    document.getElementById("statStreakLoss").textContent = `${maxLossStreak} giorni`;
+
+    document.getElementById("statMaxDrawdownEur").textContent = `-${euro(maxDrawdownEur)}`;
+    document.getElementById("statMaxDrawdownPerc").textContent = `-${maxDrawdownPerc.toFixed(2)}%`;
+}
+
+function goToPage(pageId) {
+    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
+    document.getElementById(pageId).classList.add("active");
+    updateAll();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function toggleNewProjectForm() {
+    const container = document.getElementById("newProjectContainer");
+    container.style.display = container.style.display === "none" ? "block" : "none";
+}
+
+function createProject() {
+    const name = document.getElementById("projectName").value.trim();
+    const capital = Number(document.getElementById("projectCapital").value);
+    const goal = Number(document.getElementById("projectGoal").value);
+    const endDate = document.getElementById("projectEndDate").value;
+
+    if (!name) { alert("Inserisci un nome per il progetto."); return; }
+    if (capital <= 0) { alert("Inserisci un capitale iniziale valido."); return; }
+    if (goal <= 0) { alert("Inserisci un obiettivo valido."); return; }
+    if (!endDate) { alert("Inserisci la data finale."); return; }
+
+    const projects = window.loadProjects();
+    projects.push({
+        id: Date.now(),
+        name, capital, goal, endDate,
+        status: 'active',
+        movements: [],
+        createdAt: new Date().toISOString()
+    });
+
+    window.saveProjects(projects);
+
+    document.getElementById("projectName").value = "";
+    document.getElementById("projectCapital").value = "";
+    document.getElementById("projectGoal").value = "";
+    document.getElementById("projectEndDate").value = "";
+    document.getElementById("newProjectContainer").style.display = "none";
+    updateAll();
+}
+
+function renderProjects() {
+    const projects = window.loadProjects();
+    const activeProjects = projects.filter(p => !p.status || p.status === 'active');
+    const closedProjects = projects.filter(p => p.status === 'completed' || p.status === 'abandoned');
+    
+    const containerActive = document.getElementById("projectsList");
+    const containerClosed = document.getElementById("closedProjectsList");
+
+    if (!activeProjects.length) {
+        containerActive.innerHTML = `<div class="empty">💼 Non hai progetti in corso.<br><br>Premi <strong>➕ Nuovo</strong> per iniziare.</div>`;
+    } else {
+        containerActive.innerHTML = activeProjects.map(project => {
+            const stats = calculateProject(project);
+            const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
+            const progress = Math.max(0, Math.min(100, stats.goalProgress));
+
+            return `
+                <div class="list-item" onclick="openProject(${project.id})">
+                    <div class="page-header" style="margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}</h2>
+                            <p class="small">🎯 ${euro(project.goal)} netto · 📅 ${formatDate(project.endDate)}</p>
+                        </div>
+                        <div class="action-btns-container">
+                            <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
+                            <button class="danger delete-btn" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="grid">
+                        <div><div class="small">Saldo</div><strong>${euro(stats.balance)}</strong></div>
+                        <div><div class="small">Risultato netto</div><strong class="${resultClass}">${euro(stats.result)}</strong></div>
+                        <div><div class="small">Progresso</div><strong class="blue">${stats.goalProgress.toFixed(1)}%</strong></div>
+                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width:${progress}%;"></div></div>
+                </div>`;
+        }).join("");
+    }
+
+    if (!closedProjects.length) {
+        containerClosed.innerHTML = `<div class="empty" style="padding: 20px;">Nessun progetto archiviato.</div>`;
+    } else {
+        containerClosed.innerHTML = closedProjects.map(project => {
+            const stats = calculateProject(project);
+            const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
+            const progress = Math.max(0, Math.min(100, stats.goalProgress));
+            
+            let statusBadge = project.status === 'completed' 
+                ? `<span style="background: rgba(34,197,94,.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;">Completato</span>`
+                : `<span style="background: rgba(239,68,68,.15); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;">Interrotto</span>`;
+
+            return `
+                <div class="list-item" onclick="openProject(${project.id})">
+                    <div class="page-header" style="margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin-bottom:4px;">🗄️ ${escapeHTML(project.name)}</h2>
+                            <div style="margin-top: 6px;">${statusBadge}</div>
+                        </div>
+                        <div class="action-btns-container">
+                            <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
+                            <button class="danger delete-btn" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="grid">
+                        <div><div class="small">Saldo finale</div><strong>${euro(stats.balance)}</strong></div>
+                        <div><div class="small">Risultato netto</div><strong class="${resultClass}">${euro(stats.result)}</strong></div>
+                        <div><div class="small">Data Chiusura</div><strong class="blue">${new Date(project.closedAt || project.endDate).toLocaleDateString('it-IT')}</strong></div>
+                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width:${progress}%;"></div></div>
+                </div>`;
+        }).join("");
+    }
+}
+
+function deleteProject(id) {
+    if (!confirm("Vuoi eliminare questo progetto? Il bilancio generale dei versamenti e prelievi di tasca tua rimarrà conservato.")) return;
+    const allProjects = window.loadProjects();
+    const project = allProjects.find(p => p.id === id);
+    const projects = allProjects.filter(p => p.id !== id);
+
+    // I soldi versati e prelevati da questo progetto restano nella Tasca Netta
+    let realLife;
+    if (project) {
+        const stats = calculateProject(project);
+        realLife = getRealLife();
+        realLife.deletedDeposits += stats.realDeposits;
+        realLife.deletedWithdrawals += stats.withdrawals;
+    }
+
+    window.saveProjects(projects, realLife); // un solo salvataggio: progetti e bilancio insieme
+    if (currentProjectId === id) currentProjectId = null;
+    updateAll();
+}
+
+function openProject(id) {
+    currentProjectId = id;
+    const project = getProject(id);
+    if (project) updateProjectStartState(project);
+    goToPage("projectDetail");
+    renderProjectDetail();
+}
+
+function showOperationForm(type) {
+    const project = getProject(currentProjectId);
+    if (!project || (project.status === 'completed' || project.status === 'abandoned')) return;
+
+    const movements = Array.isArray(project.movements) ? project.movements : [];
+    const hasFirstDeposit = movements.some(m => m.type === "deposit");
+
+    if (!hasFirstDeposit && type !== "deposit") {
+        alert("Prima di effettuare altre operazioni devi registrare il primo deposito.");
+        return;
+    }
+
+    const container = document.getElementById("operationInnerContainer");
+    let title = "", label = "", placeholder = "", inputId = "";
+
+    if (type === "day") {
+        container.innerHTML = `
+            <div class="operation-form">
+                <h3 style="margin-bottom:8px; color: var(--accent); font-size:14px;">📅 Resoconto</h3>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+                    <div>
+                        <label>Data e Ora</label>
+                        <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                    </div>
+                    <div>
+                        <label>Saldo attuale (€) *</label>
+                        <input id="operationBalance" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 250" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                        <div>
+                            <label>Prelievi (€)</label>
+                            <input id="operationDayWithdraw" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                        </div>
+                        <div>
+                            <label>Depositi (€)</label>
+                            <input id="operationDayDeposit" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="primary" style="flex:1; padding:8px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                    <button class="secondary" style="flex:1; padding:8px; font-size:13px;" onclick="resetOperationCard()">✕</button>
+                </div>
+            </div>`;
+            
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
+        
+        setTimeout(() => { 
+            const balanceInput = document.getElementById("operationBalance");
+            if (balanceInput) {
+                balanceInput.focus();
+                balanceInput.click();
+            }
+        }, 150);
+        return;
+    } 
+    
+    if (type === "deposit") {
+        title = "📥 Deposito"; label = "Importo (€)"; placeholder = "100"; inputId = "operationAmount";
+    } else if (type === "withdraw") {
+        title = "📤 Prelievo"; label = "Importo (€)"; placeholder = "100"; inputId = "operationAmount";
+    }
+
+    container.innerHTML = `
+        <div class="operation-form">
+            <h3 style="margin-bottom:8px; color: var(--accent); font-size:14px;">${title}</h3>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+                <div>
+                    <label>Data e Ora</label>
+                    <input id="operationDate" type="datetime-local" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                </div>
+                <div>
+                    <label>${label}</label>
+                    <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:2px; margin-bottom:0; padding:8px;">
+                </div>
+                ${type === "deposit" && !hasFirstDeposit ? `
+                <label class="transfer-check">
+                    <input type="checkbox" id="operationTransfer">
+                    <span>🔁 <strong>Saldo trasferito da un altro progetto</strong><br>Soldi già sul conto: non contano come nuovi versamenti nella Tasca Netta.</span>
+                </label>` : ""}
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button class="primary" style="flex:1; padding:8px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
+                <button class="secondary" style="flex:1; padding:8px; font-size:13px;" onclick="resetOperationCard()">✕</button>
+            </div>
+        </div>`;
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById("operationDate").value = now.toISOString().slice(0, 16);
+    
+    setTimeout(() => { 
+        const targetInput = document.getElementById(inputId);
+        if (targetInput) {
+            targetInput.focus();
+            targetInput.click();
+        }
+    }, 150);
+}
+
+function resetOperationCard() {
+    const container = document.getElementById("operationInnerContainer");
+    container.innerHTML = `
+        <button class="main-operation operation-day" onclick="showOperationForm('day')">
+            <strong>📅 Resoconto Giornaliero</strong>
+        </button>
+        <div class="secondary-operations">
+            <button class="operation-btn deposit-btn operation-deposit" onclick="showOperationForm('deposit')">
+                <strong>📥 Deposito</strong>
+            </button>
+            <button class="operation-btn withdraw-btn operation-withdraw" onclick="showOperationForm('withdraw')">
+                <strong>📤 Prelievo</strong>
+            </button>
+        </div>`;
+}
+
+function saveOperation(type) {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project || (project.status === 'completed' || project.status === 'abandoned')) return;
+
+    const hasFirstDeposit = project.movements.some(m => m.type === "deposit");
+    if (!hasFirstDeposit && type !== "deposit") {
+        alert("Prima del primo deposito non è consentito salvare questa operazione.");
+        resetOperationCard();
+        return;
+    }
+
+    let movement;
+    const dateVal = document.getElementById("operationDate").value;
+    const finalDate = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
+
+    if (type === "day") {
+        const inputBal = document.getElementById("operationBalance").value;
+        const inputW = document.getElementById("operationDayWithdraw").value;
+        const inputD = document.getElementById("operationDayDeposit").value;
+        
+        if (inputBal === "" || Number(inputBal) < 0) { alert("Inserisci un saldo valido."); return; }
+        
+        const dep = Number(inputD) || 0;
+        const wit = Number(inputW) || 0;
+        const stats = calculateProject(project);
+        
+        if (dep > 0) {
+            const netCapital = stats.deposits - stats.withdrawals;
+            const remainingSpace = project.capital - netCapital;
+            if (dep > remainingSpace) {
+                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
+                return;
+            }
+        }
+        
+        movement = { id: Date.now(), type: "day", balance: Number(inputBal), deposit: dep, withdraw: wit, date: finalDate };
+        
+    } else {
+        const input = document.getElementById("operationAmount");
+        const amount = Number(input.value);
+        if (input.value === "" || amount <= 0 || isNaN(amount)) { alert("Inserisci un importo valido."); return; }
+        
+        const stats = calculateProject(project);
+        
+        if (type === "deposit") {
+            const netCapital = stats.deposits - stats.withdrawals;
+            const remainingSpace = project.capital - netCapital;
+            if (amount > remainingSpace) {
+                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
+                return;
+            }
+        }
+        
+        if (type === "withdraw" && amount > stats.balance) {
+            alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
+            return;
+        }
+        movement = { id: Date.now(), type, amount, date: finalDate };
+        const transferBox = document.getElementById("operationTransfer");
+        if (type === "deposit" && transferBox && transferBox.checked) movement.transfer = true;
+    }
+
+    project.movements.push(movement);
+    window.saveProjects(projects);
+    resetOperationCard();
+    updateProjectStartState(project);
+}
+
+function deleteMovement(id) {
+    if (!confirm("Vuoi eliminare questo movimento? I calcoli si aggiorneranno automaticamente.")) return;
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    
+    if (project.status === 'completed' || project.status === 'abandoned') {
+        alert("Non puoi modificare i movimenti di un progetto archiviato.");
+        return;
+    }
+
+    project.movements = project.movements.filter(m => m.id !== id);
+    window.saveProjects(projects);
+}
+
+function renderProjectDetail() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+
+    updateProjectStartState(project);
+    const stats = calculateProject(project);
+    
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+
+    document.getElementById("detailProjectName").textContent = (isClosed ? "🗄️ " : "💼 ") + project.name;
+    document.getElementById("detailBalance").textContent = euro(stats.balance);
+
+    const resultElement = document.getElementById("detailResult");
+    resultElement.textContent = euro(stats.result);
+    resultElement.className = "big-number";
+    if (stats.result > 0) resultElement.classList.add("green");
+    if (stats.result < 0) resultElement.classList.add("red");
+
+    const percentageElement = document.getElementById("detailPercentage");
+    percentageElement.textContent = stats.percentage.toFixed(2) + "%";
+    percentageElement.className = "big-number";
+    if (stats.percentage > 0) percentageElement.classList.add("green");
+    if (stats.percentage < 0) percentageElement.classList.add("red");
+
+    const realizedElement = document.getElementById("detailRealized");
+    if (realizedElement) {
+        realizedElement.textContent = euro(stats.realizedResult);
+        realizedElement.className = "big-number";
+        realizedElement.style.color = ""; 
+        if (stats.realizedResult > 0) {
+            realizedElement.classList.add("green");
+        } else if (stats.realizedResult < 0) {
+            realizedElement.classList.add("red");
+        } else {
+            realizedElement.style.color = "var(--muted)";
+        }
+    }
+
+    document.getElementById("detailGoal").textContent = euro(project.goal);
+    document.getElementById("goalProgress").textContent = stats.goalProgress.toFixed(2) + "%";
+    document.getElementById("goalRemaining").textContent = euro(stats.goalRemaining);
+    document.getElementById("goalEndDate").textContent = formatDate(project.endDate);
+
+    let badgeHtml = "";
+    if (stats.goalProgress >= 100) { badgeHtml = "Completato"; document.getElementById("milestoneBadge").style.color = "var(--green)"; document.getElementById("milestoneBadge").style.borderColor = "var(--green)"; }
+    else if (stats.goalProgress > 0) { badgeHtml = "In progresso"; document.getElementById("milestoneBadge").style.color = "var(--accent)"; document.getElementById("milestoneBadge").style.borderColor = "var(--accent)"; }
+    else { badgeHtml = "Iniziale"; document.getElementById("milestoneBadge").style.color = "var(--muted)"; document.getElementById("milestoneBadge").style.borderColor = "var(--border)"; }
+    document.getElementById("milestoneBadge").textContent = badgeHtml;
+    
+    const dayMovements = stats.history.filter(h => h.type === "day" && h.dayDiff !== null);
+    const last3 = dayMovements.slice(-3);
+    let isTilt = false;
+    let tiltReason = "";
+
+    if (last3.length === 3 && last3.every(m => m.dayDiff < 0)) {
+        isTilt = true;
+        tiltReason = "Hai registrato 3 giornate in perdita consecutive. Considera 24 ore di pausa per recuperare la lucidità e prevenire l'overtrading.";
+    } else if (dayMovements.length > 0) {
+        const lastMove = dayMovements[dayMovements.length - 1];
+        if (lastMove.dayDiff < 0) {
+            const currentEquity = project.capital + lastMove.resultAfter;
+            const prevEquity = currentEquity - lastMove.dayDiff;
+            if (prevEquity > 0 && Math.abs(lastMove.dayDiff) / prevEquity > 0.15) {
+                isTilt = true;
+                tiltReason = "Hai appena subito una perdita superiore al 15% del capitale. Fai un bel respiro, chiudi i mercati e stacca per oggi.";
+            }
+        }
+    }
+
+    const tiltBanner = document.getElementById("tiltWarningBanner");
+    if (isTilt && !isClosed) {
+        document.getElementById("tiltWarningText").textContent = tiltReason;
+        tiltBanner.style.display = "flex";
+    } else {
+        tiltBanner.style.display = "none";
+    }
+
+    const today = new Date();
+    const isEndOfMonth = (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate());
+    const storageKey = `sblocco_${today.getFullYear()}_${today.getMonth()}`;
+    const isUnlockedInStorage = localStorage.getItem(storageKey) === "true";
+
+    if (isClosed) {
+        document.getElementById("situazioneLabel").textContent = "finale";
+        document.getElementById("saldoLabel").textContent = "💰 Saldo finale";
+        document.getElementById("daysRemainingLabel").textContent = "Giorni effettivi impiegati";
+        document.getElementById("goalDaysRemaining").textContent = stats.elapsedDays;
+        document.getElementById("expectedLabel").textContent = "Risultato previsto alla chiusura";
+        
+        document.getElementById("operationsCardBlock").style.display = "none";
+        document.getElementById("archivedBannerBlock").style.display = "flex";
+        document.getElementById("archivedIcon").textContent = project.status === 'completed' ? '🏆' : '🛑';
+        document.getElementById("archivedTitle").textContent = project.status === 'completed' ? 'Obiettivo Raggiunto' : 'Progetto Interrotto';
+        document.getElementById("btnCloseProjectHeader").style.display = "none";
+    } else {
+        document.getElementById("situazioneLabel").textContent = "attuale";
+        document.getElementById("saldoLabel").textContent = "💰 Saldo attuale";
+        document.getElementById("daysRemainingLabel").textContent = "Giorni rimanenti";
+        document.getElementById("goalDaysRemaining").textContent = stats.deadlinePassed ? "Scaduto" : stats.daysRemaining;
+        document.getElementById("expectedLabel").textContent = "Traguardo ideale ad oggi";
+        
+        document.getElementById("operationsCardBlock").style.display = "flex";
+        document.getElementById("archivedBannerBlock").style.display = "none";
+        document.getElementById("btnCloseProjectHeader").style.display = "inline-flex";
+
+        if (isEndOfMonth && !isUnlockedInStorage) {
+            document.getElementById("operationInnerContainer").style.display = "none";
+            document.getElementById("endOfMonthBlock").style.display = "flex";
+        } else {
+            document.getElementById("endOfMonthBlock").style.display = "none";
+            document.getElementById("operationInnerContainer").style.display = "flex";
+        }
+    }
+    
+    document.getElementById("goalProgressBar").style.width = Math.max(0, Math.min(100, stats.goalProgress)) + "%";
+
+    const goalStatus = document.getElementById("goalStatus");
+    goalStatus.className = "goal-status";
+    
+    if (project.status === 'completed') { goalStatus.textContent = "🏆 Raggiunto"; goalStatus.classList.add("completed"); }
+    else if (project.status === 'abandoned') { goalStatus.textContent = "🛑 Interrotto"; goalStatus.classList.add("delayed"); }
+    else if (stats.result >= project.goal) { goalStatus.textContent = "🏆 Obiettivo superato"; goalStatus.classList.add("completed"); }
+    else if (stats.deadlinePassed) { goalStatus.textContent = "⚠️ Scadenza superata"; goalStatus.classList.add("delayed"); }
+    else { goalStatus.textContent = "🎯 In corso"; }
+
+    document.getElementById("expectedToday").textContent = euro(stats.expectedToday);
+    
+    const diffEl = document.getElementById("roadmapDifference");
+    diffEl.textContent = stats.roadmapDifference > 0 ? "+" + euro(stats.roadmapDifference) : euro(stats.roadmapDifference);
+    diffEl.className = stats.roadmapDifference > 0 ? "green" : stats.roadmapDifference < 0 ? "red" : "";
+
+    const roundedDays = Math.round(Math.abs(stats.daysDifference));
+    let daysText = "In linea";
+    if (stats.daysDifference > 0) daysText = roundedDays + " giorni di anticipo";
+    if (stats.daysDifference < 0) daysText = roundedDays + " giorni di ritardo";
+
+    const daysEl = document.getElementById("daysDifference");
+    daysEl.textContent = daysText;
+    daysEl.className = stats.daysDifference > 0 ? "green" : stats.daysDifference < 0 ? "red" : "";
+
+    const roadmapStatus = document.getElementById("roadmapStatus");
+    if (Math.abs(stats.daysDifference) < 1) {
+        roadmapStatus.className = "roadmap-status inline";
+        roadmapStatus.innerHTML = `<strong>🎯 Perfettamente in linea.</strong>`;
+    } else if (stats.roadmapDifference > 0) {
+        roadmapStatus.className = "roadmap-status ahead";
+        roadmapStatus.innerHTML = `<strong class="green">🚀 In anticipo!</strong> Circa ${roundedDays} giorni avanti.`;
+    } else {
+        roadmapStatus.className = "roadmap-status behind";
+        roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
+    }
+
+    document.getElementById("dailyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.dailyNeeded);
+    document.getElementById("weeklyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.weeklyNeeded);
+    document.getElementById("monthlyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.monthlyNeeded);
+
+    renderProjection(project, stats);
+    updateSalaryDisplay();
+
+    resetOperationCard();
+    renderHistory(project, stats);
+    setTimeout(() => { drawProjectChart(project, stats); }, 50);
+}
+
+function renderHistory(project, stats) {
+    const container = document.getElementById("projectHistory");
+    if (!project.movements.length) {
+        container.innerHTML = `<div class="empty">Nessun movimento registrato.</div>`;
+        return;
+    }
+
+    const historyMap = {};
+    stats.history.forEach(item => { historyMap[item.id] = item; });
+    const movements = [...project.movements].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+
+    container.innerHTML = movements.map(movement => {
+        let badge = "", value = "";
+        const item = historyMap[movement.id];
+
+        if (movement.type === "deposit") {
+            badge = `<span class="badge deposit">📥 Deposito</span>${movement.transfer ? `<span class="badge transfer">🔁 Trasferito</span>` : ""}`;
+            value = `<strong class="green">+${euro(movement.amount)}</strong>`;
+        }
+        if (movement.type === "withdraw") {
+            badge = `<span class="badge withdraw">📤 Prelievo</span>`;
+            value = `<strong class="orange">-${euro(movement.amount)}</strong>`;
+        }
+        if (movement.type === "day") {
+            const dep = movement.deposit || 0;
+            const wit = movement.withdraw || 0;
+            let extraBadges = "";
+            if (dep > 0) extraBadges += ` <span class="badge deposit" style="margin-left:4px;">📥 +${euro(dep)}</span>`;
+            if (wit > 0) extraBadges += ` <span class="badge withdraw" style="margin-left:4px;">📤 -${euro(wit)}</span>`;
+            
+            badge = `<span class="badge day">📅 Resoconto</span>${extraBadges}`;
+            
+            const diff = (item && item.dayDiff !== null && item.dayDiff !== undefined) ? item.dayDiff : 0;
+            const diffSign = diff > 0 ? "+" : "";
+            const diffClass = diff > 0 ? "green" : diff < 0 ? "red" : "";
+            
+            value = `
+                <div style="text-align:right;">
+                    <strong class="${diffClass}">${diffSign}${euro(diff)}</strong>
+                    <div class="small" style="font-size:11px; margin-top:2px;">Saldo: ${euro(movement.balance)}</div>
+                </div>`;
+        }
+
+        const diffText = (movement.type === "day" && item && item.dayDiff !== null && item.dayDiff !== undefined)
+            ? ` · G/P: <strong class="${item.dayDiff > 0 ? 'green' : item.dayDiff < 0 ? 'red' : ''}">${item.dayDiff > 0 ? '+' : ''}${euro(item.dayDiff)}</strong>`
+            : '';
+
+        const deleteBtn = isClosed ? '' : `<button class="delete-btn" onclick="deleteMovement(${movement.id})">🗑️</button>`;
+
+        return `
+            <div class="history-item">
+                <div>
+                    ${badge}
+                    <div class="small" style="margin-top:7px;">${new Date(movement.date).toLocaleString("it-IT")}</div>
+                    <div class="small" style="margin-top:5px;">Saldo: <strong>${euro(item ? item.balanceAfter : 0)}</strong> · Risultato netto: <strong>${euro(item ? item.resultAfter : 0)}</strong>${diffText}</div>
+                </div>
+                <div class="history-right">
+                    ${value}
+                    ${deleteBtn}
+                </div>
+            </div>`;
+    }).join("");
+}
+
+function drawProjectChart(project, stats) {
+    const canvas = document.getElementById("projectChart");
+    if (!canvas) return;
+    const container = canvas.parentElement;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const padding = { top: 25, right: 25, bottom: 45, left: 65 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    const points = [{ date: new Date(project.createdAt), value: 0, balance: 0 }];
+    stats.history.forEach(item => {
+        points.push({ date: new Date(item.date), value: item.resultAfter, balance: item.balanceAfter });
+    });
+
+    chartPoints = points;
+
+    if (points.length < 2) {
+        ctx.fillStyle = "#98a2b3";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Registra il primo movimento per visualizzare il grafico.", width / 2, height / 2);
+        return;
+    }
+
+    const startTime = new Date(project.createdAt).getTime();
+    const endTime = new Date(project.endDate + "T00:00:00").getTime();
+    const values = [0, project.goal];
+
+    points.forEach(point => values.push(point.value));
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const valueRange = Math.max(1, maxValue - minValue);
+
+    function xFromTime(time) {
+        const progress = Math.max(0, Math.min(1, (time - startTime) / (endTime - startTime)));
+        return padding.left + progress * chartWidth;
+    }
+
+    function yFromValue(value) {
+        const progress = (value - minValue) / valueRange;
+        return padding.top + chartHeight - progress * chartHeight;
+    }
+
+    ctx.strokeStyle = "rgba(152,162,179,.15)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+
+        const value = maxValue - (valueRange / 4) * i;
+        ctx.fillStyle = "#98a2b3";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "right";
+        ctx.fillText(euro(value), padding.left - 8, y + 4);
+    }
+
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7,6]);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, yFromValue(0));
+    ctx.lineTo(width - padding.right, yFromValue(project.goal));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = "#4f8cff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    points.forEach((point, index) => {
+        const x = xFromTime(point.date.getTime());
+        const y = yFromValue(point.value);
+        point.chartX = x;
+        point.chartY = y;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    points.forEach(point => {
+        ctx.fillStyle = "#4f8cff";
+        ctx.beginPath();
+        ctx.arc(point.chartX, point.chartY, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle = "#98a2b3";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(new Date(project.createdAt).toLocaleDateString("it-IT"), padding.left, height - 15);
+    ctx.textAlign = "right";
+    ctx.fillText(formatDate(project.endDate), width - padding.right, height - 15);
+
+    canvas.onmousemove = function(event) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        let closest = null;
+        let closestDistance = Infinity;
+
+        points.forEach(point => {
+            const distance = Math.sqrt(Math.pow(mouseX - point.chartX, 2) + Math.pow(mouseY - point.chartY, 2));
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = point;
+            }
+        });
+
+        const tooltip = document.getElementById("chartTooltip");
+
+        if (closest && closestDistance < 30) {
+            const daysFromStart = daysBetween(project.createdAt, closest.date);
+            const expected = project.goal * Math.max(0, Math.min(1, daysFromStart / stats.totalDays));
+            const difference = closest.value - expected;
+
+            tooltip.innerHTML = `
+                <strong>📅 ${closest.date.toLocaleString("it-IT")}</strong>
+                💰 Saldo: ${euro(closest.balance)}<br>
+                📈 Risultato netto: ${euro(closest.value)}<br>
+                🎯 Previsto: ${euro(expected)}<br>
+                <span class="${difference >= 0 ? 'green' : 'red'}">
+                    ${difference >= 0 ? '🟢' : '🔴'} Differenza: ${euro(difference)}
+                </span>`;
+
+            tooltip.style.display = "block";
+            let tooltipX = closest.chartX + 15;
+            let tooltipY = closest.chartY + 15;
+
+            if (tooltipX > width - 230) tooltipX = closest.chartX - 220;
+
+            tooltip.style.left = tooltipX + "px";
+            tooltip.style.top = tooltipY + "px";
+            canvas.style.cursor = "pointer";
+        } else {
+            tooltip.style.display = "none";
+            canvas.style.cursor = "default";
+        }
+    };
+
+    canvas.onmouseleave = function() {
+        document.getElementById("chartTooltip").style.display = "none";
+    };
+}
+
+function updateDashboard() {
+    const projects = window.loadProjects();
+    let totalBalance = 0, totalResult = 0, completed = 0, countActive = 0;
+    let autoDep = 0, autoWit = 0;
+
+    projects.forEach(project => {
+        const stats = calculateProject(project);
+        
+        autoDep += stats.realDeposits; // i saldi trasferiti fra progetti non sono soldi usciti di tasca
+        autoWit += stats.withdrawals;
+        
+        if (!project.status || project.status === 'active') {
+            totalBalance += stats.balance;
+            totalResult += stats.result;
+            countActive++;
+        }
+        
+        if (project.status === 'completed' || (!project.status && stats.result >= project.goal)) {
+            completed++;
+        }
+    });
+    
+    // Calcolo Bilancio Vita Reale: progetti esistenti (attivi e archiviati) + extra manuali + progetti eliminati
+    const rl = getRealLife();
+    const finalDep = rl.manualDeposits + rl.deletedDeposits + autoDep;
+    const finalWit = rl.manualWithdrawals + rl.deletedWithdrawals + autoWit;
+    const netCash = finalWit - finalDep;
+
+    document.getElementById("realLifeDeposits").textContent = euro(finalDep);
+    document.getElementById("realLifeWithdrawals").textContent = euro(finalWit);
+    
+    const realNetEl = document.getElementById("realLifeNet");
+    realNetEl.textContent = euro(netCash);
+    realNetEl.className = "big-number";
+    if (netCash > 0) realNetEl.classList.add("green");
+    if (netCash < 0) realNetEl.classList.add("red");
+
+    document.getElementById("totalBalance").textContent = euro(totalBalance);
+    const resultElement = document.getElementById("totalResult");
+    resultElement.textContent = euro(totalResult);
+    resultElement.className = "big-number";
+
+    if (totalResult > 0) resultElement.classList.add("green");
+    if (totalResult < 0) resultElement.classList.add("red");
+
+    document.getElementById("projectCount").textContent = countActive;
+    document.getElementById("completedProjects").textContent = completed;
+}
+
+function updateAll() {
+    renderProjects();
+    updateDashboard();
+    if (currentProjectId) renderProjectDetail();
+}
+
+document.getElementById("todayDate").textContent = new Date().toLocaleDateString("it-IT", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+});
+
+window.addEventListener("resize", () => {
+    const page = document.getElementById("projectDetail");
+    if (page && page.classList.contains("active") && currentProjectId) {
+        renderProjectDetail();
+    }
+});
+
+function updateProjectStartState(project) {
+    const detailPage = document.getElementById("projectDetail");
+    if (!detailPage || !project) return;
+
+    const movements = Array.isArray(project.movements) ? project.movements : [];
+    const hasFirstDeposit = movements.some(m => m.type === "deposit");
+    detailPage.classList.toggle("project-not-started", !hasFirstDeposit);
+}
+</script>
+
+</body>
+</html>
