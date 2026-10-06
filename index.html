@@ -313,6 +313,41 @@ h2 {
     line-height: 1.5;
 }
 
+/* TABELLA DI MARCIA COMPOSTA */
+.ritmo-info-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    cursor: pointer;
+    align-self: center;
+}
+.marcia-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.marcia-table-wrap { max-height: 50vh; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+.marcia-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.marcia-table th {
+    position: sticky; top: 0; background: var(--card); color: var(--muted);
+    font-weight: normal; text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.marcia-table td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.marcia-table th:first-child, .marcia-table td:first-child { text-align: left; }
+.marcia-table tr.current td { background: rgba(79,140,255,.12); font-weight: bold; }
+.marcia-table tr.year-start td { border-top: 2px solid var(--border); }
+.transfer-check {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--muted);
+    line-height: 1.4; cursor: pointer;
+}
+.transfer-check input { width: auto; margin: 2px 0 0; }
+.badge.transfer { background: rgba(79,140,255,.15); color: #9ec0ff; margin-left: 4px; }
+
 /* LAYOUT CONSOLE STABILE */
 .detail-grid {
     display: grid;
@@ -725,6 +760,10 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p>La quota calcolata dividendo ciò che <strong>manca all'obiettivo finale</strong> per i <strong>giorni rimanenti</strong>.</p>
             </div>
             <div class="guide-box">
+                <h4>📈 Tabella di marcia</h4>
+                <p>Il pulsante ℹ️ accanto al ritmo mostra il percorso a <strong>interesse composto</strong>: stessa percentuale ogni giorno, quindi pochi euro all'inizio e molti di più verso la fine, mese per mese.</p>
+            </div>
+            <div class="guide-box">
                 <h4>📍 Arrivo Stimato</h4>
                 <p>Prende il tuo ritmo degli <strong>ultimi 30 giorni</strong> (o da inizio progetto, se è più giovane) e calcola quando arrivi all'obiettivo continuando così, recuperando anche eventuali perdite. La data finale resta fissa: vedi di quanti giorni arrivi in anticipo o in ritardo.</p>
             </div>
@@ -733,6 +772,17 @@ canvas { width: 100%; height: 100%; display: block; }
                 <p>Calcola la percentuale che puoi incassare sul profitto reale generato nel mese, purché il bilancio totale sia in positivo.</p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- MODALE TABELLA DI MARCIA -->
+<div class="modal-overlay" id="marciaModal" onclick="if (event.target.id === 'marciaModal') closeMarciaModal()">
+    <div class="modal-content" style="max-width: 720px;">
+        <div class="modal-header">
+            <h3>📈 Tabella di marcia (interesse composto)</h3>
+            <button class="modal-close-btn" onclick="closeMarciaModal()">✕</button>
+        </div>
+        <div id="marciaContent"></div>
     </div>
 </div>
 
@@ -932,6 +982,7 @@ canvas { width: 100%; height: 100%; display: block; }
                 <span class="small">🗓️ Al mese</span>
                 <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
             </span>
+            <button class="ritmo-info-btn" onclick="openMarciaModal()" title="Tabella di marcia a interesse composto">ℹ️</button>
         </div>
 
         <div class="header-name">
@@ -1496,6 +1547,7 @@ function calculateProject(project) {
     let balance = 0;
     let deposits = 0;
     let withdrawals = 0;
+    let transferIn = 0;
 
     const movements = [...(project.movements || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
     const history = [];
@@ -1508,6 +1560,7 @@ function calculateProject(project) {
             const amount = Number(movement.amount || 0);
             balance += amount;
             deposits += amount;
+            if (movement.transfer) transferIn += amount; // saldo arrivato da un altro progetto: non sono soldi nuovi
         }
         else if (movement.type === "withdraw") {
             const amount = Number(movement.amount || 0);
@@ -1591,9 +1644,116 @@ function calculateProject(project) {
         balance, deposits, withdrawals, result, realizedResult, percentage,
         goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
         dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
-        daysDifference, history, profitThisMonth, deadlinePassed
+        daysDifference, history, profitThisMonth, deadlinePassed,
+        transferIn, realDeposits: deposits - transferIn
     };
 }
+
+// ===== TABELLA DI MARCIA A INTERESSE COMPOSTO =====
+// Il ritmo in alto è la media lineare. Qui il saldo cresce della stessa percentuale ogni giorno:
+// all'inizio servono pochi euro, verso la fine molti di più. Si ricalcola ogni giorno dal saldo attuale.
+function calculateCompoundPlan(project, stats) {
+    const start = stats.balance;
+    const target = start + stats.goalRemaining;
+    const days = stats.daysRemaining;
+    if (start <= 0 || days <= 0 || stats.goalRemaining <= 0) return null;
+
+    const rate = Math.pow(target / start, 1 / days) - 1;
+    const equityAt = k => start * Math.pow(1 + rate, k); // saldo atteso a fine del giorno k (oggi = giorno 1)
+
+    const today = getToday();
+    const end = new Date(today);
+    end.setDate(end.getDate() + days - 1);
+
+    const months = [];
+    let cursor = new Date(today);
+    while (cursor <= end) {
+        const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+        const last = monthEnd < end ? monthEnd : end;
+        const firstK = daysBetween(today.toISOString(), cursor.toISOString()) + 1;
+        const lastK = daysBetween(today.toISOString(), last.toISOString()) + 1;
+        const equityBefore = equityAt(firstK - 1);
+        const equityAfter = equityAt(lastK);
+        months.push({
+            date: new Date(cursor),
+            days: lastK - firstK + 1,
+            dailyStart: equityBefore * rate,
+            weekly: equityBefore * (Math.pow(1 + rate, 7) - 1),
+            monthGain: equityAfter - equityBefore,
+            equityEnd: equityAfter,
+            resultEnd: stats.result + (equityAfter - start)
+        });
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+
+    return {
+        start, target, days, rate,
+        todayDaily: start * rate,
+        lastDaily: equityAt(days - 1) * rate,
+        monthlyRate: Math.pow(1 + rate, 30.44) - 1,
+        months
+    };
+}
+
+function openMarciaModal() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const stats = calculateProject(project);
+    const box = document.getElementById("marciaContent");
+    const isClosed = project.status === 'completed' || project.status === 'abandoned';
+    const plan = isClosed ? null : calculateCompoundPlan(project, stats);
+    const perc = v => (v * 100).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + "%";
+
+    if (!plan) {
+        let why = "Serve un saldo positivo e almeno un giorno prima della scadenza.";
+        if (isClosed) why = "Il progetto è chiuso.";
+        else if (stats.goalRemaining <= 0) why = "Hai già raggiunto l'obiettivo. 🎉";
+        else if (stats.deadlinePassed) why = "La scadenza è superata.";
+        box.innerHTML = `<div class="empty">${why}</div>`;
+    } else {
+        const nowKey = `${getToday().getFullYear()}-${getToday().getMonth()}`;
+        let prevYear = null;
+        const rows = plan.months.map(m => {
+            const key = `${m.date.getFullYear()}-${m.date.getMonth()}`;
+            const label = m.date.toLocaleDateString("it-IT", { month: "short", year: "numeric" });
+            const cls = [key === nowKey ? "current" : "", prevYear !== null && m.date.getFullYear() !== prevYear ? "year-start" : ""].join(" ").trim();
+            prevYear = m.date.getFullYear();
+            return `<tr class="${cls}">
+                <td>${label}${m.days < 28 ? ` <span class="small">(${m.days} gg)</span>` : ""}</td>
+                <td>${euro(m.dailyStart)}</td>
+                <td>${euro(m.weekly)}</td>
+                <td>${euro(m.monthGain)}</td>
+                <td>${euro(m.resultEnd)}</td>
+            </tr>`;
+        }).join("");
+
+        box.innerHTML = `
+            <p class="small" style="margin-bottom:14px;">
+                In alto vedi la <strong>media lineare</strong> (${euro(stats.dailyNeeded)} al giorno, sempre uguale).
+                Qui invece il saldo cresce della <strong>stessa percentuale ogni giorno</strong>, reinvestendo tutto:
+                all'inizio bastano pochi euro, verso la fine ne servono molti di più.
+                Si ricalcola ogni giorno partendo dal saldo di oggi.
+            </p>
+            <div class="marcia-summary">
+                <div class="guide-box"><div class="small">📈 Crescita richiesta</div><strong class="blue" style="font-size:17px;">${perc(plan.rate)} al giorno</strong><div class="small">≈ ${perc(plan.monthlyRate)} al mese</div></div>
+                <div class="guide-box"><div class="small">📅 Oggi</div><strong style="font-size:17px;">${euro(plan.todayDaily)}</strong><div class="small">su un saldo di ${euro(plan.start)}</div></div>
+                <div class="guide-box"><div class="small">🏁 Ultimo giorno</div><strong style="font-size:17px;">${euro(plan.lastDaily)}</strong><div class="small">saldo finale ${euro(plan.target)}</div></div>
+            </div>
+            <div class="marcia-table-wrap">
+                <table class="marcia-table">
+                    <thead><tr><th>Mese</th><th>Al giorno</th><th>Alla settimana</th><th>Nel mese</th><th>Risultato a fine mese</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <p class="small" style="margin-top:10px;">
+                «Al giorno» e «Alla settimana» sono calcolati a inizio mese. Vale se reinvesti tutto:
+                prelievi e cedole riducono il saldo e alzano le cifre dei mesi successivi.
+            </p>`;
+    }
+    document.getElementById("marciaModal").classList.add("active");
+}
+
+function closeMarciaModal() { document.getElementById("marciaModal").classList.remove("active"); }
 
 // ===== ARRIVO STIMATO =====
 // Calcola quando arrivi all'obiettivo se continui al ritmo recente.
@@ -1947,7 +2107,7 @@ function deleteProject(id) {
     if (project) {
         const stats = calculateProject(project);
         realLife = getRealLife();
-        realLife.deletedDeposits += stats.deposits;
+        realLife.deletedDeposits += stats.realDeposits;
         realLife.deletedWithdrawals += stats.withdrawals;
     }
 
@@ -2041,6 +2201,11 @@ function showOperationForm(type) {
                     <label>${label}</label>
                     <input id="${inputId}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="${placeholder}" style="margin-top:2px; margin-bottom:0; padding:8px;">
                 </div>
+                ${type === "deposit" && !hasFirstDeposit ? `
+                <label class="transfer-check">
+                    <input type="checkbox" id="operationTransfer">
+                    <span>🔁 <strong>Saldo trasferito da un altro progetto</strong><br>Soldi già sul conto: non contano come nuovi versamenti nella Tasca Netta.</span>
+                </label>` : ""}
             </div>
             <div style="display: flex; gap: 6px;">
                 <button class="primary" style="flex:1; padding:8px; font-size:13px;" onclick="saveOperation('${type}')">💾 Salva</button>
@@ -2136,6 +2301,8 @@ function saveOperation(type) {
             return;
         }
         movement = { id: Date.now(), type, amount, date: finalDate };
+        const transferBox = document.getElementById("operationTransfer");
+        if (type === "deposit" && transferBox && transferBox.checked) movement.transfer = true;
     }
 
     project.movements.push(movement);
@@ -2340,7 +2507,7 @@ function renderHistory(project, stats) {
         const item = historyMap[movement.id];
 
         if (movement.type === "deposit") {
-            badge = `<span class="badge deposit">📥 Deposito</span>`;
+            badge = `<span class="badge deposit">📥 Deposito</span>${movement.transfer ? `<span class="badge transfer">🔁 Trasferito</span>` : ""}`;
             value = `<strong class="green">+${euro(movement.amount)}</strong>`;
         }
         if (movement.type === "withdraw") {
@@ -2555,7 +2722,7 @@ function updateDashboard() {
     projects.forEach(project => {
         const stats = calculateProject(project);
         
-        autoDep += stats.deposits;
+        autoDep += stats.realDeposits; // i saldi trasferiti fra progetti non sono soldi usciti di tasca
         autoWit += stats.withdrawals;
         
         if (!project.status || project.status === 'active') {
