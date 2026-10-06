@@ -975,8 +975,8 @@ canvas { width: 100%; height: 100%; display: block; }
         <h4 class="rules-section-title">🛡️ Money management</h4>
         <p class="rules-help">Percentuali sulla banca. Metti <strong>0</strong> per spegnere una regola.</p>
         <div class="rules-grid">
-            <div><label>Puntata back massima (% del saldo)</label><input id="ruleStakePct" type="number" step="0.1" min="0"></div>
-            <div><label>Responsabilità lay massima (% del saldo)</label><input id="ruleLayPct" type="number" step="0.1" min="0"></div>
+            <div><label>Puntata massima in punta (% del saldo)</label><input id="ruleStakePct" type="number" step="0.1" min="0"></div>
+            <div><label>Responsabilità massima in banca (% del saldo)</label><input id="ruleLayPct" type="number" step="0.1" min="0"></div>
             <div><label>Stop perdita giornaliero (%)</label><input id="ruleDailyStopPct" type="number" step="0.1" min="0"></div>
             <div><label>Stop perdita settimanale (%)</label><input id="ruleWeeklyStopPct" type="number" step="0.1" min="0"></div>
             <div><label>Stop perdita mensile (%)</label><input id="ruleMonthlyStopPct" type="number" step="0.1" min="0"></div>
@@ -2154,8 +2154,8 @@ function popolaStatisticheProgetto(project) {
 // quindi viaggiano nel cloud insieme al resto. Una regola a 0 è spenta.
 // Valori predefiniti presi dal backtest delle strategie (cartella condivisa "strategie").
 const DEFAULT_RULES = {
-    stakePct: 2,          // puntata back massima, % del saldo
-    layPct: 3,            // responsabilità lay massima, % del saldo
+    stakePct: 2,          // puntata massima in punta (back), % del saldo
+    layPct: 3,            // responsabilità massima in banca (lay), % del saldo
     dailyStopPct: 5,      // stop perdita giornaliero, % della banca a inizio giornata
     weeklyStopPct: 0,     // stop perdita settimanale (da lunedì), spento di default
     monthlyStopPct: 15,   // stop perdita mensile
@@ -2175,29 +2175,38 @@ const AVVISO_QUASI = 0.75;     // allarme giallo al 75% di uno stop
 
 // Dal backtest: lato, quota media e % minima di vinte per andare in pari (commissione 4,5%).
 const DEFAULT_STRATEGIES = [
-    { id: "lay_sfavorito", name: "Lay sfavorito", side: "lay", refOdds: 5.96, refBreakEven: 78.3, breakEven: null },
-    { id: "back_pareggio", name: "Back pareggio", side: "back", refOdds: 4.27, refBreakEven: 26.3, breakEven: null },
-    { id: "back_over_0_5_primo_tempo", name: "Back Over 0.5 primo tempo", side: "back", refOdds: 1.43, refBreakEven: 71.3, breakEven: null },
-    { id: "back_over_1_5", name: "Back Over 1.5", side: "back", refOdds: 1.33, refBreakEven: 76.8, breakEven: null },
-    { id: "back_under_3_5", name: "Back Under 3.5", side: "back", refOdds: 1.43, refBreakEven: 72.4, breakEven: null },
-    { id: "back_over_2_5", name: "Back Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, breakEven: null },
-    { id: "lay_over_0_5_primo_tempo", name: "Lay Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, breakEven: null },
-    { id: "lay_favorito", name: "Lay favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, breakEven: null },
-    { id: "back_goal_btts_si", name: "Back Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, breakEven: null },
-    { id: "back_favorito", name: "Back favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, breakEven: null },
-    { id: "back_no_goal_btts_no", name: "Back No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, breakEven: null },
-    { id: "lay_over_2_5", name: "Lay Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, breakEven: null },
-    { id: "lay_0_0", name: "Lay 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, breakEven: null },
-    { id: "back_under_2_5", name: "Back Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, breakEven: null },
-    { id: "lay_del_pareggio", name: "Lay del pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, breakEven: null }
+    { id: "lay_sfavorito", name: "Banca sfavorito", side: "lay", refOdds: 5.96, refBreakEven: 78.3, breakEven: null },
+    { id: "back_pareggio", name: "Punta pareggio", side: "back", refOdds: 4.27, refBreakEven: 26.3, breakEven: null },
+    { id: "back_over_0_5_primo_tempo", name: "Punta Over 0.5 primo tempo", side: "back", refOdds: 1.43, refBreakEven: 71.3, breakEven: null },
+    { id: "back_over_1_5", name: "Punta Over 1.5", side: "back", refOdds: 1.33, refBreakEven: 76.8, breakEven: null },
+    { id: "back_under_3_5", name: "Punta Under 3.5", side: "back", refOdds: 1.43, refBreakEven: 72.4, breakEven: null },
+    { id: "back_over_2_5", name: "Punta Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, breakEven: null },
+    { id: "lay_over_0_5_primo_tempo", name: "Banca Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, breakEven: null },
+    { id: "lay_favorito", name: "Banca favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, breakEven: null },
+    { id: "back_goal_btts_si", name: "Punta Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, breakEven: null },
+    { id: "back_favorito", name: "Punta favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, breakEven: null },
+    { id: "back_no_goal_btts_no", name: "Punta No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, breakEven: null },
+    { id: "lay_over_2_5", name: "Banca Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, breakEven: null },
+    { id: "lay_0_0", name: "Banca 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, breakEven: null },
+    { id: "back_under_2_5", name: "Punta Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, breakEven: null },
+    { id: "lay_del_pareggio", name: "Banca pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, breakEven: null }
 ];
 
 function getRules(project) {
     return { ...DEFAULT_RULES, ...(project.rules || {}) };
 }
 
+// Nomi italiani di Betfair: back = Punta, lay = Banca
+const OLD_STRATEGY_NAMES = { lay_del_pareggio: "Lay del pareggio" };
+
 function getStrategies(project) {
-    return Array.isArray(project.strategies) ? project.strategies : DEFAULT_STRATEGIES.map(s => ({ ...s }));
+    if (!Array.isArray(project.strategies)) return DEFAULT_STRATEGIES.map(s => ({ ...s }));
+    // Le strategie salvate con la prima versione hanno i nomi inglesi: si aggiornano se non sono stati cambiati
+    return project.strategies.map(s => {
+        const def = DEFAULT_STRATEGIES.find(d => d.id === s.id);
+        const oldName = def && (OLD_STRATEGY_NAMES[s.id] || def.name.replace(/^Punta /, "Back ").replace(/^Banca /, "Lay "));
+        return def && s.name === oldName ? { ...s, name: def.name } : s;
+    });
 }
 
 function getBets(project) {
@@ -2381,7 +2390,7 @@ function calculateAlarms(project, stats) {
         b.stake > (sides[b.strategyId] === "lay" ? mm.layLiability : mm.stake) + 0.005 &&
         (sides[b.strategyId] === "lay" ? r.layPct : r.stakePct) > 0);
     if (tooBig.length) {
-        add("yellow", "💶", "Puntata troppo alta", `Oggi ${tooBig.length === 1 ? "un'operazione ha" : tooBig.length + " operazioni hanno"} superato il limite: back max ${euro(mm.stake)}, responsabilità lay max ${euro(mm.layLiability)}. Riduci la puntata.`);
+        add("yellow", "💶", "Puntata troppo alta", `Oggi ${tooBig.length === 1 ? "un'operazione ha" : tooBig.length + " operazioni hanno"} superato il limite: in punta max ${euro(mm.stake)}, responsabilità in banca max ${euro(mm.layLiability)}. Riduci la puntata.`);
     }
 
     // Segnali di tilt sui resoconti
@@ -2489,8 +2498,8 @@ function renderMoneyManagement(project, stats, isClosed) {
     let html = "";
     if (!isClosed) {
         const stakeParts = [];
-        if (r.stakePct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.stake)}</strong><div class="small">back (${fmtPct(mm.stakePct)})</div></div>`);
-        if (r.layPct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.layLiability)}</strong><div class="small">resp. lay (${fmtPct(mm.layPct)})</div></div>`);
+        if (r.stakePct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.stake)}</strong><div class="small">in punta (${fmtPct(mm.stakePct)})</div></div>`);
+        if (r.layPct > 0) stakeParts.push(`<div style="text-align:right;"><strong class="blue" style="font-size:18px;">${euro(mm.layLiability)}</strong><div class="small">resp. in banca (${fmtPct(mm.layPct)})</div></div>`);
         if (stakeParts.length) html += `
             <div class="mm-row">
                 <div><div>💶 Puntata massima</div><div class="small">sul saldo di ${euro(stats.balance)}${mm.reduced ? " · <span class=\"orange\">dimezzata per il calo</span>" : ""}</div></div>
@@ -2564,7 +2573,7 @@ function renderStrategies(project) {
                 <tbody>
                     ${list.map(s => `
                         <tr>
-                            <td>${escapeHTML(s.name)} <span class="small" style="font-size:11px;">${s.side === "lay" ? "lay" : "back"}</span></td>
+                            <td>${escapeHTML(s.name)} <span class="small" style="font-size:11px;">${s.side === "lay" ? "banca" : "punta"}</span></td>
                             <td>${s.n}</td>
                             <td>${oddsCell(s)}</td>
                             <td class="${wrClass(s)}">${s.winRate === null ? "--" : fmtPct(s.winRate)}</td>
@@ -2608,8 +2617,8 @@ function renderRulesStrategies() {
         <div class="strategy-edit-row">
             <input data-strategy-name="${i}" value="${escapeHTML(s.name).replace(/"/g, "&quot;")}" placeholder="Nome strategia">
             <select data-strategy-side="${i}" class="field-select">
-                <option value="back" ${s.side !== "lay" ? "selected" : ""}>Back</option>
-                <option value="lay" ${s.side === "lay" ? "selected" : ""}>Lay</option>
+                <option value="back" ${s.side !== "lay" ? "selected" : ""}>Punta</option>
+                <option value="lay" ${s.side === "lay" ? "selected" : ""}>Banca</option>
             </select>
             <input data-strategy-odds="${i}" type="number" step="0.01" min="1.01" value="${s.refOdds ?? ""}" placeholder="quota">
             <input data-strategy-be="${i}" type="number" step="0.1" min="0" max="100" value="${s.breakEven ?? ""}" placeholder="auto">
