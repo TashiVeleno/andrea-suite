@@ -1022,9 +1022,9 @@ canvas { width: 100%; height: 100%; display: block; }
             <h3>🎯 Registra operazione</h3>
             <button class="modal-close-btn" onclick="closeBetModal()">✕</button>
         </div>
-        <p class="rules-help">Serve per misurare ogni strategia. Con puntata e quota calcolo io la vincita (commissione inclusa). Il saldo del progetto resta quello del resoconto giornaliero.</p>
+        <p class="rules-help">Serve per misurare ogni strategia. Con puntata e quota calcolo io la vincita (commissione inclusa). Se chiudi prima della fine, scrivi anche la quota d'uscita: calcolo io quanto bancare o puntare e il guadagno. Il saldo del progetto resta quello del resoconto giornaliero.</p>
         <label>Strategia</label>
-        <select id="betStrategy" class="field-select" onchange="updateBetStakeLabel(); autoFillBetAmount()"></select>
+        <select id="betStrategy" class="field-select" onchange="betExitStakeTouched = false; updateBetStakeLabel(); autoFillBetAmount()"></select>
         <label>Data e Ora</label>
         <input id="betDate" type="datetime-local">
         <label>Esito</label>
@@ -1033,10 +1033,15 @@ canvas { width: 100%; height: 100%; display: block; }
             <button id="betLossBtn" class="loss" onclick="setBetResult('loss')">❌ Persa</button>
         </div>
         <div class="rules-grid">
-            <div><label id="betStakeLabel">Puntata (€)</label><input id="betStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 20" oninput="autoFillBetAmount()"></div>
-            <div><label>Quota presa</label><input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Es. 1,45" oninput="autoFillBetAmount(); updateBetOddsHint()"></div>
+            <div><label id="betStakeLabel">Puntata (€)</label><input id="betStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 20" oninput="betExitStakeTouched = false; autoFillBetAmount()"></div>
+            <div><label>Quota presa</label><input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Es. 1,45" oninput="betExitStakeTouched = false; autoFillBetAmount(); updateBetOddsHint()"></div>
         </div>
         <div id="betOddsHint" class="small" style="margin:-4px 0 10px; font-size:12px;"></div>
+        <div class="rules-grid">
+            <div><label id="betExitOddsLabel">Quota d'uscita</label><input id="betExitOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Vuoto se arrivi a fine" oninput="betExitStakeTouched = false; autoFillBetAmount()"></div>
+            <div><label id="betExitStakeLabel">Importo d'uscita (€)</label><input id="betExitStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Lo calcolo io" oninput="betExitStakeTouched = true; autoFillBetAmount()"></div>
+        </div>
+        <div id="betExitHint" class="small" style="margin:-4px 0 10px; font-size:12px;"></div>
         <label>Quanto hai vinto o perso, netto commissione (€)</label>
         <input id="betAmount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Si calcola da puntata e quota" oninput="betAmountTouched = true">
         <button class="primary" style="width:100%;" onclick="saveBet()">💾 Salva operazione</button>
@@ -2276,6 +2281,28 @@ function netWinFromOdds(side, stake, odds, commissionPct) {
     return side === "lay" ? stake / (odds - 1) * k : stake * (odds - 1) * k;
 }
 
+// Chiusura prima della fine: entri in punta ed esci bancando, o entri in banca ed esci puntando.
+// In punta stake = puntata, in banca stake = responsabilità. exitStake vuoto = uscita in pari (stesso guadagno con ogni risultato).
+// Restituisce l'importo d'uscita, il netto se la selezione vince o perde e il netto sicuro (il più basso dei due).
+function tradeResult(side, stake, odds, exitOdds, exitStake, commissionPct) {
+    if (!(stake > 0) || !(odds > 1) || !(exitOdds > 1)) return null;
+    const k = 1 - commissionPct / 100;
+    const net = x => x > 0 ? x * k : x;
+    let amount, ifWins, ifLoses;
+    if (side === "lay") {
+        const layStake = stake / (odds - 1);
+        amount = exitStake > 0 ? exitStake : layStake * odds / exitOdds;
+        ifWins = -stake + amount * (exitOdds - 1);
+        ifLoses = layStake - amount;
+    } else {
+        amount = exitStake > 0 ? exitStake : stake * odds / exitOdds;
+        ifWins = stake * (odds - 1) - amount * (exitOdds - 1);
+        ifLoses = -stake + amount;
+    }
+    ifWins = net(ifWins); ifLoses = net(ifLoses);
+    return { amount, ifWins, ifLoses, pl: Math.min(ifWins, ifLoses) };
+}
+
 // Guadagno di un periodo, giorno per giorno: vale il resoconto giornaliero se c'è,
 // altrimenti la somma delle operazioni registrate quel giorno.
 function periodProfit(project, stats, start) {
@@ -2344,21 +2371,24 @@ function calculateStrategyStats(project) {
 
     return getStrategies(project).map(s => {
         const list = bets.filter(b => b.strategyId === s.id);
-        let wins = 0, losses = 0, winSum = 0, lossSum = 0, total = 0, oddsSum = 0, oddsCount = 0, beSum = 0;
+        let wins = 0, losses = 0, winSum = 0, lossSum = 0, total = 0, oddsSum = 0, oddsCount = 0, beSum = 0, closedEarly = 0, plSq = 0, oddsAll = 0;
         list.forEach(b => {
             const pl = Number(b.pl) || 0;
             total += pl;
+            plSq += pl * pl;
             if (pl > 0) { wins++; winSum += pl; }
             else if (pl < 0) { losses++; lossSum += -pl; }
+            if (Number(b.odds) > 1) { oddsSum += Number(b.odds); oddsAll++; }
+            if (Number(b.exitOdds) > 1) { closedEarly++; return; } // chiusa prima: la soglia della quota d'entrata non vale
             if (Number(b.odds) > 1) {
-                oddsSum += Number(b.odds); oddsCount++;
+                oddsCount++;
                 beSum += breakEvenFromOdds(s.side, b.odds, rules.commissionPct);
             }
         });
 
         const n = list.length;
         const winRate = n ? wins / n * 100 : null;
-        const avgOdds = oddsCount ? oddsSum / oddsCount : null;
+        const avgOdds = oddsAll ? oddsSum / oddsAll : null;
 
         // Soglia: fissa se impostata, altrimenti media delle soglie delle tue operazioni (dalla quota presa),
         // poi quella del backtest, infine dai tuoi risultati (perdita media / (vincita media + perdita media)).
@@ -2374,8 +2404,17 @@ function calculateStrategyStats(project) {
         const p = breakEven / 100;
         if (n && breakEven !== null && p > 0 && p < 1) z = (winRate / 100 - p) / Math.sqrt(p * (1 - p) / n);
 
+        // Se chiudi quasi sempre prima della fine conta il guadagno vero: z = guadagno medio / sua incertezza
+        const trading = n > 0 && closedEarly * 2 >= n;
+        if (trading) {
+            breakEven = null; source = null; z = null;
+            const mean = total / n, varPl = n > 1 ? (plSq - n * mean * mean) / (n - 1) : 0;
+            if (n > 1) z = varPl > 0 ? mean / Math.sqrt(varPl / n) : (mean > 0 ? Infinity : mean < 0 ? -Infinity : 0);
+        }
+
         let state;
         if (!n) state = "nodata";
+        else if (trading) state = n < rules.minBets ? "few" : z <= Z_SOTTO_SOGLIA ? "below" : z < 0 ? "doubt" : "ok";
         else if (breakEven === null) state = "nothreshold";
         else if (n < rules.minBets) state = "few";
         else if (z <= Z_SOTTO_SOGLIA) state = "below";
@@ -2384,10 +2423,11 @@ function calculateStrategyStats(project) {
 
         // Quota da cercare: dalla tua % di vinte quando hai abbastanza operazioni, prima da quella del backtest
         let oddsLimit = null, oddsLimitFromRef = false;
-        if (n >= rules.minBets) oddsLimit = oddsLimitFromWinRate(s.side, winRate, rules.commissionPct);
+        if (trading) oddsLimit = null;
+        else if (n >= rules.minBets) oddsLimit = oddsLimitFromWinRate(s.side, winRate, rules.commissionPct);
         else if (s.refWinRate > 0) { oddsLimit = oddsLimitFromWinRate(s.side, s.refWinRate, rules.commissionPct); oddsLimitFromRef = true; }
 
-        return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets, oddsLimit, oddsLimitFromRef };
+        return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets, oddsLimit, oddsLimitFromRef, trading, closedEarly };
     });
 }
 
@@ -2643,7 +2683,7 @@ function renderStrategies(project) {
         if (s.state === "nothreshold") return `<span class="state-pill wait">Soglia da impostare</span>`;
         return `<span class="state-pill wait">Nessuna op.</span>`;
     };
-    const wrClass = s => s.winRate === null || s.breakEven === null ? "" : s.winRate >= s.breakEven ? "green" : "red";
+    const wrClass = s => s.winRate === null ? "" : s.trading ? (s.total > 0 ? "green" : s.total < 0 ? "red" : "") : s.breakEven === null ? "" : s.winRate >= s.breakEven ? "green" : "red";
     const mark = { fixed: "", myOdds: "", refOdds: "†", data: "*" };
     const oddsCell = s => s.avgOdds ? fmtOdds(s.avgOdds) : (s.refOdds > 1 ? `<span class="small">${fmtOdds(s.refOdds)}†</span>` : "--");
 
@@ -2659,8 +2699,8 @@ function renderStrategies(project) {
                             <td>${s.n}</td>
                             <td>${oddsCell(s)}</td>
                             <td class="${wrClass(s)}">${s.winRate === null ? "--" : fmtPct(s.winRate)}</td>
-                            <td>${s.breakEven === null ? "--" : fmtPct(s.breakEven) + mark[s.source]}</td>
-                            <td><strong class="blue">${oddsLimitText(s)}</strong></td>
+                            <td>${s.trading ? `<span class="small">media ${s.total / s.n >= 0 ? "+" : ""}${euro(s.total / s.n)}</span>` : s.breakEven === null ? "--" : fmtPct(s.breakEven) + mark[s.source]}</td>
+                            <td>${s.trading ? `<span class="small">chiusura</span>` : `<strong class="blue">${oddsLimitText(s)}</strong>`}</td>
                             <td class="${s.total > 0 ? "green" : s.total < 0 ? "red" : ""}">${s.n ? euro(s.total) : "--"}</td>
                             <td>${pill(s)}</td>
                         </tr>`).join("")}
@@ -2670,7 +2710,7 @@ function renderStrategies(project) {
         <p class="small" style="margin-top:10px; font-size:12px; line-height:1.6;">
             ${totalBets ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); openBetModal()">${totalBets} operazioni registrate</a> · ` : ""}
             ${used.length ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); toggleAllStrategies()">${hidden ? `mostra altre ${hidden} strategie` : "mostra solo quelle usate"}</a> · ` : ""}
-            "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. "Entra a" = quota da cercare per non perdere con la % che vinci: in punta almeno quella, in banca al massimo quella. † dati del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
+            "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. "Entra a" = quota da cercare per non perdere con la % che vinci: in punta almeno quella, in banca al massimo quella. † dati del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. ${all.some(s => s.trading) ? `"Chiusura" = strategia che chiudi quasi sempre prima della fine: la giudico sul guadagno medio per operazione, non sulla quota d'entrata. ` : ""}Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
         </p>`;
 }
 
@@ -2767,6 +2807,7 @@ function saveRules() {
 // ----- Modale operazioni per strategia -----
 let betResult = null;
 let betAmountTouched = false;
+let betExitStakeTouched = false;
 
 function openBetModal() {
     const project = getProject(currentProjectId);
@@ -2794,7 +2835,10 @@ function currentBetStrategy() {
 
 function updateBetStakeLabel() {
     const s = currentBetStrategy();
-    document.getElementById("betStakeLabel").textContent = s && s.side === "lay" ? "Responsabilità (€)" : "Puntata (€)";
+    const lay = s && s.side === "lay";
+    document.getElementById("betStakeLabel").textContent = lay ? "Responsabilità (€)" : "Puntata (€)";
+    document.getElementById("betExitOddsLabel").textContent = lay ? "Quota Punta d'uscita" : "Quota Banca d'uscita";
+    document.getElementById("betExitStakeLabel").textContent = lay ? "Puntata d'uscita (€)" : "Bancata d'uscita (€)";
     updateBetOddsHint();
 }
 
@@ -2821,26 +2865,55 @@ function resetBetForm() {
     document.getElementById("betAmount").value = "";
     document.getElementById("betStake").value = "";
     document.getElementById("betOdds").value = "";
+    document.getElementById("betExitOdds").value = "";
+    document.getElementById("betExitStake").value = "";
+    document.getElementById("betExitHint").innerHTML = "";
     betAmountTouched = false;
+    betExitStakeTouched = false;
     setBetResult(null);
     updateBetStakeLabel();
 }
 
-function setBetResult(result) {
+function showBetResult(result) {
     betResult = result;
     document.getElementById("betWinBtn").classList.toggle("active", result === "win");
     document.getElementById("betLossBtn").classList.toggle("active", result === "loss");
+}
+
+function setBetResult(result) {
+    showBetResult(result);
     autoFillBetAmount();
 }
 
 // Con puntata e quota calcola da solo la vincita (netta di commissione) o la perdita
 function autoFillBetAmount() {
-    if (betAmountTouched || !betResult) return;
     const project = getProject(currentProjectId);
     const s = currentBetStrategy();
     if (!project || !s) return;
     const stake = Number(document.getElementById("betStake").value);
     const odds = Number(document.getElementById("betOdds").value);
+
+    // Chiusa prima della fine: calcolo l'importo d'uscita e il guadagno, l'esito viene dal segno
+    const exitOdds = Number(document.getElementById("betExitOdds").value);
+    const exitBox = document.getElementById("betExitStake");
+    const hint = document.getElementById("betExitHint");
+    const t = tradeResult(s.side, stake, odds, exitOdds, betExitStakeTouched ? Number(exitBox.value) : 0, getRules(project).commissionPct);
+    if (!t) { hint.innerHTML = ""; if (!betExitStakeTouched) exitBox.value = ""; }
+    else {
+        const lay = s.side === "lay";
+        const even = tradeResult(s.side, stake, odds, exitOdds, 0, getRules(project).commissionPct);
+        if (!betExitStakeTouched) exitBox.value = (Math.round(t.amount * 100) / 100).toFixed(2);
+        const sign = x => `<strong class="${x > 0 ? "green" : x < 0 ? "red" : ""}">${x > 0 ? "+" : ""}${euro(x)}</strong>`;
+        hint.innerHTML = `Per uscire in pari ${lay ? "punta" : "banca"} <strong>${euro(even.amount)}</strong> a ${fmtOdds(exitOdds)}. ` +
+            (Math.abs(t.ifWins - t.ifLoses) < 0.01 ? `Guadagno netto: ${sign(t.pl)}.` : `Netto: ${sign(t.ifWins)} se passa, ${sign(t.ifLoses)} se non passa. Registro il più basso.`);
+        if (!betAmountTouched) {
+            showBetResult(t.pl >= 0 ? "win" : "loss");
+            document.getElementById("betAmount").value = (Math.round(Math.abs(t.pl) * 100) / 100).toFixed(2);
+        }
+        return;
+    }
+
+    if (betAmountTouched || !betResult) return;
     let amount = null;
     if (betResult === "loss" && stake > 0) amount = stake;
     if (betResult === "win") amount = netWinFromOdds(s.side, stake, odds, getRules(project).commissionPct);
@@ -2856,6 +2929,8 @@ function saveBet() {
     const amount = Number(document.getElementById("betAmount").value);
     const stake = Number(document.getElementById("betStake").value) || 0;
     const odds = Number(document.getElementById("betOdds").value) || 0;
+    const exitOdds = Number(document.getElementById("betExitOdds").value) || 0;
+    const exitStake = Number(document.getElementById("betExitStake").value) || 0;
     const dateVal = document.getElementById("betDate").value;
 
     if (!betResult) { alert("Scegli se l'operazione è vinta o persa."); return; }
@@ -2870,6 +2945,7 @@ function saveBet() {
         stake
     };
     if (odds > 1) bet.odds = odds;
+    if (exitOdds > 1) { bet.exitOdds = exitOdds; if (exitStake > 0) bet.exitStake = exitStake; }
     project.bets.push(bet);
     if (!Array.isArray(project.strategies)) project.strategies = getStrategies(project);
 
@@ -2889,6 +2965,7 @@ function renderBetList(project) {
         const details = [new Date(b.date).toLocaleString("it-IT")];
         if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
         if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
+        if (b.exitOdds) details.push(`uscita ${s && s.side === "lay" ? "punta" : "banca"} ${b.exitStake ? euro(b.exitStake) + " " : ""}a ${fmtOdds(b.exitOdds)}`);
         return `
         <div class="bet-item">
             <div>
