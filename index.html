@@ -2149,8 +2149,15 @@ function popolaStatisticheProgetto(project) {
     document.getElementById("statEvenCount").textContent = evenCount;
     document.getElementById("statWinRate").textContent = `${winRate}%`;
 
-    document.getElementById("statBestDay").textContent = bestDay !== -Infinity ? `+${euro(bestDay)}` : "€ 0,00";
-    document.getElementById("statWorstDay").textContent = worstDay !== Infinity ? `-${euro(Math.abs(worstDay))}` : "€ 0,00";
+    // Segno e colore seguono il valore: se hai solo giornate positive, anche il peggior giorno è positivo
+    const showDay = (id, value) => {
+        const el = document.getElementById(id);
+        const has = isFinite(value);
+        el.textContent = has ? `${value > 0 ? "+" : ""}${euro(value)}` : "€ 0,00";
+        el.className = `big-number ${has && value > 0 ? "green" : has && value < 0 ? "red" : ""}`;
+    };
+    showDay("statBestDay", bestDay);
+    showDay("statWorstDay", worstDay);
     document.getElementById("statStreakWin").textContent = `${maxWinStreak} giorni`;
     document.getElementById("statStreakLoss").textContent = `${maxLossStreak} giorni`;
 
