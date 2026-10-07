@@ -732,11 +732,14 @@ canvas { width: 100%; height: 100%; display: block; }
 .alarm-item.lvl-red .alarm-title { color: var(--red); }
 .alarm-item.lvl-yellow { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); }
 .alarm-item.lvl-yellow .alarm-title { color: var(--orange); }
+.alarm-item.lvl-blue { background: rgba(79,140,255,.10); border: 1px solid rgba(79,140,255,.35); }
+.alarm-item.lvl-blue .alarm-title { color: var(--accent); }
 .alarm-item.ok { background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3); padding: 10px 16px; }
 .alarm-item.ok .alarm-title { color: var(--green); font-size: 14px; display: inline; }
 .alarm-chip { display: inline-block; margin-left: 8px; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; vertical-align: middle; }
 .alarm-chip.red { background: rgba(239,68,68,.15); color: var(--red); }
 .alarm-chip.yellow { background: rgba(245,158,11,.15); color: var(--orange); }
+.alarm-chip.blue { background: rgba(79,140,255,.15); color: var(--accent); }
 
 .risk-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; margin-top: 16px; align-items: start; }
 .risk-card { min-height: 0; min-width: 0; }
@@ -854,7 +857,7 @@ canvas { width: 100%; height: 100%; display: block; }
             </div>
             <div class="guide-box">
                 <h4>🔔 Allarmi</h4>
-                <p><strong class="red">Rossi</strong>: fermati (stop raggiunto, calo troppo forte, strategia sotto soglia). <strong class="orange">Gialli</strong>: attenzione (sei indietro sul piano, stai per toccare uno stop, non fai il resoconto da giorni).</p>
+                <p><strong class="red">Rossi</strong>: fermati (stop raggiunto, calo troppo forte, strategia sotto soglia). <strong class="orange">Gialli</strong>: attenzione (sei indietro sul piano, stai per toccare uno stop, non fai il resoconto da giorni). <strong class="blue">Blu</strong>: sei avanti sul piano, è il momento di staccare.</p>
             </div>
         </div>
     </div>
@@ -995,6 +998,7 @@ canvas { width: 100%; height: 100%; display: block; }
         <p class="rules-help">Dopo 3 mesi ti avviso se hai meno del 75% del guadagno previsto dal piano; dopo 6 mesi, allarme rosso sotto il 50% o se sei in perdita.</p>
         <div class="rules-grid">
             <div><label>Avvisami se non faccio il resoconto da (giorni)</label><input id="ruleNoReportDays" type="number" step="1" min="0"></div>
+            <div><label>Dimmi di staccare quando sono avanti di (giorni)</label><input id="ruleAheadDays" type="number" step="1" min="0"></div>
         </div>
 
         <h4 class="rules-section-title">🎯 Strategie e soglia di pareggio</h4>
@@ -2180,6 +2184,7 @@ const DEFAULT_RULES = {
     maxDrawdownPct: 30,   // calo dal picco: stop a tutte le strategie
     commissionPct: 4.5,   // commissione Betfair Italia sulle vincite nette
     noReportDays: 3,      // allarme se non c'è un resoconto da N giorni
+    aheadDays: 10,        // avviso "sei avanti, stacca" quando sei in anticipo sul piano di almeno N giorni
     minBets: 30           // operazioni minime prima di giudicare una strategia
 };
 
@@ -2451,6 +2456,12 @@ function calculateAlarms(project, stats) {
         }
     }
 
+    // In anticipo sul piano: il momento giusto per fermarsi, non per forzare
+    if (r.aheadDays > 0 && !stats.deadlinePassed && stats.daysDifference >= r.aheadDays) {
+        const ahead = Math.floor(stats.daysDifference);
+        add("blue", "🏖️", "Sei avanti: stacca", `Sei <strong>${ahead} giorni</strong> avanti sul piano (+${euro(stats.roadmapDifference)}). Non serve forzare: puoi fermarti anche ${ahead} giorni e restare in linea con l'obiettivo. Riprendi solo quando torni sotto i ${r.aheadDays} giorni di anticipo o quando trovi giocate alla quota giusta.`);
+    }
+
     if (r.noReportDays > 0) {
         const reports = movements.filter(m => m.type === "day");
         const ref = reports.length
@@ -2481,7 +2492,8 @@ function calculateAlarms(project, stats) {
         }
     }
 
-    return alarms.sort((a, b) => (a.level === "red" ? 0 : 1) - (b.level === "red" ? 0 : 1));
+    const order = { red: 0, yellow: 1, blue: 2 };
+    return alarms.sort((a, b) => order[a.level] - order[b.level]);
 }
 
 function renderRiskSection(project, stats) {
@@ -2668,7 +2680,7 @@ const RULE_INPUTS = {
     stakePct: "ruleStakePct", layPct: "ruleLayPct", dailyStopPct: "ruleDailyStopPct",
     weeklyStopPct: "ruleWeeklyStopPct", monthlyStopPct: "ruleMonthlyStopPct", commissionPct: "ruleCommissionPct",
     drawdownWarnPct: "ruleDrawdownWarnPct", maxDrawdownPct: "ruleMaxDrawdownPct",
-    noReportDays: "ruleNoReportDays", minBets: "ruleMinBets"
+    noReportDays: "ruleNoReportDays", aheadDays: "ruleAheadDays", minBets: "ruleMinBets"
 };
 
 function openRulesModal() {
@@ -2960,7 +2972,7 @@ function renderProjects() {
             const progress = Math.max(0, Math.min(100, stats.goalProgress));
             const alarms = calculateAlarms(project, stats);
             const alarmChip = alarms.length
-                ? `<span class="alarm-chip ${alarms.some(a => a.level === "red") ? "red" : "yellow"}">🔔 ${alarms.length} ${alarms.length === 1 ? "allarme" : "allarmi"}</span>`
+                ? `<span class="alarm-chip ${alarms.some(a => a.level === "red") ? "red" : alarms.some(a => a.level === "yellow") ? "yellow" : "blue"}">🔔 ${alarms.length} ${alarms.length === 1 ? "allarme" : "allarmi"}</span>`
                 : "";
 
             return `
