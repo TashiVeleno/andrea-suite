@@ -954,7 +954,13 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
             <p class="small" style="margin-bottom: 15px;">Aggiungi qui eventuali movimentazioni <strong>passate o esterne</strong> ai progetti attuali. Questi valori verranno <strong>sommati in automatico</strong> a tutti i depositi/prelievi che stai registrando nei tuoi progetti attivi.</p>
-            <p class="small" id="deletedProjectsNote" style="display:none; margin-bottom: 15px;"></p>
+            <div id="deletedProjectsBlock" style="display:none; margin-bottom: 15px; padding: 12px; border: 1px solid var(--border); border-radius: 12px;">
+                <p class="small" style="margin-bottom: 10px;">🗑️ Soldi dei <strong>progetti eliminati</strong>, già conteggiati: non serve aggiungerli sotto. Se non sono giusti, correggili qui (metti 0 per azzerarli).</p>
+                <label>Versati dai progetti eliminati (€)</label>
+                <input id="deletedDeposits" type="number" step="0.01" min="0">
+                <label>Prelevati dai progetti eliminati (€)</label>
+                <input id="deletedWithdrawals" type="number" step="0.01" min="0" style="margin-bottom:0;">
+            </div>
             <label>➕ Aggiungi versamenti pregressi extra (€)</label>
             <input id="manualDeposits" type="number" step="0.01" min="0">
             <label>➕ Aggiungi prelievi pregressi extra (€)</label>
@@ -1573,12 +1579,11 @@ function openRealLifeModal() {
     document.getElementById("manualDeposits").value = rl.manualDeposits || "";
     document.getElementById("manualWithdrawals").value = rl.manualWithdrawals || "";
 
-    const note = document.getElementById("deletedProjectsNote");
+    // I totali dei progetti eliminati si vedono e si correggono solo se ce ne sono
     const hasDeleted = rl.deletedDeposits > 0 || rl.deletedWithdrawals > 0;
-    note.style.display = hasDeleted ? "block" : "none";
-    note.innerHTML = hasDeleted
-        ? `🗑️ Dai progetti eliminati sono già conservati <strong>${euro(rl.deletedDeposits)}</strong> versati e <strong>${euro(rl.deletedWithdrawals)}</strong> prelevati: non serve aggiungerli qui.`
-        : "";
+    document.getElementById("deletedProjectsBlock").style.display = hasDeleted ? "block" : "none";
+    document.getElementById("deletedDeposits").value = rl.deletedDeposits;
+    document.getElementById("deletedWithdrawals").value = rl.deletedWithdrawals;
 
     document.getElementById("realLifeModal").classList.add("active");
 }
@@ -1595,6 +1600,10 @@ function saveRealLifeManual() {
     const rl = getRealLife();
     rl.manualDeposits = parseFloat(document.getElementById("manualDeposits").value) || 0;
     rl.manualWithdrawals = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    if (document.getElementById("deletedProjectsBlock").style.display !== "none") {
+        rl.deletedDeposits = Math.max(0, parseFloat(document.getElementById("deletedDeposits").value) || 0);
+        rl.deletedWithdrawals = Math.max(0, parseFloat(document.getElementById("deletedWithdrawals").value) || 0);
+    }
     if (window.saveRealLife) window.saveRealLife(rl);
     closeRealLifeModal();
     updateDashboard();
