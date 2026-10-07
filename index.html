@@ -1030,8 +1030,9 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
         <div class="rules-grid">
             <div><label id="betStakeLabel">Puntata (€)</label><input id="betStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 20" oninput="autoFillBetAmount()"></div>
-            <div><label>Quota presa</label><input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Es. 1,45" oninput="autoFillBetAmount()"></div>
+            <div><label>Quota presa</label><input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="Es. 1,45" oninput="autoFillBetAmount(); updateBetOddsHint()"></div>
         </div>
+        <div id="betOddsHint" class="small" style="margin:-4px 0 10px; font-size:12px;"></div>
         <label>Quanto hai vinto o perso, netto commissione (€)</label>
         <input id="betAmount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Si calcola da puntata e quota" oninput="betAmountTouched = true">
         <button class="primary" style="width:100%;" onclick="saveBet()">💾 Salva operazione</button>
@@ -2189,23 +2190,23 @@ const Z_SOTTO_SOGLIA = -1.64;  // 95%: la strategia è davvero sotto la soglia, 
 const ROI_ULTIME_N = 100, ROI_MINIMO = -5; // utile delle ultime 100 operazioni sotto il -5% del volume
 const AVVISO_QUASI = 0.75;     // allarme giallo al 75% di uno stop
 
-// Dal backtest: lato, quota media e % minima di vinte per andare in pari (commissione 4,5%).
+// Dal backtest: lato, quota media, % minima di vinte per andare in pari (commissione 4,5%) e % di vinte storica.
 const DEFAULT_STRATEGIES = [
-    { id: "lay_sfavorito", name: "Banca sfavorito", side: "lay", refOdds: 5.96, refBreakEven: 78.3, breakEven: null },
-    { id: "back_pareggio", name: "Punta pareggio", side: "back", refOdds: 4.27, refBreakEven: 26.3, breakEven: null },
-    { id: "back_over_0_5_primo_tempo", name: "Punta Over 0.5 primo tempo", side: "back", refOdds: 1.43, refBreakEven: 71.3, breakEven: null },
-    { id: "back_over_1_5", name: "Punta Over 1.5", side: "back", refOdds: 1.33, refBreakEven: 76.8, breakEven: null },
-    { id: "back_under_3_5", name: "Punta Under 3.5", side: "back", refOdds: 1.43, refBreakEven: 72.4, breakEven: null },
-    { id: "back_over_2_5", name: "Punta Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, breakEven: null },
-    { id: "lay_over_0_5_primo_tempo", name: "Banca Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, breakEven: null },
-    { id: "lay_favorito", name: "Banca favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, breakEven: null },
-    { id: "back_goal_btts_si", name: "Punta Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, breakEven: null },
-    { id: "back_favorito", name: "Punta favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, breakEven: null },
-    { id: "back_no_goal_btts_no", name: "Punta No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, breakEven: null },
-    { id: "lay_over_2_5", name: "Banca Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, breakEven: null },
-    { id: "lay_0_0", name: "Banca 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, breakEven: null },
-    { id: "back_under_2_5", name: "Punta Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, breakEven: null },
-    { id: "lay_del_pareggio", name: "Banca pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, breakEven: null }
+    { id: "lay_sfavorito", name: "Banca sfavorito", side: "lay", refOdds: 5.96, refBreakEven: 78.3, refWinRate: 78.1, breakEven: null },
+    { id: "back_pareggio", name: "Punta pareggio", side: "back", refOdds: 4.27, refBreakEven: 26.3, refWinRate: 26.0, breakEven: null },
+    { id: "back_over_0_5_primo_tempo", name: "Punta Over 0.5 primo tempo", side: "back", refOdds: 1.43, refBreakEven: 71.3, refWinRate: 70.4, breakEven: null },
+    { id: "back_over_1_5", name: "Punta Over 1.5", side: "back", refOdds: 1.33, refBreakEven: 76.8, refWinRate: 75.7, breakEven: null },
+    { id: "back_under_3_5", name: "Punta Under 3.5", side: "back", refOdds: 1.43, refBreakEven: 72.4, refWinRate: 71.0, breakEven: null },
+    { id: "back_over_2_5", name: "Punta Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, refWinRate: 51.2, breakEven: null },
+    { id: "lay_over_0_5_primo_tempo", name: "Banca Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, refWinRate: 29.6, breakEven: null },
+    { id: "lay_favorito", name: "Banca favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, refWinRate: 47.9, breakEven: null },
+    { id: "back_goal_btts_si", name: "Punta Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, refWinRate: 52.8, breakEven: null },
+    { id: "back_favorito", name: "Punta favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, refWinRate: 52.1, breakEven: null },
+    { id: "back_no_goal_btts_no", name: "Punta No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, refWinRate: 47.2, breakEven: null },
+    { id: "lay_over_2_5", name: "Banca Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, refWinRate: 48.8, breakEven: null },
+    { id: "lay_0_0", name: "Banca 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, refWinRate: 93.0, breakEven: null },
+    { id: "back_under_2_5", name: "Punta Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, refWinRate: 48.8, breakEven: null },
+    { id: "lay_del_pareggio", name: "Banca pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, refWinRate: 74.0, breakEven: null }
 ];
 
 function getRules(project) {
@@ -2221,7 +2222,9 @@ function getStrategies(project) {
     return project.strategies.map(s => {
         const def = DEFAULT_STRATEGIES.find(d => d.id === s.id);
         const oldName = def && (OLD_STRATEGY_NAMES[s.id] || def.name.replace(/^Punta /, "Back ").replace(/^Banca /, "Lay "));
-        return def && s.name === oldName ? { ...s, name: def.name } : s;
+        const out = def && s.name === oldName ? { ...s, name: def.name } : s;
+        // La % di vinte storica è arrivata dopo: si aggiunge alle strategie salvate prima
+        return def && out.refWinRate === undefined && out.refOdds === def.refOdds ? { ...out, refWinRate: def.refWinRate } : out;
     });
 }
 
@@ -2251,6 +2254,14 @@ function breakEvenFromOdds(side, odds, commissionPct) {
     const q = Number(odds), k = 1 - commissionPct / 100;
     if (!(q > 1)) return null;
     return side === "lay" ? (q - 1) / ((q - 1) + k) * 100 : 1 / (1 + (q - 1) * k) * 100;
+}
+
+// Quota a cui entrare per non perdere con una certa % di vinte, commissione inclusa.
+// In punta serve una quota uguale o più alta, in banca uguale o più bassa.
+function oddsLimitFromWinRate(side, winRatePct, commissionPct) {
+    const p = winRatePct / 100, k = 1 - commissionPct / 100;
+    if (side === "lay") return p < 1 && p > 0 ? 1 + p * k / (1 - p) : null;
+    return p > 0 && p < 1 ? 1 + (1 / p - 1) / k : null;
 }
 
 // Vincita netta di un'operazione vinta. Nel lay la "puntata" è la responsabilità.
@@ -2366,7 +2377,12 @@ function calculateStrategyStats(project) {
         else if (z < 0) state = "doubt";
         else state = "ok";
 
-        return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets };
+        // Quota da cercare: dalla tua % di vinte quando hai abbastanza operazioni, prima da quella del backtest
+        let oddsLimit = null, oddsLimitFromRef = false;
+        if (n >= rules.minBets) oddsLimit = oddsLimitFromWinRate(s.side, winRate, rules.commissionPct);
+        else if (s.refWinRate > 0) { oddsLimit = oddsLimitFromWinRate(s.side, s.refWinRate, rules.commissionPct); oddsLimitFromRef = true; }
+
+        return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets, oddsLimit, oddsLimitFromRef };
     });
 }
 
@@ -2544,7 +2560,45 @@ function renderMoneyManagement(project, stats, isClosed) {
                 <strong class="${plClass(stats.profitThisMonth)}">${sign(stats.profitThisMonth)}${euro(stats.profitThisMonth)}</strong>
             </div>`;
     }
+    if (!isClosed) html += volumeRows(project, stats);
     box.innerHTML = html || `<div class="small">Tutte le regole sono spente.</div>`;
+}
+
+// Quanto hai giocato nel mese, quanto rende ogni 100€ giocati e quanto servirebbe giocare per l'obiettivo
+function volumeRows(project, stats) {
+    const withStake = getBets(project).filter(b => Number(b.stake) > 0);
+    if (!withStake.length) {
+        return `<div class="mm-row"><div><div>📊 Giocato del mese</div><div class="small">Registra le operazioni con la puntata per vedere quanto giochi e quanto rende.</div></div></div>`;
+    }
+    const sum = (list, key) => list.reduce((t, b) => t + Number(b[key]), 0);
+    const now = new Date();
+    const month = withStake.filter(b => { const d = new Date(b.date); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); });
+    const monthVolume = sum(month, "stake"), monthPL = sum(month, "pl");
+    const totalVolume = sum(withStake, "stake"), totalPL = sum(withStake, "pl");
+    const monthRoi = monthVolume > 0 ? monthPL / monthVolume * 100 : null;
+    const roi = totalPL / totalVolume * 100;
+    const roiText = v => `${v > 0 ? "+" : ""}${fmtPct(v)}`;
+
+    let need;
+    if (stats.deadlinePassed || !(stats.monthlyNeeded > 0)) need = "";
+    else if (roi > 0) need = `Al tuo rendimento (${roiText(roi)} su ${withStake.length} operazioni) servono circa <strong>${euro(stats.monthlyNeeded / (roi / 100))}</strong> giocati al mese per l'obiettivo.`;
+    else need = `Il tuo rendimento è ${roiText(roi)} su ${withStake.length} operazioni: giocare di più farebbe solo perdere di più. Prima cerca quote migliori (colonna "Entra a").`;
+
+    return `
+        <div class="mm-row" style="display:block;">
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <span>📊 Giocato del mese <strong>${euro(monthVolume)}</strong></span>
+                <span class="small">${monthRoi === null ? "nessuna operazione" : `rendimento <strong class="${monthRoi > 0 ? "green" : monthRoi < 0 ? "red" : ""}">${roiText(monthRoi)}</strong>`}</span>
+            </div>
+            ${monthRoi === null ? "" : `<div class="small" style="margin-top:4px;">Ogni 100€ giocati questo mese: ${monthPL >= 0 ? "+" : ""}${euro(monthRoi)}</div>`}
+            ${need ? `<div class="small" style="margin-top:4px;">${need}</div>` : ""}
+        </div>`;
+}
+
+// "≥ 1,52" in punta, "≤ 3,10" in banca; † se viene dalla % di vinte del backtest
+function oddsLimitText(s) {
+    if (!s.oddsLimit) return "--";
+    return `${s.side === "lay" ? "≤" : "≥"} ${fmtOdds(s.oddsLimit)}${s.oddsLimitFromRef ? "†" : ""}`;
 }
 
 let showAllStrategies = false;
@@ -2585,7 +2639,7 @@ function renderStrategies(project) {
         ${!used.length ? `<p class="small" style="margin-bottom:8px;">Registra l'esito di ogni operazione con ➕ per vedere se vinci abbastanza. Ecco le soglie del backtest:</p>` : ""}
         <div class="strategy-table-wrap">
             <table class="strategy-table">
-                <thead><tr><th>Strategia</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Serve</th><th>Totale</th><th>Stato</th></tr></thead>
+                <thead><tr><th>Strategia</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Serve</th><th>Entra a</th><th>Totale</th><th>Stato</th></tr></thead>
                 <tbody>
                     ${list.map(s => `
                         <tr>
@@ -2594,6 +2648,7 @@ function renderStrategies(project) {
                             <td>${oddsCell(s)}</td>
                             <td class="${wrClass(s)}">${s.winRate === null ? "--" : fmtPct(s.winRate)}</td>
                             <td>${s.breakEven === null ? "--" : fmtPct(s.breakEven) + mark[s.source]}</td>
+                            <td><strong class="blue">${oddsLimitText(s)}</strong></td>
                             <td class="${s.total > 0 ? "green" : s.total < 0 ? "red" : ""}">${s.n ? euro(s.total) : "--"}</td>
                             <td>${pill(s)}</td>
                         </tr>`).join("")}
@@ -2603,7 +2658,7 @@ function renderStrategies(project) {
         <p class="small" style="margin-top:10px; font-size:12px; line-height:1.6;">
             ${totalBets ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); openBetModal()">${totalBets} operazioni registrate</a> · ` : ""}
             ${used.length ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); toggleAllStrategies()">${hidden ? `mostra altre ${hidden} strategie` : "mostra solo quelle usate"}</a> · ` : ""}
-            "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. † quota media del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
+            "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. "Entra a" = quota da cercare per non perdere con la % che vinci: in punta almeno quella, in banca al massimo quella. † dati del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
         </p>`;
 }
 
@@ -2728,6 +2783,23 @@ function currentBetStrategy() {
 function updateBetStakeLabel() {
     const s = currentBetStrategy();
     document.getElementById("betStakeLabel").textContent = s && s.side === "lay" ? "Responsabilità (€)" : "Puntata (€)";
+    updateBetOddsHint();
+}
+
+// Sotto la quota mostra a che quota conviene entrare con questa strategia
+function updateBetOddsHint() {
+    const box = document.getElementById("betOddsHint");
+    const project = getProject(currentProjectId);
+    const s = currentBetStrategy();
+    const st = project && s ? calculateStrategyStats(project).find(x => x.id === s.id) : null;
+    if (!st || !st.oddsLimit) { box.innerHTML = ""; return; }
+    const odds = Number(document.getElementById("betOdds").value);
+    const lay = s.side === "lay";
+    const bad = odds > 1 && (lay ? odds > st.oddsLimit + 0.005 : odds < st.oddsLimit - 0.005);
+    const base = `Con questa strategia entra a quota <strong>${oddsLimitText(st)}</strong>${st.oddsLimitFromRef ? " (dal backtest)" : " (dai tuoi risultati)"}.`;
+    box.innerHTML = bad
+        ? `<span class="orange">⚠️ Quota ${lay ? "troppo alta" : "troppo bassa"}.</span> ${base} A lungo andare giocate così fanno perdere.`
+        : base;
 }
 
 function resetBetForm() {
