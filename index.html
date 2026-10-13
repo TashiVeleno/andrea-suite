@@ -659,6 +659,8 @@ canvas { width: 100%; height: 100%; display: block; }
     padding-right: 4px;
 }
 
+.history-filters .field-select { font-size: 14px; padding: 9px; margin-bottom: 8px; }
+
 .history-item {
     display: flex;
     justify-content: space-between;
@@ -1344,6 +1346,25 @@ canvas { width: 100%; height: 100%; display: block; }
 
     <h2 class="section-title">📜 Storico movimenti</h2>
     <div class="card">
+        <div class="rules-grid history-filters">
+            <select id="historyFilterType" class="field-select" onchange="changeHistoryFilter()">
+                <option value="all">Tutti i movimenti</option>
+                <option value="deposit">📥 Solo depositi</option>
+                <option value="withdraw">📤 Solo prelievi</option>
+                <option value="day">📅 Solo resoconti</option>
+                <option value="gain">🟢 Giorni in guadagno</option>
+                <option value="loss">🔴 Giorni in perdita</option>
+            </select>
+            <select id="historyFilterPeriod" class="field-select" onchange="changeHistoryFilter()">
+                <option value="all">Da sempre</option>
+                <option value="week">Questa settimana</option>
+                <option value="month">Questo mese</option>
+                <option value="lastMonth">Mese scorso</option>
+                <option value="30">Ultimi 30 giorni</option>
+                <option value="year">Quest'anno</option>
+            </select>
+        </div>
+        <div id="historySummary" class="small" style="margin:-2px 0 10px;"></div>
         <div id="projectHistory" class="history-scroll-container"></div>
     </div>
 </section>
@@ -3477,8 +3498,27 @@ function renderProjectDetail() {
     setTimeout(() => { drawProjectChart(project, stats); }, 50);
 }
 
+function changeHistoryFilter() {
+    const project = getProject(currentProjectId);
+    if (project) renderHistory(project, calculateProject(project));
+}
+
+// Inizio (incluso) e fine (esclusa) del periodo scelto nel filtro
+function historyPeriodRange(period) {
+    const now = new Date();
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (period === "week") return [new Date(day.getFullYear(), day.getMonth(), day.getDate() - (day.getDay() + 6) % 7), null];
+    if (period === "month") return [new Date(now.getFullYear(), now.getMonth(), 1), null];
+    if (period === "lastMonth") return [new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 1)];
+    if (period === "30") return [new Date(day.getFullYear(), day.getMonth(), day.getDate() - 29), null];
+    if (period === "year") return [new Date(now.getFullYear(), 0, 1), null];
+    return [null, null];
+}
+
 function renderHistory(project, stats) {
     const container = document.getElementById("projectHistory");
+    const summary = document.getElementById("historySummary");
+    summary.innerHTML = "";
     if (!project.movements.length) {
         container.innerHTML = `<div class="empty">Nessun movimento registrato.</div>`;
         return;
@@ -3486,7 +3526,41 @@ function renderHistory(project, stats) {
 
     const historyMap = {};
     stats.history.forEach(item => { historyMap[item.id] = item; });
-    const movements = [...project.movements].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    // Filtri: tipo di movimento e periodo
+    const type = document.getElementById("historyFilterType").value;
+    const [from, to] = historyPeriodRange(document.getElementById("historyFilterPeriod").value);
+    const dayDiffOf = m => { const it = historyMap[m.id]; return m.type === "day" && it && it.dayDiff !== null && it.dayDiff !== undefined ? it.dayDiff : null; };
+    const depositOf = m => m.type === "deposit" ? Number(m.amount) || 0 : m.type === "day" ? Number(m.deposit) || 0 : 0;
+    const withdrawOf = m => m.type === "withdraw" ? Number(m.amount) || 0 : m.type === "day" ? Number(m.withdraw) || 0 : 0;
+    const typeOk = m => type === "all"
+        || (type === "deposit" && depositOf(m) > 0)
+        || (type === "withdraw" && withdrawOf(m) > 0)
+        || (type === "day" && m.type === "day")
+        || (type === "gain" && dayDiffOf(m) > 0)
+        || (type === "loss" && dayDiffOf(m) < 0);
+    const movements = project.movements
+        .filter(m => typeOk(m) && (!from || new Date(m.date) >= from) && (!to || new Date(m.date) < to))
+        .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    if (!movements.length) {
+        container.innerHTML = `<div class="empty">Nessun movimento con questi filtri.</div>`;
+        return;
+    }
+
+    // Riepilogo di quello che vedi
+    const filtered = type !== "all" || from;
+    if (filtered) {
+        const gp = movements.reduce((t, m) => t + (dayDiffOf(m) || 0), 0);
+        const dep = movements.reduce((t, m) => t + depositOf(m), 0);
+        const wit = movements.reduce((t, m) => t + withdrawOf(m), 0);
+        const days = movements.filter(m => dayDiffOf(m) !== null).length;
+        const parts = [`<strong>${movements.length}</strong> ${movements.length === 1 ? "movimento" : "movimenti"}`];
+        if (days && type !== "deposit" && type !== "withdraw") parts.push(`G/P <strong class="${gp > 0 ? "green" : gp < 0 ? "red" : ""}">${gp > 0 ? "+" : ""}${euro(gp)}</strong>${days > 1 ? ` (media ${gp / days > 0 ? "+" : ""}${euro(gp / days)} al giorno)` : ""}`);
+        if (dep && type !== "withdraw") parts.push(`depositi <strong class="green">+${euro(dep)}</strong>`);
+        if (wit && type !== "deposit") parts.push(`prelievi <strong class="orange">-${euro(wit)}</strong>`);
+        summary.innerHTML = parts.join(" · ");
+    }
     const isClosed = project.status === 'completed' || project.status === 'abandoned';
 
     container.innerHTML = movements.map(movement => {
