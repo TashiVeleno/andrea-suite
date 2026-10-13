@@ -1017,6 +1017,21 @@ canvas { width: 100%; height: 100%; display: block; }
     </div>
 </div>
 
+<!-- MODALE IMPORTA CSV BETFAIR -->
+<div class="modal-overlay" id="importModal" onclick="if (event.target.id === 'importModal') closeImportModal()">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <h3>📥 Importa da Betfair</h3>
+            <button class="modal-close-btn" onclick="closeImportModal()">✕</button>
+        </div>
+        <p class="rules-help">Le scommesse della stessa partita e dello stesso mercato diventano una sola operazione, con il risultato netto della commissione. Servono solo per le statistiche delle strategie: il saldo resta quello del resoconto giornaliero. Le scommesse già importate vengono saltate.</p>
+        <div id="importSummary" class="small" style="margin-bottom:10px;"></div>
+        <div id="importMapping"></div>
+        <button class="primary" id="importConfirmBtn" style="width:100%; margin-top:8px;" onclick="confirmBetfairImport()">📥 Importa</button>
+        <div id="importUndo" class="small" style="margin-top:12px;"></div>
+    </div>
+</div>
+
 <!-- MODALE REGISTRA OPERAZIONE (STRATEGIE) -->
 <div class="modal-overlay" id="betModal" onclick="if (event.target.id === 'betModal') closeBetModal()">
     <div class="modal-content" style="max-width: 480px;">
@@ -1326,7 +1341,11 @@ canvas { width: 100%; height: 100%; display: block; }
         <div class="console-card risk-card">
             <div class="risk-card-header">
                 <h2>🎯 Strategie</h2>
-                <button class="primary" id="btnAddBet" style="padding: 6px 12px; font-size:13px;" onclick="openBetModal()">➕ Operazione</button>
+                <div style="display:flex; gap:6px;">
+                    <button id="btnImportBets" style="padding: 6px 10px; font-size:13px;" onclick="document.getElementById('betfairFile').click()" title="Importa le scommesse concluse da Betfair (CSV)">📥 Betfair</button>
+                    <button class="primary" id="btnAddBet" style="padding: 6px 12px; font-size:13px;" onclick="openBetModal()">➕ Operazione</button>
+                </div>
+                <input type="file" id="betfairFile" accept=".csv,text/csv" style="display:none" onchange="readBetfairFile(this)">
             </div>
             <div id="strategyContent"></div>
         </div>
@@ -2331,7 +2350,8 @@ function periodProfit(project, stats, start) {
     stats.history.forEach(h => {
         if (h.type === "day" && h.dayDiff !== null) reports[dayKey(h.date)] = (reports[dayKey(h.date)] || 0) + h.dayDiff;
     });
-    getBets(project).forEach(b => {
+    // Le operazioni importate da Betfair servono solo per le statistiche, non per il saldo
+    getBets(project).filter(b => b.source !== "betfair").forEach(b => {
         bets[dayKey(b.date)] = (bets[dayKey(b.date)] || 0) + (Number(b.pl) || 0);
     });
 
@@ -2576,6 +2596,7 @@ function renderRiskSection(project, stats) {
     }
 
     document.getElementById("btnAddBet").style.display = isClosed ? "none" : "";
+    document.getElementById("btnImportBets").style.display = isClosed ? "none" : "";
     renderMoneyManagement(project, stats, isClosed);
     renderStrategies(project);
 }
@@ -2984,6 +3005,7 @@ function renderBetList(project) {
     document.getElementById("betList").innerHTML = bets.length ? bets.map(b => {
         const s = strategies[b.strategyId];
         const details = [new Date(b.date).toLocaleString("it-IT")];
+        if (b.label) details.unshift(escapeHTML(b.label));
         if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
         if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
         if (b.exitOdds) details.push(`uscita ${s && s.side === "lay" ? "punta" : "banca"} ${b.exitStake ? euro(b.exitStake) + " " : ""}a ${fmtOdds(b.exitOdds)}`);
@@ -2999,6 +3021,236 @@ function renderBetList(project) {
             </div>
         </div>`;
     }).join("") : `<div class="small">Nessuna operazione registrata.</div>`;
+}
+
+// ----- Importazione CSV Betfair (scommesse concluse) -----
+const IT_MONTHS = { gen: 0, feb: 1, mar: 2, apr: 3, mag: 4, giu: 5, lug: 6, ago: 7, set: 8, ott: 9, nov: 10, dic: 11 };
+let importDraft = null;
+
+// Righe CSV con virgolette ("1.234,56" contiene virgole)
+function parseCSV(text) {
+    const rows = []; let row = [], field = "", quoted = false;
+    text = text.replace(/^\uFEFF/, "");
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (quoted) {
+            if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+            else if (c === '"') quoted = false;
+            else field += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === "\n" || c === "\r") {
+            if (c === "\r" && text[i + 1] === "\n") i++;
+            row.push(field); field = "";
+            if (row.some(f => f.trim() !== "")) rows.push(row);
+            row = [];
+        } else field += c;
+    }
+    row.push(field);
+    if (row.some(f => f.trim() !== "")) rows.push(row);
+    return rows;
+}
+
+// "1.234,56" → 1234.56 ; "--" → 0
+function itNumber(v) {
+    const t = String(v || "").trim();
+    if (!t || t === "--") return 0;
+    return Number(t.replace(/\./g, "").replace(",", ".")) || 0;
+}
+
+// "13-ott-26 13:19:43" → Date
+function itDate(v) {
+    const m = String(v || "").trim().match(/^(\d{1,2})-([a-z]{3})-(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/i);
+    if (!m || !(m[2].toLowerCase() in IT_MONTHS)) return null;
+    const y = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]);
+    return new Date(y, IT_MONTHS[m[2].toLowerCase()], Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6] || 0));
+}
+
+// "Evento Under 3,5 goal-Over/Under 3,5 gol | ID scommessa Betfair 1:123 | ..." → evento, selezione, mercato, id
+function parseBetfairDetails(text) {
+    const parts = String(text || "").split(" | ");
+    const idMatch = text.match(/ID scommessa Betfair\s*([\d:]+)/i);
+    const head = parts[0].trim();
+    let event = head, selection = "", market = "", line = null, ou = null;
+    const m = head.match(/^(.*?)\s+(Over|Under)\s+(\d+(?:,\d+)?)\s+goal-(.+)$/i);
+    if (m) {
+        event = m[1]; ou = m[2][0].toUpperCase() + m[2].slice(1).toLowerCase(); line = m[3].replace(",", ".");
+        selection = `${ou} ${line}`; market = m[4].trim();
+    } else {
+        const cut = head.lastIndexOf("-");
+        market = cut > 0 ? head.slice(cut + 1).trim() : "";
+        const rest = cut > 0 ? head.slice(0, cut).trim() : head;
+        const ev = rest.match(/^(.+? - .+?)\s+(.+)$/);
+        if (ev) { event = ev[1]; selection = ev[2]; } else event = rest;
+    }
+    const firstHalf = /1[º°o]?\s*tempo|primo tempo/i.test(market);
+    return { event, selection, market, ou, line, firstHalf, betId: idMatch ? idMatch[1] : null };
+}
+
+// Nome strategia dalla prima scommessa: "Punta Under 3.5", "Banca Over 0.5 primo tempo"
+function betfairStrategyName(side, d) {
+    const verb = side === "lay" ? "Banca" : "Punta";
+    if (d.ou) return `${verb} ${d.selection}${d.firstHalf ? " primo tempo" : ""}`;
+    return `${verb} ${d.market || d.selection}`.trim();
+}
+
+function readBetfairFile(input) {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => buildBetfairImport(String(reader.result || ""));
+    reader.readAsText(file, "utf-8");
+}
+
+function buildBetfairImport(text) {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const rows = parseCSV(text);
+    const head = (rows[0] || []).map(h => h.trim().toLowerCase());
+    const col = name => head.findIndex(h => h.startsWith(name));
+    const ix = { placed: col("piazzat"), settled: col("chius"), details: col("dettagli"), type: col("tipo"), odds: col("quota"), stake: col("puntata"), liability: col("responsabilit"), pl: col("profitto") };
+    if (Object.values(ix).some(i => i < 0)) {
+        alert("Questo file non sembra l'elenco delle scommesse concluse di Betfair. Scaricalo da Il mio conto → Scommesse → Concluse.");
+        return;
+    }
+
+    const known = new Set();
+    getBets(project).forEach(b => (b.betfairIds || []).forEach(id => known.add(id)));
+
+    // Raggruppa per mercato: stesso evento, stesso mercato, stessa ora di chiusura
+    const groups = new Map();
+    let skipped = 0, total = 0;
+    rows.slice(1).forEach(r => {
+        const d = parseBetfairDetails(r[ix.details]);
+        const settled = itDate(r[ix.settled]);
+        const placed = itDate(r[ix.placed]);
+        const type = String(r[ix.type] || "").trim().toLowerCase();
+        if (!settled || !placed || !(type === "punta" || type === "banca")) return;
+        total++;
+        if (d.betId && known.has(d.betId)) { skipped++; return; }
+        const key = `${r[ix.settled].trim()}|${d.event}|${d.market}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ ...d, placed, settled, side: type === "banca" ? "lay" : "back", odds: Number(String(r[ix.odds]).trim().replace(",", ".")) || 0, stake: itNumber(r[ix.stake]), liability: itNumber(r[ix.liability]), pl: itNumber(r[ix.pl]) });
+    });
+
+    const k = 1 - getRules(project).commissionPct / 100;
+    const ops = [...groups.values()].map(list => {
+        list.sort((a, b) => a.placed - b.placed);
+        const first = list[0];
+        const gross = list.reduce((t, b) => t + b.pl, 0);
+        // Uscita: le scommesse che coprono l'entrata (lato opposto sulla stessa selezione o altra selezione)
+        const exits = list.slice(1).filter(b => !(b.side === first.side && b.selection === first.selection));
+        const exitStake = exits.reduce((t, b) => t + b.stake, 0);
+        const exitOdds = exitStake > 0 ? exits.reduce((t, b) => t + b.odds * b.stake, 0) / exitStake : 0;
+        const op = {
+            name: betfairStrategyName(first.side, first),
+            side: first.side,
+            date: first.settled.toISOString(),
+            pl: Math.round((gross > 0 ? gross * k : gross) * 100) / 100,
+            stake: Math.round((first.side === "lay" ? first.liability : first.stake) * 100) / 100,
+            odds: first.odds,
+            label: `${first.event} · ${first.market}`,
+            betfairIds: list.map(b => b.betId).filter(Boolean)
+        };
+        if (exitOdds > 1) { op.exitOdds = Math.round(exitOdds * 100) / 100; op.exitStake = Math.round(exitStake * 100) / 100; }
+        return op;
+    }).filter(op => op.pl !== 0 || op.betfairIds.length);
+
+    importDraft = { ops, skipped, total };
+    renderImportModal(project);
+    document.getElementById("importModal").classList.add("active");
+}
+
+function renderImportModal(project) {
+    const strategies = getStrategies(project);
+    const mapping = project.betfairMapping || {};
+    const ops = importDraft ? importDraft.ops : [];
+    const imported = getBets(project).filter(b => b.source === "betfair").length;
+
+    if (importDraft) {
+        const dates = ops.map(o => new Date(o.date)).sort((a, b) => a - b);
+        const range = dates.length ? ` dal ${dates[0].toLocaleDateString("it-IT")} al ${dates[dates.length - 1].toLocaleDateString("it-IT")}` : "";
+        document.getElementById("importSummary").innerHTML = ops.length
+            ? `Nel file: <strong>${importDraft.total}</strong> scommesse → <strong>${ops.length}</strong> operazioni nuove${range}.${importDraft.skipped ? ` ${importDraft.skipped} scommesse erano già importate e le salto.` : ""} Per ogni tipo scegli la strategia giusta:`
+            : `Nel file: <strong>${importDraft.total}</strong> scommesse, tutte già importate. Non c'è niente di nuovo.`;
+    } else document.getElementById("importSummary").innerHTML = "";
+
+    // Un menu per ogni tipo trovato: strategia esistente con lo stesso nome, quella scelta l'ultima volta o una nuova
+    const types = {};
+    ops.forEach(o => { types[o.name] = types[o.name] || { side: o.side, n: 0, pl: 0 }; types[o.name].n++; types[o.name].pl += o.pl; });
+    const names = Object.keys(types).sort((a, b) => types[b].n - types[a].n);
+    document.getElementById("importMapping").innerHTML = names.map((name, i) => {
+        const t = types[name];
+        const same = strategies.find(s => s.name.toLowerCase() === name.toLowerCase());
+        const chosen = mapping[name] && strategies.some(s => s.id === mapping[name]) ? mapping[name] : same ? same.id : "__new";
+        return `
+        <div style="border-top:1px solid var(--border); padding:8px 0;">
+            <div style="display:flex; justify-content:space-between; gap:8px;"><strong>${escapeHTML(name)}</strong><span class="small">${t.n} op. · <span class="${t.pl > 0 ? "green" : t.pl < 0 ? "red" : ""}">${t.pl > 0 ? "+" : ""}${euro(t.pl)}</span></span></div>
+            <select class="field-select" data-import-type="${i}" data-import-name="${escapeHTML(name).replace(/"/g, "&quot;")}" style="font-size:14px; padding:8px; margin:6px 0 0;">
+                ${same ? "" : `<option value="__new" ${chosen === "__new" ? "selected" : ""}>➕ Nuova strategia "${escapeHTML(name)}"</option>`}
+                ${strategies.map(s => `<option value="${escapeHTML(s.id)}" ${s.id === chosen ? "selected" : ""}>${escapeHTML(s.name)}</option>`).join("")}
+                <option value="__skip">Non importare</option>
+            </select>
+        </div>`;
+    }).join("");
+    document.getElementById("importConfirmBtn").style.display = ops.length ? "" : "none";
+    document.getElementById("importUndo").innerHTML = imported
+        ? `Hai già ${imported} operazioni importate da Betfair. <a href="#" style="color:var(--red, #f87171);" onclick="event.preventDefault(); removeBetfairImports()">Eliminale tutte</a>`
+        : "";
+}
+
+function closeImportModal() {
+    document.getElementById("importModal").classList.remove("active");
+    importDraft = null;
+}
+
+function confirmBetfairImport() {
+    if (!importDraft) return;
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project || isProjectClosed(project)) return;
+
+    project.strategies = getStrategies(project);
+    project.betfairMapping = project.betfairMapping || {};
+    project.bets = getBets(project);
+    const target = {};
+    document.querySelectorAll("[data-import-type]").forEach(sel => {
+        const name = sel.getAttribute("data-import-name").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+        let id = sel.value;
+        if (id === "__new") {
+            const side = importDraft.ops.find(o => o.name === name).side;
+            id = "bf_" + name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+            if (!project.strategies.some(s => s.id === id)) project.strategies.push({ id, name, side, refOdds: null, breakEven: null });
+        }
+        target[name] = id;
+        if (id !== "__skip") project.betfairMapping[name] = id;
+    });
+
+    let added = 0, n = Date.now();
+    importDraft.ops.forEach(op => {
+        const strategyId = target[op.name];
+        if (!strategyId || strategyId === "__skip") return;
+        const { name, side, ...bet } = op;
+        project.bets.push({ id: n++, strategyId, source: "betfair", ...bet });
+        added++;
+    });
+
+    window.saveProjects(projects);
+    closeImportModal();
+    renderProjectDetail();
+    alert(`Importate ${added} operazioni. Le trovi nella sezione Strategie.`);
+}
+
+function removeBetfairImports() {
+    if (!confirm("Vuoi eliminare tutte le operazioni importate da Betfair? Quelle inserite a mano restano.")) return;
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    project.bets = getBets(project).filter(b => b.source !== "betfair");
+    window.saveProjects(projects);
+    renderImportModal(project);
+    renderProjectDetail();
 }
 
 function deleteBet(id) {
