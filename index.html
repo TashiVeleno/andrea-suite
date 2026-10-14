@@ -1821,7 +1821,9 @@ function calculateProject(project) {
     const result = balance + withdrawals - deposits;
     const realizedResult = withdrawals - deposits;
 
-    const percentage = project.capital > 0 ? (result / project.capital) * 100 : 0;
+    // Base delle percentuali: il capitale iniziale, o tutto quello che hai versato se è di più
+    const capitalBase = Math.max(Number(project.capital) || 0, deposits);
+    const percentage = capitalBase > 0 ? (result / capitalBase) * 100 : 0;
     const goal = Number(project.goal || 0);
     const goalProgress = goal > 0 ? (result / goal) * 100 : 0;
     const goalRemaining = Math.max(0, goal - result);
@@ -1868,7 +1870,7 @@ function calculateProject(project) {
     const profitThisMonth = result - previousMonthResult;
 
     return {
-        balance, deposits, withdrawals, result, realizedResult, percentage,
+        balance, deposits, withdrawals, result, realizedResult, percentage, capitalBase,
         goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
         dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
         daysDifference, history, profitThisMonth, deadlinePassed,
@@ -2172,12 +2174,12 @@ function popolaStatisticheProgetto(project) {
     const profitFactor = lossSum > 0 ? (winSum / lossSum).toFixed(2) : (winSum > 0 ? "∞" : "0,00");
     const avgDailyProfit = totalDays > 0 ? (winSum - lossSum) / totalDays : 0;
 
-    let peak = project.capital;
+    let peak = stats.capitalBase;
     let maxDrawdownEur = 0;
     let maxDrawdownPerc = 0;
 
     stats.history.forEach(item => {
-        let currentEquity = project.capital + item.resultAfter;
+        let currentEquity = stats.capitalBase + item.resultAfter;
         if (currentEquity > peak) {
             peak = currentEquity;
         }
@@ -2373,7 +2375,7 @@ function calculateMoneyManagement(project, stats) {
     const todayPL = periodProfit(project, stats, today);
     const weekPL = periodProfit(project, stats, weekStart);
     const monthPL = periodProfit(project, stats, monthStart);
-    const equity = project.capital + stats.result;
+    const equity = stats.capitalBase + stats.result;
 
     // Il limite si calcola sulla banca a inizio periodo, così non si restringe mentre perdi
     const limit = (pct, pl) => pct > 0 ? Math.max(0, (equity - pl) * pct / 100) : 0;
@@ -2382,8 +2384,8 @@ function calculateMoneyManagement(project, stats) {
     const weeklyLimit = limit(rules.weeklyStopPct, weekPL);
     const monthlyLimit = limit(rules.monthlyStopPct, monthPL);
 
-    let peak = project.capital;
-    stats.history.forEach(h => { peak = Math.max(peak, project.capital + h.resultAfter); });
+    let peak = stats.capitalBase;
+    stats.history.forEach(h => { peak = Math.max(peak, stats.capitalBase + h.resultAfter); });
     const drawdown = Math.max(0, peak - equity);
     const drawdownPct = peak > 0 ? drawdown / peak * 100 : 0;
 
@@ -2518,7 +2520,7 @@ function calculateAlarms(project, stats) {
         add("yellow", "😤", "3 giornate in perdita di fila", "Considera 24 ore di pausa per recuperare la lucidità e non forzare le operazioni.");
     } else if (dayMovements.length > 0) {
         const lastMove = dayMovements[dayMovements.length - 1];
-        const prevEquity = project.capital + lastMove.resultAfter - lastMove.dayDiff;
+        const prevEquity = stats.capitalBase + lastMove.resultAfter - lastMove.dayDiff;
         if (lastMove.dayDiff < 0 && prevEquity > 0 && -lastMove.dayDiff / prevEquity > 0.15) {
             add("red", "🛑", "Perdita oltre il 15% in un giorno", "Fai un bel respiro, chiudi i mercati e stacca per oggi.");
         }
