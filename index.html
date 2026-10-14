@@ -3553,17 +3553,7 @@ function saveOperation(type) {
         
         const dep = Number(inputD) || 0;
         const wit = Number(inputW) || 0;
-        const stats = calculateProject(project);
-        
-        if (dep > 0) {
-            const netCapital = stats.deposits - stats.withdrawals;
-            const remainingSpace = project.capital - netCapital;
-            if (dep > remainingSpace) {
-                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
-                return;
-            }
-        }
-        
+
         movement = { id: Date.now(), type: "day", balance: Number(inputBal), deposit: dep, withdraw: wit, date: finalDate };
         
     } else {
@@ -3572,15 +3562,6 @@ function saveOperation(type) {
         if (input.value === "" || amount <= 0 || isNaN(amount)) { alert("Inserisci un importo valido."); return; }
         
         const stats = calculateProject(project);
-        
-        if (type === "deposit") {
-            const netCapital = stats.deposits - stats.withdrawals;
-            const remainingSpace = project.capital - netCapital;
-            if (amount > remainingSpace) {
-                alert(`Limite superato!\n\nCapitale iniziale: ${euro(project.capital)}.\nVersato netto: ${euro(netCapital)}.\nPuoi depositare al massimo altri ${euro(remainingSpace)}.`);
-                return;
-            }
-        }
         
         if (type === "withdraw" && amount > stats.balance) {
             alert("Non puoi prelevare più del saldo attuale (" + euro(stats.balance) + ").");
