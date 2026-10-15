@@ -1,0 +1,7 @@
+{
+  "name": "andrea-suite",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

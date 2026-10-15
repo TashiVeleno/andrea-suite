@@ -1146,6 +1146,13 @@ canvas { width: 100%; height: 100%; display: block; }
 
     <h2 class="section-title" style="margin-top: 40px;">🗄️ Progetti chiusi</h2>
     <div id="closedProjectsList"></div>
+
+    <div style="border-top: 1px solid var(--border); margin-top: 40px; padding-top: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span class="small">💾 Backup di tutti i progetti:</span>
+        <button class="secondary" style="padding: 6px 12px; font-size: 13px;" onclick="exportBackup()">⬇️ Scarica backup</button>
+        <button class="secondary" style="padding: 6px 12px; font-size: 13px;" onclick="document.getElementById('backupFileInput').click()">⬆️ Ripristina backup</button>
+        <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="importBackup(this)">
+    </div>
 </section>
 
 <!-- DETTAGLIO PROGETTO -->
@@ -1728,6 +1735,87 @@ window.exportProjectToCSV = function() {
     document.body.removeChild(link);
 };
 
+// ===== BACKUP COMPLETO (JSON) =====
+// Un unico file con tutti i progetti (movimenti, operazioni, regole, strategie) e il Bilancio Vita Reale.
+// Il ripristino sostituisce tutti i dati attuali, anche nel cloud se hai fatto l'accesso.
+const BACKUP_APP = "andrea-suite";
+const BACKUP_VERSION = 1;
+const REAL_LIFE_FIELDS = ["manualDeposits", "manualWithdrawals", "deletedDeposits", "deletedWithdrawals"];
+
+function buildBackup(projects, realLife, now) {
+    return {
+        app: BACKUP_APP,
+        version: BACKUP_VERSION,
+        exportedAt: (now || new Date()).toISOString(),
+        projects: JSON.parse(JSON.stringify(projects || [])),
+        realLife: { ...(realLife || {}) }
+    };
+}
+
+// Legge un file di backup e restituisce { projects, realLife }, oppure lancia un errore leggibile
+function parseBackup(text) {
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error("Il file non è un JSON valido."); }
+    if (!data || typeof data !== "object") throw new Error("Il file non contiene un backup.");
+    if (data.app !== BACKUP_APP || !Array.isArray(data.projects)) throw new Error("Questo file non è un backup di Andrea Suite.");
+    if (Number(data.version) > BACKUP_VERSION) throw new Error("Il backup è stato creato da una versione più nuova dell'app.");
+
+    data.projects.forEach((p, i) => {
+        if (!p || typeof p !== "object" || p.id === undefined || typeof p.name !== "string") throw new Error(`Il progetto n° ${i + 1} non è valido.`);
+        if (p.movements !== undefined && !Array.isArray(p.movements)) throw new Error(`I movimenti del progetto «${p.name}» non sono validi.`);
+    });
+
+    const rl = data.realLife && typeof data.realLife === "object" ? data.realLife : {};
+    const realLife = {};
+    REAL_LIFE_FIELDS.forEach(k => {
+        const v = Number(rl[k] ?? 0);
+        if (!isFinite(v)) throw new Error("Il Bilancio Vita Reale nel backup non è valido.");
+        realLife[k] = v;
+    });
+
+    const projects = data.projects.map(p => ({ ...p, movements: Array.isArray(p.movements) ? p.movements : [] }));
+    return { projects, realLife, exportedAt: data.exportedAt || null };
+}
+
+function exportBackup() {
+    const backup = buildBackup(window.loadProjects(), window.loadRealLife());
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Backup_AndreaSuite_${backup.exportedAt.slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function importBackup(input) {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        let backup;
+        try { backup = parseBackup(String(reader.result)); }
+        catch (e) { alert("Backup non caricato: " + e.message); return; }
+
+        const quando = backup.exportedAt ? ` del ${new Date(backup.exportedAt).toLocaleString("it-IT")}` : "";
+        const ok = confirm(`Ripristinare il backup${quando}?\n\n` +
+            `Contiene ${backup.projects.length} progett${backup.projects.length === 1 ? "o" : "i"}.\n` +
+            `Tutti i dati attuali (${window.loadProjects().length} progetti e il Bilancio Vita Reale) verranno sostituiti.`);
+        if (!ok) return;
+
+        currentProjectId = null;
+        goToPage("main-dashboard");
+        window.saveProjects(backup.projects, backup.realLife);
+        alert("Backup ripristinato.");
+    };
+    reader.onerror = () => alert("Impossibile leggere il file.");
+    reader.readAsText(file);
+}
+
 function euro(value) {
     return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
@@ -2091,6 +2179,15 @@ window.unlockOperations = function() {
     document.getElementById("operationInnerContainer").style.display = "flex";
 }
 
+// Cedola del mese: una % dell'utile di questo mese, mai più del risultato totale del progetto.
+// Bloccata se il progetto è in perdita, zero se questo mese non c'è utile.
+function calculateCedola(stats, percentPct) {
+    const base = Math.min(stats.profitThisMonth, stats.result);
+    if (stats.result <= 0) return { state: "blocked", base, amount: 0, toRecover: Math.abs(stats.result) };
+    if (stats.profitThisMonth <= 0) return { state: "noprofit", base, amount: 0, toRecover: 0 };
+    return { state: "ok", base, amount: base * percentPct / 100, toRecover: 0 };
+}
+
 // Aggiorna dinamicamente la card della Cedola
 window.updateSalaryDisplay = function() {
     const salaryStatus = document.getElementById("salaryStatus");
@@ -2101,11 +2198,11 @@ window.updateSalaryDisplay = function() {
     if (!project) return;
     const stats = calculateProject(project);
     
-    const percent = Number(select.value) / 100;
-    cedolaBaseValue = Math.min(stats.profitThisMonth, stats.result);
+    const cedola = calculateCedola(stats, Number(select.value));
+    cedolaBaseValue = cedola.base;
     
-    if (stats.result <= 0) {
-        const daRecuperare = Math.abs(stats.result);
+    if (cedola.state === "blocked") {
+        const daRecuperare = cedola.toRecover;
         salaryStatus.innerHTML = `
             <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px; margin:0;">
                 <strong class="red">🔴 Bloccata</strong><br><br>
@@ -2113,7 +2210,7 @@ window.updateSalaryDisplay = function() {
                 Devi recuperare <strong>${euro(daRecuperare)}</strong> per sbloccare i profitti.
             </div>
         `;
-    } else if (stats.profitThisMonth <= 0) {
+    } else if (cedola.state === "noprofit") {
         salaryStatus.innerHTML = `
             <div class="roadmap-status behind" style="border-color: var(--red); background: rgba(239,68,68,.10); border-radius:12px; margin:0;">
                 <strong class="red">🔴 Nessun utile mensile</strong><br><br>
@@ -2121,7 +2218,7 @@ window.updateSalaryDisplay = function() {
             </div>
         `;
     } else {
-        const stipendio = cedolaBaseValue * percent;
+        const stipendio = cedola.amount;
         salaryStatus.innerHTML = `
             <div class="roadmap-status inline" style="border-color: var(--green); background: rgba(34,197,94,.10); border-radius:12px; margin:0;">
                 <strong class="green">🟢 In utile</strong><br><br>
