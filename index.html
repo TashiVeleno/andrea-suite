@@ -5,8 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andrea Suite</title>
 
-<!-- Link per trasformare la suite in una PWA installabile senza barre -->
+<!-- App installabile sul telefono: icona nella schermata home, schermo intero, si apre anche offline -->
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f17">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Andrea Suite">
 
 <!-- Libreria per l'effetto coriandoli -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -1400,7 +1407,7 @@ canvas { width: 100%; height: 100%; display: block; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBplEyF8WUiJtz-I0w2XpNSUUXmhsDVcgQ",
@@ -1509,34 +1516,106 @@ function renderAuthUI(name, photoURL) {
     }
 }
 
+// Sincronizzazione con il cloud senza perdere dati: se modifichi su due dispositivi (o su uno rimasto offline),
+// al salvataggio le modifiche vengono unite a quelle già nel cloud (vedi mergeProjects nello script principale).
+const CLOUD_BASE_KEY = "andrea_suite_cloud_base"; // ultima versione in comune con il cloud
+const UNSYNCED_KEY = "andrea_suite_unsynced";     // id dell'account con modifiche fatte qui non ancora nel cloud
+let pushing = false;
+let pushAgain = false;
+
+const clone = v => JSON.parse(JSON.stringify(v));
+
+function cloudProjects(data) {
+    return Array.isArray(data.projects) ? data.projects : (data.projects?.projects || []);
+}
+
+// La base vale solo per l'account con cui è stata salvata
+function readCloudBase() {
+    try {
+        const base = JSON.parse(localStorage.getItem(CLOUD_BASE_KEY));
+        return base && currentUser && base.uid === currentUser.uid ? base : null;
+    } catch { return null; }
+}
+
+function saveCloudBase(projects, realLife) {
+    localStorage.setItem(CLOUD_BASE_KEY, JSON.stringify({ uid: currentUser.uid, projects, realLife: realLife || null }));
+}
+
+function hasUnsynced() {
+    return !!currentUser && localStorage.getItem(UNSYNCED_KEY) === currentUser.uid;
+}
+
+function setUnsynced(value) {
+    if (value) localStorage.setItem(UNSYNCED_KEY, currentUser.uid);
+    else localStorage.removeItem(UNSYNCED_KEY);
+}
+
 function syncWithCloud(uid) {
     if (!db) return;
     const userDocRef = doc(db, "users", uid);
-    unsubscribeCloud = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            localProjects = Array.isArray(data.projects) ? data.projects : (data.projects?.projects || []);
-            saveToLocalStorage();
-            if (data.realLife) {
-                localRealLife = normalizeRealLife(data.realLife);
-                realLifeReady = true;
-                saveRealLifeToStorage();
-            } else if (realLifeReady) {
-                pushToCloud(); // primo avvio: porta nel cloud il bilancio salvato finora solo su questo dispositivo
-            }
-            updateAll();
-        } else { pushToCloud(); }
-    });
+    unsubscribeCloud = onSnapshot(userDocRef, { includeMetadataChanges: true }, (docSnap) => {
+        if (pushing || docSnap.metadata.hasPendingWrites) return;
+        if (docSnap.metadata.fromCache && !docSnap.exists()) return; // offline e niente in memoria: aspetta il cloud
+        if (!docSnap.exists()) { pushToCloud(); return; }
+        if (hasUnsynced()) {
+            // ci sono modifiche fatte qui: non sovrascriverle, uniscile appena il cloud risponde
+            if (!docSnap.metadata.fromCache) pushToCloud();
+            return;
+        }
+        const data = docSnap.data();
+        localProjects = cloudProjects(data);
+        saveToLocalStorage();
+        if (data.realLife) {
+            localRealLife = normalizeRealLife(data.realLife);
+            realLifeReady = true;
+            saveRealLifeToStorage();
+        }
+        saveCloudBase(localProjects, data.realLife ? localRealLife : null);
+        if (!data.realLife && realLifeReady) pushToCloud(); // primo avvio: porta nel cloud il bilancio salvato finora solo su questo dispositivo
+        updateAll();
+    }, e => console.warn("Cloud:", e));
 }
 
 async function pushToCloud() {
     if (!currentUser || !db) return;
+    if (pushing) { pushAgain = true; return; }
+    pushing = true;
+    pushAgain = false;
+    const ref = doc(db, "users", currentUser.uid);
+    const sent = clone({ projects: localProjects, realLife: realLifeReady ? localRealLife : null });
     try {
-        const payload = { projects: localProjects, updatedAt: new Date().toISOString() };
-        if (realLifeReady) payload.realLife = localRealLife;
-        await setDoc(doc(db, "users", currentUser.uid), payload, { merge: true });
-    } catch (e) { console.error(e); }
+        const result = await runTransaction(db, async tx => {
+            const snap = await tx.get(ref);
+            const remote = snap.exists() ? snap.data() : null;
+            const base = readCloudBase() || { projects: [], realLife: null }; // senza base: si tiene tutto, niente si cancella
+            const projects = remote ? mergeProjects(base.projects, sent.projects, cloudProjects(remote)) : sent.projects;
+            const realLife = mergeRealLife(base.realLife, sent.realLife, remote && remote.realLife ? normalizeRealLife(remote.realLife) : null);
+            const payload = { projects, updatedAt: new Date().toISOString() };
+            if (realLife) payload.realLife = normalizeRealLife(realLife);
+            tx.set(ref, payload, { merge: true });
+            return { projects, realLife: payload.realLife || null };
+        });
+        saveCloudBase(result.projects, result.realLife);
+        // se hai modificato qualcosa mentre il salvataggio era in corso, quelle modifiche restano
+        localProjects = mergeProjects(sent.projects, localProjects, result.projects);
+        const realLife = mergeRealLife(sent.realLife, realLifeReady ? localRealLife : null, result.realLife);
+        if (realLife) {
+            localRealLife = normalizeRealLife(realLife);
+            realLifeReady = true;
+            saveRealLifeToStorage();
+        }
+        saveToLocalStorage();
+        if (!pushAgain) setUnsynced(false);
+        updateAll();
+    } catch (e) {
+        console.warn("Cloud non raggiunto, le modifiche restano su questo dispositivo e verranno unite al prossimo collegamento:", e);
+    } finally {
+        pushing = false;
+        if (pushAgain) pushToCloud();
+    }
 }
+
+window.addEventListener("online", () => { if (hasUnsynced()) pushToCloud(); });
 
 function loadLocalData() {
     try { 
@@ -1578,8 +1657,11 @@ window.saveProjects = (projects, realLife) => {
         realLifeReady = true;
         saveRealLifeToStorage();
     }
-    if (currentUser) pushToCloud();
-    else updateAll();
+    if (currentUser) {
+        setUnsynced(true);
+        pushToCloud();
+    }
+    updateAll();
 };
 
 window.saveRealLife = (realLife) => window.saveProjects(localProjects, realLife);
@@ -1588,6 +1670,10 @@ if (localStorage.getItem("andrea_suite_local_session") === "true") {
     renderAuthUI("Andrea (Locale)", null);
 }
 loadLocalData();
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service worker:", e));
+}
 </script>
 
 <script>
@@ -1734,6 +1820,82 @@ window.exportProjectToCSV = function() {
     link.click();
     document.body.removeChild(link);
 };
+
+// ===== UNIONE DELLE MODIFICHE TRA DISPOSITIVI =====
+// Ogni dispositivo ricorda l'ultima versione che ha in comune con il cloud ("base").
+// Quando salva, confronta base, dati suoi e dati del cloud e tiene le modifiche di entrambi:
+// progetti, movimenti, operazioni e strategie vengono uniti uno per uno (per id).
+// Se la stessa cosa è stata cambiata su tutti e due, vince questo dispositivo; se da una parte è stata cancellata, resta cancellata.
+function sameData(a, b) {
+    return stableJSON(a) === stableJSON(b);
+}
+
+// Firestore non conserva l'ordine delle chiavi: si confrontano i dati con le chiavi in ordine
+function stableJSON(v) {
+    if (v === undefined) return "undefined";
+    if (Array.isArray(v)) return "[" + v.map(stableJSON).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ":" + stableJSON(v[k])).join(",") + "}";
+    return JSON.stringify(v);
+}
+
+function mergeValue(base, local, remote) {
+    if (sameData(local, base)) return remote;
+    return local; // cambiato qui (ed eventualmente anche nel cloud): vince questo dispositivo
+}
+
+function mergeById(base, local, remote, mergeItem) {
+    const list = x => (Array.isArray(x) ? x : []);
+    const byId = arr => new Map(list(arr).filter(x => x && x.id !== undefined).map(x => [String(x.id), x]));
+    const b = byId(base), l = byId(local), r = byId(remote);
+    const ids = [...l.keys(), ...[...r.keys()].filter(id => !l.has(id))];
+    const result = [];
+    ids.forEach(id => {
+        const bi = b.get(id), li = l.get(id), ri = r.get(id);
+        let item;
+        if (sameData(li, ri)) item = li;
+        else if (sameData(li, bi)) item = ri;               // cambiato (o cancellato) solo nel cloud
+        else if (sameData(ri, bi)) item = li;               // cambiato (o cancellato) solo qui
+        else if (!li || !ri) item = undefined;              // cancellato da una parte e cambiato dall'altra: resta cancellato
+        else item = mergeItem ? mergeItem(bi, li, ri) : li; // cambiato da tutte e due le parti
+        if (item !== undefined) result.push(item);
+    });
+    // elementi senza id (dati molto vecchi): si tengono quelli di questo dispositivo
+    return result.concat(list(local).filter(x => !x || x.id === undefined));
+}
+
+const MERGE_LISTS = ["movements", "bets", "strategies"];
+
+function mergeProject(base, local, remote) {
+    base = base || {};
+    const merged = {};
+    new Set([...Object.keys(local), ...Object.keys(remote)]).forEach(key => {
+        const v = MERGE_LISTS.includes(key) && (Array.isArray(local[key]) || Array.isArray(remote[key]))
+            ? mergeById(base[key], local[key], remote[key])
+            : mergeValue(base[key], local[key], remote[key]);
+        if (v !== undefined) merged[key] = v;
+    });
+    return merged;
+}
+
+function mergeProjects(base, local, remote) {
+    return mergeById(base, local, remote, mergeProject);
+}
+
+// I totali dei progetti eliminati si sommano (si può eliminare su tutti e due i dispositivi);
+// gli altri valori del bilancio seguono la regola di sempre.
+function mergeRealLife(base, local, remote) {
+    if (!remote) return local;
+    if (!local) return remote;
+    base = base || {};
+    const merged = {};
+    REAL_LIFE_FIELDS.forEach(k => {
+        const b = Number(base[k]) || 0, l = Number(local[k]) || 0, r = Number(remote[k]) || 0;
+        if (l === b) merged[k] = r;
+        else if (r === b || l === r) merged[k] = l;
+        else merged[k] = k.startsWith("deleted") ? Math.round((l + r - b) * 100) / 100 : l;
+    });
+    return merged;
+}
 
 // ===== BACKUP COMPLETO (JSON) =====
 // Un unico file con tutti i progetti (movimenti, operazioni, regole, strategie) e il Bilancio Vita Reale.
