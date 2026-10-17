@@ -4260,7 +4260,10 @@ function renderProjectDetail() {
     renderProjection(project, stats);
     updateSalaryDisplay();
 
-    resetOperationCard();
+    // se stai scrivendo in un modulo (deposito, prelievo, resoconto) non lo chiudere sotto le dita
+    const typing = document.activeElement && document.activeElement.tagName === "INPUT"
+        && document.getElementById("operationInnerContainer").contains(document.activeElement);
+    if (!typing) resetOperationCard();
     renderHistory(project, stats);
     setTimeout(() => { drawProjectChart(project, stats); }, 50);
 }
@@ -4632,7 +4635,11 @@ document.getElementById("todayDate").textContent = new Date().toLocaleDateString
     weekday: "long", day: "numeric", month: "long", year: "numeric"
 });
 
+// Sul telefono la tastiera che si apre cambia solo l'altezza: si ridisegna solo se cambia la larghezza
+let lastResizeWidth = window.innerWidth;
 window.addEventListener("resize", () => {
+    if (window.innerWidth === lastResizeWidth) return;
+    lastResizeWidth = window.innerWidth;
     const page = document.getElementById("projectDetail");
     if (page && page.classList.contains("active") && currentProjectId) {
         renderProjectDetail();
