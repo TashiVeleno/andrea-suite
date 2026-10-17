@@ -524,6 +524,30 @@ label { font-size: 12px; color: var(--muted); }
 
 .form-card { max-width: 650px; }
 
+/* Simulatore obiettivo: barre + tappe */
+.planner-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.planner-row input[type=range] { flex: 1; margin: 4px 0 10px; padding: 0; border: none; background: transparent; accent-color: var(--accent); }
+.planner-row input[type=number] { width: 130px; flex: none; }
+.planner-row .planner-value { width: 130px; flex: none; text-align: right; font-weight: bold; margin-bottom: 6px; }
+.planner-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 14px; }
+.planner-preview .guide-box { padding: 10px; text-align: center; }
+.planner-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: inherit; margin: 4px 0 10px; cursor: pointer; }
+.planner-check input { width: auto; margin: 0; }
+.stage-edit { display: grid; grid-template-columns: 1fr 110px 90px; gap: 8px; align-items: center; }
+.stage-edit input { margin: 0; }
+.stage-edit .small { text-align: center; }
+.stage-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 14px; }
+.stage-line { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
+.stage-line.current { border-color: var(--accent); background: rgba(79,140,255,.08); }
+.stage-line.done { opacity: .6; }
+.planner-error { color: #ff8d8d; font-size: 13px; margin: 6px 0 12px; }
+.stage-info { margin-top: 10px; font-size: 13px; }
+.stage-info .stage-list { margin: 8px 0 0; }
+@media (max-width: 520px) {
+    .planner-row input[type=number], .planner-row .planner-value { width: 100px; }
+    .stage-edit { grid-template-columns: 1fr 90px 70px; }
+}
+
 .empty {
     padding: 40px;
     text-align: center;
@@ -948,10 +972,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="editProjectName">
             <label>Capitale iniziale (€)</label>
             <input id="editProjectCapital" type="number" step="0.01">
-            <label>🎯 Obiettivo netto (€)</label>
-            <input id="editProjectGoal" type="number" step="0.01">
-            <label>📅 Data finale</label>
-            <input id="editProjectEndDate" type="date">
+            <div id="editProjectPlanner"></div>
             <button class="primary" style="margin-top:10px; width: 100%;" onclick="saveEditedProject()">💾 Salva Modifiche</button>
         </div>
     </div>
@@ -1139,10 +1160,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="projectName" placeholder="Es. Investimento Sportivo">
             <label>Capitale iniziale (€)</label>
             <input id="projectCapital" type="number" step="0.01" min="0.01">
-            <label>🎯 Obiettivo netto (€)</label>
-            <input id="projectGoal" type="number" step="0.01" min="0.01">
-            <label>📅 Data finale</label>
-            <input id="projectEndDate" type="date">
+            <div id="projectPlanner"></div>
             <button class="primary" onclick="createProject()">Crea progetto</button>
             <button class="secondary" style="margin-left:8px;" onclick="toggleNewProjectForm()">Annulla</button>
         </div>
@@ -1265,6 +1283,8 @@ canvas { width: 100%; height: 100%; display: block; }
             <div id="roadmapStatus" class="roadmap-status inline" style="margin-top:6px;">
                 Calcolo della situazione...
             </div>
+
+            <div id="stageInfo" class="stage-info" style="display:none;"></div>
 
             <div class="roadmap-grid">
                 <div>
@@ -1706,8 +1726,7 @@ function openEditProjectModal(id) {
     
     document.getElementById("editProjectName").value = project.name;
     document.getElementById("editProjectCapital").value = project.capital;
-    document.getElementById("editProjectGoal").value = project.goal;
-    document.getElementById("editProjectEndDate").value = project.endDate;
+    plannerFill("editProject", { start: project.createdAt || new Date().toISOString(), goal: project.goal, endDate: project.endDate, stages: project.stages });
     
     document.getElementById("editProjectModal").classList.add("active");
 }
@@ -1759,18 +1778,19 @@ function saveEditedProject() {
 
     const name = document.getElementById("editProjectName").value.trim();
     const capital = Number(document.getElementById("editProjectCapital").value);
-    const goal = Number(document.getElementById("editProjectGoal").value);
-    const endDate = document.getElementById("editProjectEndDate").value;
-
-    if (!name || capital <= 0 || goal <= 0 || !endDate) {
+    if (!name || capital <= 0) {
         alert("Verifica di aver compilato tutti i campi correttamente.");
         return;
     }
+    const plan = plannerRead("editProject");
+    if (!plan) return;
 
     project.name = name;
     project.capital = capital;
-    project.goal = goal;
-    project.endDate = endDate;
+    project.goal = plan.goal;
+    project.endDate = plan.endDate;
+    if (plan.stages) project.stages = plan.stages;
+    else delete project.stages;
 
     window.saveProjects(projects);
     closeEditProjectModal();
@@ -2020,6 +2040,94 @@ function getProject(id) {
     return window.loadProjects().find(p => p.id === id);
 }
 
+// ===== TAPPE =====
+// Un obiettivo si può dividere in tappe: le prime due (Facile, Medio) hanno un ritmo mensile e una durata scelti da te,
+// l'ultima (Difficile) dura fino alla scadenza e chiede quello che manca all'obiettivo.
+// I giorni si contano come nella tabella di marcia: il giorno di inizio è il giorno 1.
+const STAGE_NAMES = ["🟢 Facile", "🟡 Medio", "🔴 Difficile"];
+const DAYS_PER_MONTH = 30.44;
+
+function startOfDay(dateStr) {
+    const d = new Date(parseISODate(dateStr));
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function addMonths(date, n) {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + n);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    return d;
+}
+
+function addDays(date, n) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + n);
+    return d;
+}
+
+// Solo le tappe compilate (ritmo e mesi maggiori di zero)
+function cleanStages(stages) {
+    return (Array.isArray(stages) ? stages : [])
+        .map(s => ({ monthly: Number(s && s.monthly) || 0, months: Math.round(Number(s && s.months) || 0) }))
+        .filter(s => s.monthly > 0 && s.months > 0)
+        .slice(0, 2);
+}
+
+// null se non ci sono tappe; { error } se le tappe non stanno nell'obiettivo o nella durata
+function calculateStagePlan(stages, goal, startStr, endStr) {
+    const list = cleanStages(stages);
+    if (!list.length) return null;
+    goal = Number(goal) || 0;
+
+    const start = startOfDay(startStr);
+    const totalDays = Math.max(1, daysBetween(startStr, endStr) + 1);
+    const plan = [];
+    let months = 0, prevDay = 0, cum = 0;
+
+    for (let i = 0; i < list.length; i++) {
+        const s = list[i];
+        months += s.months;
+        const endDay = daysBetween(start.toISOString(), addMonths(start, months).toISOString());
+        if (endDay >= totalDays) return { error: `Le prime tappe durano ${months} mesi e arrivano alla data finale: deve restare tempo per l'ultima tappa. Accorciale o sposta la scadenza.` };
+        const amount = s.monthly * s.months;
+        plan.push({ name: STAGE_NAMES[i], monthly: s.monthly, months: s.months, startDay: prevDay, endDay, startTarget: cum, endTarget: cum + amount, amount });
+        prevDay = endDay;
+        cum += amount;
+    }
+
+    const lastAmount = goal - cum;
+    if (lastAmount <= 0) return { error: `Le prime tappe arrivano già a ${euro(cum)}: l'obiettivo è ${euro(goal)}. Alza l'obiettivo o abbassa le tappe.` };
+    const lastDays = totalDays - prevDay;
+    plan.push({
+        name: STAGE_NAMES[2], monthly: lastAmount / (lastDays / DAYS_PER_MONTH), months: lastDays / DAYS_PER_MONTH,
+        startDay: prevDay, endDay: totalDays, startTarget: cum, endTarget: goal, amount: lastAmount, last: true
+    });
+
+    plan.forEach(s => {
+        s.days = s.endDay - s.startDay;
+        s.daily = s.amount / s.days;
+        s.startDate = addDays(start, s.startDay);
+        s.endDate = addDays(start, s.endDay - 1); // ultimo giorno della tappa
+    });
+    return { stages: plan, totalDays, goal };
+}
+
+// Il guadagno previsto dal piano dopo "elapsedDays" giorni (il giorno di inizio è il giorno 1)
+function stageExpected(plan, elapsedDays) {
+    for (const s of plan.stages) {
+        if (elapsedDays <= s.endDay) return s.startTarget + s.amount * Math.max(0, elapsedDays - s.startDay) / s.days;
+    }
+    return plan.goal;
+}
+
+function stageIndexAt(plan, elapsedDays) {
+    const i = plan.stages.findIndex(s => elapsedDays <= s.endDay);
+    return i === -1 ? plan.stages.length - 1 : i;
+}
+
 function calculateProject(project) {
     let balance = 0;
     let deposits = 0;
@@ -2089,10 +2197,16 @@ function calculateProject(project) {
     const daysRemaining = project.closedAt ? 0 : Math.max(0, daysBetween(new Date().toISOString(), endDateStr) + 1);
     const deadlinePassed = !project.closedAt && daysBetween(new Date().toISOString(), endDateStr) < 0;
 
-    const expectedToday = goal * Math.min(1, elapsedDays / totalDays);
+    // Con le tappe il piano sale a gradini (poco all'inizio, di più alla fine) invece che in linea retta
+    const stagePlanRaw = project.stages ? calculateStagePlan(project.stages, goal, startDateStr, endDateStr) : null;
+    const stagePlan = stagePlanRaw && !stagePlanRaw.error ? stagePlanRaw : null;
+    const currentStage = stagePlan ? stageIndexAt(stagePlan, elapsedDays) : -1;
+    const stage = stagePlan ? stagePlan.stages[currentStage] : null;
+
+    const expectedToday = stagePlan ? stageExpected(stagePlan, elapsedDays) : goal * Math.min(1, elapsedDays / totalDays);
     const roadmapDifference = result - expectedToday;
     
-    const originalDaily = goal / totalDays;
+    const originalDaily = stage ? stage.daily : goal / totalDays;
     const daysDifference = originalDaily > 0 ? roadmapDifference / originalDaily : 0;
 
     let dailyNeeded = 0;
@@ -2100,9 +2214,16 @@ function calculateProject(project) {
     let monthlyNeeded = 0;
 
     if (goalRemaining > 0 && daysRemaining > 0 && !project.closedAt) {
-        dailyNeeded = goalRemaining / daysRemaining;
+        if (stage) {
+            // Quanto serve per chiudere la tappa in corso; se è già raggiunta, il ritmo della tappa
+            const daysLeftInStage = Math.max(1, stage.endDay - elapsedDays + 1);
+            const toStageEnd = stage.endTarget - result;
+            dailyNeeded = toStageEnd > 0 ? toStageEnd / daysLeftInStage : stage.daily;
+        } else {
+            dailyNeeded = goalRemaining / daysRemaining;
+        }
         weeklyNeeded = dailyNeeded * 7;
-        monthlyNeeded = dailyNeeded * 30.44;
+        monthlyNeeded = dailyNeeded * DAYS_PER_MONTH;
     }
     
     const now = new Date();
@@ -2119,12 +2240,23 @@ function calculateProject(project) {
     
     const profitThisMonth = result - previousMonthResult;
 
+    // Tappa precedente chiusa sotto il suo traguardo: meglio restare al suo ritmo
+    let stageBehind = null;
+    if (stage && currentStage > 0) {
+        const prev = stagePlan.stages[currentStage - 1];
+        const boundary = stage.startDate.getTime();
+        let resultAtEnd = 0;
+        history.forEach(item => { if (new Date(item.date).getTime() < boundary) resultAtEnd = item.resultAfter; });
+        if (resultAtEnd < prev.endTarget) stageBehind = { name: prev.name, monthly: prev.monthly, target: prev.endTarget, result: resultAtEnd };
+    }
+
     return {
         balance, deposits, withdrawals, result, realizedResult, percentage, capitalBase,
         goal, goalProgress, goalRemaining, totalDays, elapsedDays, daysRemaining, 
         dailyNeeded, weeklyNeeded, monthlyNeeded, expectedToday, roadmapDifference, 
         daysDifference, history, profitThisMonth, deadlinePassed,
-        transferIn, realDeposits: deposits - transferIn
+        transferIn, realDeposits: deposits - transferIn,
+        stagePlan, currentStage, stageBehind
     };
 }
 
@@ -2208,7 +2340,9 @@ function openMarciaModal() {
 
         box.innerHTML = `
             <p class="small" style="margin-bottom:14px;">
-                In alto vedi la <strong>media lineare</strong> (${euro(stats.dailyNeeded)} al giorno, sempre uguale).
+                ${stats.stagePlan
+                    ? `In alto vedi il <strong>ritmo della tappa in corso</strong> (${euro(stats.dailyNeeded)} al giorno).`
+                    : `In alto vedi la <strong>media lineare</strong> (${euro(stats.dailyNeeded)} al giorno, sempre uguale).`}
                 Qui invece il saldo cresce della <strong>stessa percentuale ogni giorno</strong>, reinvestendo tutto:
                 all'inizio bastano pochi euro, verso la fine ne servono molti di più.
                 Si ricalcola ogni giorno partendo dal saldo di oggi.
@@ -3531,37 +3665,174 @@ function goToPage(pageId) {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// ===== SIMULATORE OBIETTIVO (barre + tappe) =====
+// Stesso blocco nel form "Nuovo progetto" (prefisso "project") e in "Modifica progetto" ("editProject").
+// Le barre muovono obiettivo e durata; sotto si vede subito quanto serve al giorno, alla settimana e al mese.
+const plannerStart = {};
+
+function plannerFields(prefix) {
+    const stageRow = (n, name) => `
+        <div class="stage-edit">
+            <span>${name}</span>
+            <input id="${prefix}S${n}Monthly" type="number" min="0" step="10" placeholder="€/mese" oninput="plannerSync('${prefix}')">
+            <input id="${prefix}S${n}Months" type="number" min="0" step="1" placeholder="mesi" oninput="plannerSync('${prefix}')">
+        </div>`;
+    return `
+        <label>🎯 Obiettivo netto (€)</label>
+        <div class="planner-row">
+            <input id="${prefix}GoalRange" type="range" min="500" max="60000" step="500" oninput="plannerSync('${prefix}', 'goalRange')">
+            <input id="${prefix}Goal" type="number" step="0.01" min="0.01" oninput="plannerSync('${prefix}', 'goal')">
+        </div>
+        <label>⏳ Durata</label>
+        <div class="planner-row">
+            <input id="${prefix}MonthsRange" type="range" min="1" max="84" step="1" oninput="plannerSync('${prefix}', 'months')">
+            <span class="planner-value" id="${prefix}MonthsLabel">--</span>
+        </div>
+        <label>📅 Data finale</label>
+        <input id="${prefix}EndDate" type="date" onchange="plannerSync('${prefix}', 'date')">
+        <div class="planner-preview" id="${prefix}Preview"></div>
+        <label class="planner-check"><input type="checkbox" id="${prefix}StagesOn" onchange="plannerSync('${prefix}', 'stagesOn')"> 🪜 Dividi in tappe (facile, medio, difficile)</label>
+        <div id="${prefix}StagesBox" style="display:none;">
+            <div class="stage-edit small"><span>Tappa</span><span>€ al mese</span><span>Mesi</span></div>
+            ${stageRow(1, STAGE_NAMES[0])}
+            ${stageRow(2, STAGE_NAMES[1])}
+            <div id="${prefix}StagesPreview"></div>
+        </div>`;
+}
+
+function plannerStages(prefix) {
+    if (!document.getElementById(prefix + "StagesOn").checked) return null;
+    return [1, 2].map(n => ({
+        monthly: Number(document.getElementById(`${prefix}S${n}Monthly`).value) || 0,
+        months: Number(document.getElementById(`${prefix}S${n}Months`).value) || 0
+    }));
+}
+
+function plannerFill(prefix, { start, goal, endDate, stages }) {
+    plannerStart[prefix] = start;
+    document.getElementById(prefix + "Goal").value = goal || "";
+    document.getElementById(prefix + "EndDate").value = endDate || "";
+    const list = Array.isArray(stages) ? stages : [];
+    document.getElementById(prefix + "StagesOn").checked = cleanStages(list).length > 0;
+    [1, 2].forEach(n => {
+        const s = list[n - 1] || {};
+        document.getElementById(`${prefix}S${n}Monthly`).value = s.monthly || "";
+        document.getElementById(`${prefix}S${n}Months`).value = s.months || "";
+    });
+    plannerSync(prefix);
+}
+
+function dateInputValue(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function plannerSync(prefix, source) {
+    const $ = id => document.getElementById(prefix + id);
+    const start = startOfDay(plannerStart[prefix] || new Date().toISOString());
+
+    if (source === "goalRange") $("Goal").value = $("GoalRange").value;
+    if (source === "months") $("EndDate").value = dateInputValue(addDays(addMonths(start, Number($("MonthsRange").value)), -1));
+    if (source === "stagesOn" && $("StagesOn").checked && !$("S1Monthly").value && !$("S2Monthly").value) {
+        $("S1Monthly").value = 150; $("S1Months").value = 3;
+        $("S2Monthly").value = 300; $("S2Months").value = 6;
+    }
+
+    const goal = Number($("Goal").value) || 0;
+    const endDate = $("EndDate").value;
+    if (source !== "goalRange" && goal > 0) $("GoalRange").value = Math.min(60000, Math.max(500, goal));
+
+    const totalDays = endDate ? daysBetween(start.toISOString(), endDate + "T00:00:00") + 1 : 0;
+    const months = totalDays / DAYS_PER_MONTH;
+    if (source !== "months" && totalDays > 0) $("MonthsRange").value = Math.max(1, Math.round(months));
+    $("MonthsLabel").textContent = totalDays > 0 ? `${Math.round(months * 10) / 10} mesi` : "--";
+
+    const box = (label, value) => `<div class="guide-box"><div class="small">${label}</div><strong class="blue">${value}</strong></div>`;
+    if (goal > 0 && totalDays > 0) {
+        const daily = goal / totalDays;
+        $("Preview").innerHTML = box("📅 Al giorno", euro(daily)) + box("📆 Alla settimana", euro(daily * 7)) + box("🗓️ Al mese", euro(daily * DAYS_PER_MONTH));
+    } else {
+        $("Preview").innerHTML = `<div class="small" style="grid-column: 1 / -1;">Scegli obiettivo e durata per vedere quanto ti serve al giorno, alla settimana e al mese.</div>`;
+    }
+
+    const stagesOn = $("StagesOn").checked;
+    $("StagesBox").style.display = stagesOn ? "block" : "none";
+    if (!stagesOn) return;
+
+    const stages = plannerStages(prefix);
+    const plan = goal > 0 && totalDays > 0 ? calculateStagePlan(stages, goal, start.toISOString(), endDate + "T00:00:00") : null;
+    if (!plan) {
+        $("StagesPreview").innerHTML = `<div class="small" style="margin:8px 0 12px;">Compila almeno una tappa con € al mese e mesi. L'ultima tappa (${STAGE_NAMES[2]}) si calcola da sola.</div>`;
+    } else if (plan.error) {
+        $("StagesPreview").innerHTML = `<div class="planner-error">⚠️ ${plan.error}</div>`;
+    } else {
+        $("StagesPreview").innerHTML = `<div class="stage-list">${plan.stages.map(stageLine).join("")}</div>`;
+    }
+}
+
+function stageLine(s, cls) {
+    return `<div class="stage-line ${cls || ""}">
+        <span><strong>${s.name}</strong> · ${euro(s.monthly)}/mese<br><span class="small">${s.startDate.toLocaleDateString("it-IT")} → ${s.endDate.toLocaleDateString("it-IT")}</span></span>
+        <span style="text-align:right;">${euro(s.daily)}/giorno · ${euro(s.daily * 7)}/sett.<br><span class="small">traguardo ${euro(s.endTarget)}</span></span>
+    </div>`;
+}
+
+// Legge e controlla obiettivo, data e tappe del form; null (con avviso) se qualcosa non va
+function plannerRead(prefix) {
+    const goal = Number(document.getElementById(prefix + "Goal").value);
+    const endDate = document.getElementById(prefix + "EndDate").value;
+    if (goal <= 0) { alert("Inserisci un obiettivo valido."); return null; }
+    if (!endDate) { alert("Inserisci la data finale."); return null; }
+    const stages = plannerStages(prefix);
+    if (stages) {
+        const plan = calculateStagePlan(stages, goal, startOfDay(plannerStart[prefix]).toISOString(), endDate + "T00:00:00");
+        if (!plan) { alert("Compila almeno una tappa (€ al mese e mesi) oppure togli la spunta alle tappe."); return null; }
+        if (plan.error) { alert(plan.error); return null; }
+    }
+    return { goal, endDate, stages: stages ? cleanStages(stages) : null };
+}
+
+["project", "editProject"].forEach(prefix => {
+    const el = document.getElementById(prefix + "Planner");
+    if (el) el.innerHTML = plannerFields(prefix);
+});
+
 function toggleNewProjectForm() {
     const container = document.getElementById("newProjectContainer");
-    container.style.display = container.style.display === "none" ? "block" : "none";
+    const opening = container.style.display === "none";
+    container.style.display = opening ? "block" : "none";
+    if (opening && !document.getElementById("projectGoal").value) {
+        // Si parte da 15.000 € in 2 anni: poi si spostano le barre
+        plannerFill("project", { start: new Date().toISOString(), goal: 15000, endDate: dateInputValue(addDays(addMonths(startOfDay(new Date().toISOString()), 24), -1)) });
+    }
 }
 
 function createProject() {
     const name = document.getElementById("projectName").value.trim();
     const capital = Number(document.getElementById("projectCapital").value);
-    const goal = Number(document.getElementById("projectGoal").value);
-    const endDate = document.getElementById("projectEndDate").value;
 
     if (!name) { alert("Inserisci un nome per il progetto."); return; }
     if (capital <= 0) { alert("Inserisci un capitale iniziale valido."); return; }
-    if (goal <= 0) { alert("Inserisci un obiettivo valido."); return; }
-    if (!endDate) { alert("Inserisci la data finale."); return; }
+    plannerStart.project = new Date().toISOString();
+    const plan = plannerRead("project");
+    if (!plan) return;
+    const { goal, endDate, stages } = plan;
 
     const projects = window.loadProjects();
-    projects.push({
+    const project = {
         id: Date.now(),
         name, capital, goal, endDate,
         status: 'active',
         movements: [],
         createdAt: new Date().toISOString()
-    });
+    };
+    if (stages) project.stages = stages;
+    projects.push(project);
 
     window.saveProjects(projects);
 
     document.getElementById("projectName").value = "";
     document.getElementById("projectCapital").value = "";
-    document.getElementById("projectGoal").value = "";
-    document.getElementById("projectEndDate").value = "";
+    plannerFill("project", { start: new Date().toISOString() });
     document.getElementById("newProjectContainer").style.display = "none";
     updateAll();
 }
@@ -3591,7 +3862,7 @@ function renderProjects() {
                     <div class="page-header" style="margin-bottom:15px;">
                         <div>
                             <h2 style="margin-bottom:4px;">💼 ${escapeHTML(project.name)}${alarmChip}</h2>
-                            <p class="small">🎯 ${euro(project.goal)} netto · 📅 ${formatDate(project.endDate)}</p>
+                            <p class="small">🎯 ${euro(project.goal)} netto · 📅 ${formatDate(project.endDate)}${stats.stagePlan ? ` · 🪜 ${stats.stagePlan.stages[stats.currentStage].name}` : ""}</p>
                         </div>
                         <div class="action-btns-container">
                             <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
@@ -3980,6 +4251,8 @@ function renderProjectDetail() {
         roadmapStatus.innerHTML = `<strong class="red">⚠️ In ritardo.</strong> Circa ${roundedDays} giorni dietro.`;
     }
 
+    renderStageInfo(stats, isClosed);
+
     document.getElementById("dailyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.dailyNeeded);
     document.getElementById("weeklyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.weeklyNeeded);
     document.getElementById("monthlyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.monthlyNeeded);
@@ -3990,6 +4263,31 @@ function renderProjectDetail() {
     resetOperationCard();
     renderHistory(project, stats);
     setTimeout(() => { drawProjectChart(project, stats); }, 50);
+}
+
+// Tappe nella tabella di marcia: in quale sei, quanto manca a chiuderla, e l'elenco di tutte
+function renderStageInfo(stats, isClosed) {
+    const box = document.getElementById("stageInfo");
+    if (!stats.stagePlan) { box.style.display = "none"; box.innerHTML = ""; return; }
+    const plan = stats.stagePlan;
+    const i = stats.currentStage;
+    const stage = plan.stages[i];
+    let html = "";
+    if (!isClosed && !stats.deadlinePassed) {
+        const toEnd = stage.endTarget - stats.result;
+        html += `<div>📍 <strong>Tappa ${i + 1} di ${plan.stages.length}: ${stage.name}</strong>, fino al ${stage.endDate.toLocaleDateString("it-IT")}. `;
+        html += toEnd > 0
+            ? `Per il traguardo di tappa (${euro(stage.endTarget)}) mancano <strong>${euro(toEnd)}</strong>. In alto vedi il ritmo che serve per chiuderla.`
+            : `<strong class="green">Traguardo di tappa già raggiunto!</strong> In alto vedi il ritmo normale della tappa.`;
+        html += `</div>`;
+        if (stats.stageBehind) {
+            const b = stats.stageBehind;
+            html += `<div class="roadmap-status behind" style="margin-top:8px;">⚠️ Hai chiuso la tappa ${b.name} a ${euro(b.result)} su ${euro(b.target)}. Il consiglio è <strong>restare al ritmo di ${euro(b.monthly)} al mese</strong> e non alzare gli stake per recuperare: se serve, sposta la data finale.</div>`;
+        }
+    }
+    html += `<div class="stage-list">${plan.stages.map((s, k) => stageLine(s, k === i && !isClosed ? "current" : k < i || isClosed ? "done" : "")).join("")}</div>`;
+    box.innerHTML = html;
+    box.style.display = "block";
 }
 
 function changeHistoryFilter() {
@@ -4186,6 +4484,12 @@ function drawProjectChart(project, stats) {
     ctx.setLineDash([7,6]);
     ctx.beginPath();
     ctx.moveTo(padding.left, yFromValue(0));
+    if (stats.stagePlan) {
+        // con le tappe la linea ideale sale più piano all'inizio
+        stats.stagePlan.stages.forEach(s => {
+            if (!s.last) ctx.lineTo(xFromTime(addDays(s.startDate, s.days).getTime()), yFromValue(s.endTarget));
+        });
+    }
     ctx.lineTo(width - padding.right, yFromValue(project.goal));
     ctx.stroke();
     ctx.setLineDash([]);

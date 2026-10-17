@@ -14,7 +14,8 @@ const EXPORTS = [
     "calculateProject", "calculateCompoundPlan", "calculateCedola", "calculateMoneyManagement",
     "calculateAlarms", "calculateStrategyStats", "breakEvenFromOdds", "oddsLimitFromWinRate",
     "netWinFromOdds", "tradeResult", "buildBackup", "parseBackup", "getToday", "daysBetween",
-    "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData"
+    "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
+    "calculateStagePlan", "stageExpected"
 ];
 
 function fakeElement() {
