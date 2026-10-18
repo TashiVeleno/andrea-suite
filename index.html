@@ -3419,13 +3419,23 @@ function renderBetList(project) {
 }
 
 // ----- Importazione CSV Betfair (scommesse concluse) -----
-const IT_MONTHS = { gen: 0, feb: 1, mar: 2, apr: 3, mag: 4, giu: 5, lug: 6, ago: 7, set: 8, ott: 9, nov: 10, dic: 11 };
+const IT_MONTHS = { gen: 0, feb: 1, mar: 2, apr: 3, mag: 4, giu: 5, lug: 6, ago: 7, set: 8, ott: 9, nov: 10, dic: 11,
+    // Excel o un conto in inglese a volte scrivono i mesi in inglese
+    jan: 0, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, dec: 11 };
 let importDraft = null;
 
-// Righe CSV con virgolette ("1.234,56" contiene virgole)
+// Righe CSV con virgolette ("1.234,56" contiene virgole).
+// Il separatore si capisce dalla prima riga: Betfair usa la virgola, Excel in italiano il punto e virgola.
+function csvDelimiter(text) {
+    const first = text.split(/\r?\n/)[0].replace(/"[^"]*"/g, "");
+    const count = ch => first.split(ch).length - 1;
+    return [";", "\t", ","].reduce((best, ch) => count(ch) > count(best) ? ch : best, ",");
+}
+
 function parseCSV(text) {
     const rows = []; let row = [], field = "", quoted = false;
     text = text.replace(/^\uFEFF/, "");
+    const sep = csvDelimiter(text);
     for (let i = 0; i < text.length; i++) {
         const c = text[i];
         if (quoted) {
@@ -3433,7 +3443,7 @@ function parseCSV(text) {
             else if (c === '"') quoted = false;
             else field += c;
         } else if (c === '"') quoted = true;
-        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === sep) { row.push(field); field = ""; }
         else if (c === "\n" || c === "\r") {
             if (c === "\r" && text[i + 1] === "\n") i++;
             row.push(field); field = "";
@@ -3463,7 +3473,8 @@ function itDate(v) {
 
 // "Evento Under 3,5 goal-Over/Under 3,5 gol | ID scommessa Betfair 1:123 | ..." → evento, selezione, mercato, id
 function parseBetfairDetails(text) {
-    const parts = String(text || "").split(" | ");
+    text = String(text || "");
+    const parts = text.split(" | ");
     const idMatch = text.match(/ID scommessa Betfair\s*([\d:]+)/i);
     const head = parts[0].trim();
     let event = head, selection = "", market = "", line = null, ou = null;
@@ -3494,19 +3505,38 @@ function readBetfairFile(input) {
     input.value = "";
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => buildBetfairImport(String(reader.result || ""));
+    reader.onload = () => {
+        const text = String(reader.result || "");
+        // Un file salvato da Excel su Windows non è UTF-8: lo rileggo con la codifica di Windows
+        if (text.includes("\uFFFD")) {
+            const again = new FileReader();
+            again.onload = () => buildBetfairImport(String(again.result || ""));
+            again.readAsText(file, "windows-1252");
+        } else buildBetfairImport(text);
+    };
+    reader.onerror = () => alert("Impossibile leggere il file.");
     reader.readAsText(file, "utf-8");
+}
+
+// Colonne del CSV delle scommesse concluse; "missing" elenca quelle che non trovo
+const BETFAIR_COLUMNS = { placed: "piazzat", settled: "chius", details: "dettagli", type: "tipo", odds: "quota", stake: "puntata", liability: "responsabilit", pl: "profitto" };
+const BETFAIR_COLUMN_NAMES = { placed: "Piazzata", settled: "Chiusa", details: "Dettagli", type: "Tipo", odds: "Quota", stake: "Puntata", liability: "Responsabilità", pl: "Profitto/Perdita" };
+
+function betfairColumns(headerRow) {
+    const head = (headerRow || []).map(h => h.trim().toLowerCase());
+    const ix = {};
+    Object.entries(BETFAIR_COLUMNS).forEach(([key, name]) => { ix[key] = head.findIndex(h => h.startsWith(name)); });
+    return { ix, missing: Object.keys(ix).filter(k => ix[k] < 0) };
 }
 
 function buildBetfairImport(text) {
     const project = getProject(currentProjectId);
     if (!project) return;
     const rows = parseCSV(text);
-    const head = (rows[0] || []).map(h => h.trim().toLowerCase());
-    const col = name => head.findIndex(h => h.startsWith(name));
-    const ix = { placed: col("piazzat"), settled: col("chius"), details: col("dettagli"), type: col("tipo"), odds: col("quota"), stake: col("puntata"), liability: col("responsabilit"), pl: col("profitto") };
-    if (Object.values(ix).some(i => i < 0)) {
-        alert("Questo file non sembra l'elenco delle scommesse concluse di Betfair. Scaricalo da Il mio conto → Scommesse → Concluse.");
+    const { ix, missing } = betfairColumns(rows[0]);
+    if (missing.length) {
+        const found = (rows[0] || []).map(h => h.trim()).filter(Boolean).slice(0, 12).join(", ");
+        alert(`Questo file non sembra l'elenco delle scommesse concluse di Betfair. Scaricalo da Il mio conto → Scommesse → Concluse.\n\nMancano le colonne: ${missing.map(k => BETFAIR_COLUMN_NAMES[k]).join(", ")}.\nColonne trovate: ${found || "nessuna"}.`);
         return;
     }
 
@@ -3517,11 +3547,11 @@ function buildBetfairImport(text) {
     const groups = new Map();
     let skipped = 0, total = 0;
     rows.slice(1).forEach(r => {
-        const d = parseBetfairDetails(r[ix.details]);
         const settled = itDate(r[ix.settled]);
         const placed = itDate(r[ix.placed]);
         const type = String(r[ix.type] || "").trim().toLowerCase();
         if (!settled || !placed || !(type === "punta" || type === "banca")) return;
+        const d = parseBetfairDetails(r[ix.details]);
         total++;
         if (d.betId && known.has(d.betId)) { skipped++; return; }
         const key = `${r[ix.settled].trim()}|${d.event}|${d.market}`;
