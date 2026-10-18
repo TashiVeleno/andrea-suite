@@ -3529,10 +3529,48 @@ function betfairColumns(headerRow) {
     return { ix, missing: Object.keys(ix).filter(k => ix[k] < 0) };
 }
 
+// "3.30" o "3,30" → 3.3 (questo file usa il punto per i decimali)
+function plainNumber(v) {
+    const t = String(v || "").trim();
+    return t.includes(",") ? itNumber(t) : Number(t) || 0;
+}
+
+// File "Movimenti chiusi" (S.No;Palinsesto;Avvenimento;...;Mercato;Profitto;Totale): una riga = un mercato già chiuso,
+// con il profitto netto ma senza tipo, quota e puntata. Restituisce null se il file non è di questo tipo.
+function parseMovimentiChiusi(rows) {
+    const head = (rows[0] || []).map(h => h.trim().toLowerCase());
+    const ix = { pal: head.indexOf("palinsesto"), avv: head.indexOf("avvenimento"), desc: head.indexOf("descrizione"), date: head.indexOf("data"), market: head.indexOf("mercato"), pl: head.indexOf("profitto") };
+    if (Object.values(ix).some(i => i < 0)) return null;
+    return rows.slice(1).map(r => {
+        const date = new Date(String(r[ix.date] || "").trim());
+        const market = String(r[ix.market] || "").trim().replace(/\s+/g, " ");
+        if (!market || isNaN(date)) return null;
+        const ou = market.match(/^Under And Over\s+(\d+(?:[.,]\d+)?)$/i);
+        return {
+            name: ou ? `Under/Over ${ou[1].replace(",", ".")}` : market,
+            side: "back",
+            date: date.toISOString(),
+            pl: Math.round(plainNumber(r[ix.pl]) * 100) / 100,
+            label: `${String(r[ix.desc] || "").trim()} · ${market}`,
+            betfairIds: [`mov:${String(r[ix.pal]).trim()}:${String(r[ix.avv]).trim()}:${market}`]
+        };
+    }).filter(Boolean);
+}
+
 function buildBetfairImport(text) {
     const project = getProject(currentProjectId);
     if (!project) return;
     const rows = parseCSV(text);
+    const movimenti = parseMovimentiChiusi(rows);
+    if (movimenti) {
+        const known = new Set();
+        getBets(project).forEach(b => (b.betfairIds || []).forEach(id => known.add(id)));
+        const ops = movimenti.filter(op => !known.has(op.betfairIds[0]));
+        importDraft = { ops, skipped: movimenti.length - ops.length, total: movimenti.length };
+        renderImportModal(project);
+        document.getElementById("importModal").classList.add("active");
+        return;
+    }
     const { ix, missing } = betfairColumns(rows[0]);
     if (missing.length) {
         const found = (rows[0] || []).map(h => h.trim()).filter(Boolean).slice(0, 12).join(", ");

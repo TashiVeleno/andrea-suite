@@ -36,3 +36,20 @@ test("date con mesi in italiano e in inglese", () => {
     assert.equal(app.itDate("13-ott-26 13:19:43").getMonth(), 9);
     assert.equal(app.itDate("13-Oct-26 13:19:43").getMonth(), 9);
 });
+
+test("file Movimenti chiusi: una riga per mercato, profitto col punto", () => {
+    const csv = [
+        "S.No;Palinsesto;Avvenimento;Sport;Manifestazione;Descrizione;Data;Mercato;Profitto;Totale",
+        "1;36421;4497;CALCIO;Serie B;Ascoli - Empoli;2026-10-17T15:00:00;Under And Over 2.5;3.30;",
+        "2;36421;1162;CALCIO;Serie A;Venezia - Napoli;2026-10-17T15:00:00;Esito Finale 1x2 ;-0.99;",
+        "3;36421;1164;CALCIO;Serie A;Udinese - Lecce;2026-10-18T12:30:00;Under And Over 3.5;3.58;12.64"
+    ].join("\n");
+    const ops = app.parseMovimentiChiusi(app.parseCSV(csv));
+    assert.equal(ops.length, 3);
+    assert.equal(ops[0].name, "Under/Over 2.5");
+    assert.equal(ops[0].pl, 3.3);
+    assert.equal(ops[1].name, "Esito Finale 1x2");
+    assert.equal(ops[1].pl, -0.99);
+    assert.equal(ops[0].betfairIds[0], "mov:36421:4497:Under And Over 2.5");
+    assert.equal(app.parseMovimentiChiusi(app.parseCSV("Piazzata,Chiusa\n1,2")), null);
+});
