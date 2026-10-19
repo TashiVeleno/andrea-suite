@@ -2,9 +2,9 @@
 // Prima prova sempre la rete (così vedi subito l'ultima versione), la copia salvata serve solo offline.
 // Le librerie esterne con la versione nell'indirizzo (Firebase, coriandoli) non cambiano mai: si salvano alla prima apertura.
 // I dati non passano di qui: restano nel telefono (localStorage) e nel cloud (Firebase).
-const CACHE = "andrea-suite-v2";
+const CACHE = "andrea-suite-v3";
 const LIBRARIES = ["https://www.gstatic.com/firebasejs/10.8.0/", "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/"];
-const FILES = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const FILES = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png?v=2", "./icons/icon-512.png?v=2"];
 
 self.addEventListener("install", event => {
     event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
