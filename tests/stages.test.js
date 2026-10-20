@@ -7,7 +7,7 @@ const app = loadApp(NOW);
 const close = (actual, expected, eps = 1e-6) =>
     assert.ok(Math.abs(actual - expected) < eps, `atteso ${expected}, ottenuto ${actual}`);
 
-// 1 gen 2027 → 31 dic 2027 (365 giorni): Facile 150 €/mese per 3 mesi, Medio 300 €/mese per 6 mesi, il resto Difficile
+// 1 gen 2027 → 31 dic 2027 (365 giorni): Costruzione 150 €/mese per 3 mesi, Crescita 300 €/mese per 6 mesi, il resto Regime
 const STAGES = [{ monthly: 150, months: 3 }, { monthly: 300, months: 6 }];
 function stagedProject(movements = []) {
     return {
@@ -68,4 +68,30 @@ test("calculateProject con tappe: tappa precedente chiusa sotto traguardo", () =
 test("calculateProject con tappa già raggiunta: ritmo normale della tappa", () => {
     const s = app.calculateProject(stagedProject([{ id: 11, type: "day", balance: 1500, deposit: 0, withdraw: 0, date: "2027-02-10T20:00:00" }]));
     close(s.dailyNeeded, 450 / 90);
+});
+
+test("tappe: avviso se l'ultima tappa chiede più del doppio della precedente", () => {
+    const steep = app.calculateStagePlan(STAGES, 6000, "2027-01-01T00:00:00", "2027-12-31T00:00:00").steep;
+    assert.ok(steep);
+    close(steep.ratio, (3750 / (92 / 30.44)) / 300);
+    const ok = app.calculateStagePlan([{ monthly: 400, months: 4 }, { monthly: 500, months: 4 }], 6000, "2027-01-01T00:00:00", "2027-12-31T00:00:00");
+    assert.equal(ok.steep, null);
+});
+
+test("tappe: compila in automatico (25% / 35% in tre parti)", () => {
+    const auto = app.autoStages(12000, 24);
+    assert.deepEqual(JSON.parse(JSON.stringify(auto)), [{ monthly: 380, months: 8 }, { monthly: 530, months: 8 }]);
+    assert.equal(app.autoStages(12000, 2), null);
+    assert.equal(app.autoStages(0, 12), null);
+    // le tappe generate non fanno scattare l'avviso
+    const plan = app.calculateStagePlan(auto, 12000, "2027-01-01T00:00:00", "2028-12-31T00:00:00");
+    assert.equal(plan.error, undefined);
+    assert.equal(plan.steep, null);
+});
+
+test("allarme: tappa precedente chiusa sotto traguardo", () => {
+    const app2 = loadApp("2027-04-10T12:00:00");
+    const p = stagedProject([{ id: 11, type: "day", balance: 1300, deposit: 0, withdraw: 0, date: "2027-03-30T20:00:00" }]);
+    const alarms = app2.calculateAlarms(p, app2.calculateProject(p));
+    assert.ok(alarms.some(a => a.icon === "🪜" && a.level === "yellow"));
 });

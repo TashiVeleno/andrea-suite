@@ -2049,10 +2049,14 @@ function getProject(id) {
 }
 
 // ===== TAPPE =====
-// Un obiettivo si può dividere in tappe: le prime due (Facile, Medio) hanno un ritmo mensile e una durata scelti da te,
-// l'ultima (Difficile) dura fino alla scadenza e chiede quello che manca all'obiettivo.
+// Un obiettivo si può dividere in tappe: le prime due (Costruzione, Crescita) hanno un ritmo mensile e una durata scelti da te,
+// l'ultima (Regime) dura fino alla scadenza e chiede quello che manca all'obiettivo.
 // I giorni si contano come nella tabella di marcia: il giorno di inizio è il giorno 1.
-const STAGE_NAMES = ["🟢 Facile", "🟡 Medio", "🔴 Difficile"];
+const STAGE_NAMES = ["🟢 Costruzione", "🟡 Crescita", "🔵 Regime"];
+// Oltre il doppio della tappa prima, l'ultima tappa costringe ad alzare troppo gli stake
+const STAGE_STEEP_RATIO = 2;
+// "Compila in automatico": durata in tre parti, obiettivo diviso 25% / 35% / 40%
+const STAGE_AUTO_SHARES = [0.25, 0.35];
 const DAYS_PER_MONTH = 30.44;
 
 function startOfDay(dateStr) {
@@ -2114,13 +2118,24 @@ function calculateStagePlan(stages, goal, startStr, endStr) {
         startDay: prevDay, endDay: totalDays, startTarget: cum, endTarget: goal, amount: lastAmount, last: true
     });
 
+    const last = plan[plan.length - 1], before = plan[plan.length - 2];
+    const steep = last.monthly > before.monthly * STAGE_STEEP_RATIO ? { from: before, to: last, ratio: last.monthly / before.monthly } : null;
+
     plan.forEach(s => {
         s.days = s.endDay - s.startDay;
         s.daily = s.amount / s.days;
         s.startDate = addDays(start, s.startDay);
         s.endDate = addDays(start, s.endDay - 1); // ultimo giorno della tappa
     });
-    return { stages: plan, totalDays, goal };
+    return { stages: plan, totalDays, goal, steep };
+}
+
+// Tappe di partenza: durata divisa in tre, 25% e 35% dell'obiettivo nelle prime due (arrotondate a 10 €)
+function autoStages(goal, months) {
+    months = Math.floor(months);
+    if (!(goal > 0) || months < 3) return null;
+    const m1 = Math.floor(months / 3), m2 = Math.floor(months / 3);
+    return [m1, m2].map((m, i) => ({ monthly: Math.max(10, Math.round(goal * STAGE_AUTO_SHARES[i] / m / 10) * 10), months: m }));
 }
 
 // Il guadagno previsto dal piano dopo "elapsedDays" giorni (il giorno di inizio è il giorno 1)
@@ -2938,6 +2953,12 @@ function calculateAlarms(project, stats) {
         } else if (stats.result < stats.expectedToday * RITMO_QUOTA_GIALLO) {
             add("yellow", "⏱️", "Indietro sul piano", `${pianoText} Controlla quanto stai giocando e il rendimento rispetto al piano.`);
         }
+    }
+
+    // Tappa precedente chiusa sotto traguardo: non alzare gli stake per recuperare
+    if (stats.stageBehind && !stats.deadlinePassed) {
+        const b = stats.stageBehind;
+        add("yellow", "🪜", "Tappa chiusa sotto traguardo", `Hai chiuso la tappa ${b.name} a ${euro(b.result)} su ${euro(b.target)}. Continua al ritmo di <strong>${euro(b.monthly)} al mese</strong>: è meglio spostare la data finale che alzare gli stake e bruciare la cassa.`);
     }
 
     // In anticipo sul piano: il momento giusto per fermarsi, non per forzare
@@ -3767,11 +3788,12 @@ function plannerFields(prefix) {
         <label>📅 Data finale</label>
         <input id="${prefix}EndDate" type="date" onchange="plannerSync('${prefix}', 'date')">
         <div class="planner-preview" id="${prefix}Preview"></div>
-        <label class="planner-check"><input type="checkbox" id="${prefix}StagesOn" onchange="plannerSync('${prefix}', 'stagesOn')"> 🪜 Dividi in tappe (facile, medio, difficile)</label>
+        <label class="planner-check"><input type="checkbox" id="${prefix}StagesOn" onchange="plannerSync('${prefix}', 'stagesOn')"> 🪜 Dividi in tappe (costruzione, crescita, regime)</label>
         <div id="${prefix}StagesBox" style="display:none;">
             <div class="stage-edit small"><span>Tappa</span><span>€ al mese</span><span>Mesi</span></div>
             ${stageRow(1, STAGE_NAMES[0])}
             ${stageRow(2, STAGE_NAMES[1])}
+            <button type="button" class="secondary" style="margin-top:8px; padding:6px 12px; font-size:13px;" onclick="plannerSync('${prefix}', 'auto')">🪄 Compila in automatico</button>
             <div id="${prefix}StagesPreview"></div>
         </div>`;
 }
@@ -3808,9 +3830,12 @@ function plannerSync(prefix, source) {
 
     if (source === "goalRange") $("Goal").value = $("GoalRange").value;
     if (source === "months") $("EndDate").value = dateInputValue(addDays(addMonths(start, Number($("MonthsRange").value)), -1));
-    if (source === "stagesOn" && $("StagesOn").checked && !$("S1Monthly").value && !$("S2Monthly").value) {
-        $("S1Monthly").value = 150; $("S1Months").value = 3;
-        $("S2Monthly").value = 300; $("S2Months").value = 6;
+    const fillAuto = source === "auto" || (source === "stagesOn" && $("StagesOn").checked && !$("S1Monthly").value && !$("S2Monthly").value);
+    if (fillAuto && $("EndDate").value) {
+        const months = (daysBetween(start.toISOString(), $("EndDate").value + "T00:00:00") + 1) / DAYS_PER_MONTH;
+        const auto = autoStages(Number($("Goal").value), months);
+        if (auto) auto.forEach((st, i) => { $(`S${i + 1}Monthly`).value = st.monthly; $(`S${i + 1}Months`).value = st.months; });
+        else if (source === "auto") alert("Per compilare le tappe servono un obiettivo e almeno 3 mesi di durata.");
     }
 
     const goal = Number($("Goal").value) || 0;
@@ -3841,7 +3866,9 @@ function plannerSync(prefix, source) {
     } else if (plan.error) {
         $("StagesPreview").innerHTML = `<div class="planner-error">⚠️ ${plan.error}</div>`;
     } else {
-        $("StagesPreview").innerHTML = `<div class="stage-list">${plan.stages.map(stageLine).join("")}</div>`;
+        const st = plan.steep;
+        const warn = st ? `<div class="roadmap-status behind" style="margin:8px 0 0;">⚠️ La tappa ${st.to.name} chiede ${euro(st.to.monthly)} al mese, ${Math.round(st.ratio * 10) / 10} volte la tappa ${st.from.name}. Rischi di dover alzare troppo gli stake: alza un po' le prime tappe o allunga la durata.</div>` : "";
+        $("StagesPreview").innerHTML = warn + `<div class="stage-list">${plan.stages.map(stageLine).join("")}</div>`;
     }
 }
 
