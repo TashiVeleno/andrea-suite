@@ -15,7 +15,7 @@ const EXPORTS = [
     "calculateAlarms", "calculateStrategyStats", "breakEvenFromOdds", "oddsLimitFromWinRate",
     "netWinFromOdds", "tradeResult", "buildBackup", "parseBackup", "getToday", "daysBetween",
     "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
-    "calculateStagePlan", "stageExpected", "autoStages", "parseCSV", "betfairColumns", "parseBetfairDetails", "itDate", "itNumber", "parseMovimentiChiusi"
+    "calculateStagePlan", "stageExpected", "autoStages", "parseCSV", "betfairColumns", "parseBetfairDetails", "itDate", "itNumber", "parseMovimentiChiusi", "applyMovementEdit"
 ];
 
 function fakeElement() {
