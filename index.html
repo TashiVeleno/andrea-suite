@@ -2715,10 +2715,11 @@ const DEFAULT_STRATEGIES = [
     { id: "lay_0_0", name: "Banca 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, refWinRate: 93.0, breakEven: null },
     { id: "back_under_2_5", name: "Punta Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, refWinRate: 48.8, breakEven: null },
     { id: "lay_del_pareggio", name: "Banca pareggio", side: "lay", refOdds: 4.36, refBreakEven: 75.9, refWinRate: 74.0, breakEven: null },
-    // Aggiunte dopo, senza backtest: la soglia si calcola dalle quote delle tue operazioni
-    { id: "back_vittoria_primo_tempo", name: "Punta vittoria primo tempo", side: "back", refOdds: null, breakEven: null, since: 2 },
-    { id: "back_over_0_5", name: "Punta Over 0.5", side: "back", refOdds: null, breakEven: null, since: 2 },
-    { id: "back_under_0_5", name: "Punta Under 0.5", side: "back", refOdds: null, breakEven: null, since: 2 }
+    // Aggiunte dopo: % di vinte da 10.733 partite dei 5 campionati maggiori (2020/21-2025/26), senza quote storiche,
+    // quindi la soglia si calcola dalle quote delle tue operazioni. Vittoria primo tempo = media tra casa (33,8%) e ospite (26,3%)
+    { id: "back_vittoria_primo_tempo", name: "Punta vittoria primo tempo", side: "back", refOdds: null, refWinRate: 30.1, breakEven: null, since: 2 },
+    { id: "back_over_0_5", name: "Punta Over 0.5", side: "back", refOdds: null, refWinRate: 93.6, breakEven: null, since: 2 },
+    { id: "back_under_0_5", name: "Punta Under 0.5", side: "back", refOdds: null, refWinRate: 6.4, breakEven: null, since: 2 }
 ];
 // Sale quando si aggiungono strategie predefinite: i progetti salvati prima le ricevono una volta sola
 const STRATEGIES_VERSION = 2;

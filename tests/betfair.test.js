@@ -71,3 +71,9 @@ test("import: esito primo tempo diventa vittoria primo tempo", () => {
     const d = app.parseBetfairDetails("Al Faisaly ( KSA ) - Al Nassr Al Nassr-Primo tempo | ID scommessa Betfair 1:1");
     assert.equal(app.betfairStrategyName("back", d), "Punta vittoria primo tempo");
 });
+
+test("strategie nuove: quota minima dal backtest", () => {
+    const stats = app.calculateStrategyStats({ strategies: undefined, bets: [] });
+    const over = stats.find(s => s.id === "back_over_0_5");
+    assert.ok(over.oddsLimit > 1.05 && over.oddsLimit < 1.1, String(over.oddsLimit));
+});
