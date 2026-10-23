@@ -53,3 +53,21 @@ test("file Movimenti chiusi: una riga per mercato, profitto col punto", () => {
     assert.equal(ops[0].betfairIds[0], "mov:36421:4497:Under And Over 2.5");
     assert.equal(app.parseMovimentiChiusi(app.parseCSV("Piazzata,Chiusa\n1,2")), null);
 });
+
+test("strategie nuove: vittoria primo tempo e Over/Under 0.5", () => {
+    const names = app.getStrategies({}).map(s => s.name);
+    ["Punta vittoria primo tempo", "Punta Over 0.5", "Punta Under 0.5"].forEach(n => assert.ok(names.includes(n), n));
+    // un progetto salvato prima le riceve, senza doppioni con quelle importate con lo stesso nome
+    const saved = { strategies: [{ id: "bf_punta_over_0_5", name: "Punta Over 0.5", side: "back" }] };
+    const list = app.getStrategies(saved);
+    assert.equal(list.filter(s => s.name === "Punta Over 0.5").length, 1);
+    assert.ok(list.some(s => s.id === "back_under_0_5"));
+    assert.ok(list.every(s => !("since" in s)));
+    // se le ha già ricevute e poi le ha tolte, non tornano
+    assert.equal(app.getStrategies({ strategies: [], strategiesVersion: 2 }).length, 0);
+});
+
+test("import: esito primo tempo diventa vittoria primo tempo", () => {
+    const d = app.parseBetfairDetails("Al Faisaly ( KSA ) - Al Nassr Al Nassr-Primo tempo | ID scommessa Betfair 1:1");
+    assert.equal(app.betfairStrategyName("back", d), "Punta vittoria primo tempo");
+});
