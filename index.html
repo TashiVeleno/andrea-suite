@@ -712,7 +712,8 @@ canvas { width: 100%; height: 100%; display: block; }
     color: white;
 }
 
-.chart-range { font-size: 12px; color: var(--muted); }
+.chart-range { display: flex; align-items: center; gap: 6px; }
+.chart-range input { width: auto; margin: 0; padding: 6px 8px; font-size: 14px; color-scheme: dark; }
 .chart-hint { margin-top: 8px; font-size: 11px; }
 
 .chart-tooltip {
@@ -1496,9 +1497,14 @@ canvas { width: 100%; height: 100%; display: block; }
                 <button type="button" data-period="365" onclick="setChartPeriod('365')">1a</button>
                 <button type="button" data-period="all" class="active" onclick="setChartPeriod('all')">Tutto</button>
             </div>
-            <span class="chart-range" id="chartRange"></span>
+            <div class="chart-range">
+                <label for="chartFrom">Dal</label>
+                <input id="chartFrom" type="date" onchange="setChartDates()">
+                <label for="chartTo">al</label>
+                <input id="chartTo" type="date" onchange="setChartDates()">
+            </div>
         </div>
-        <p class="small chart-hint">Pizzica con due dita o usa la rotella per zoomare, trascina di lato per scorrere nel tempo.</p>
+        <p class="small chart-hint">Pizzica con due dita o usa la rotella per zoomare, trascina di lato per scorrere nel tempo, oppure scegli le date qui sopra.</p>
 
         <div class="chart-container">
             <canvas id="projectChart"></canvas>
@@ -5085,12 +5091,39 @@ function updateChartToolbar(range) {
     document.querySelectorAll("#chartPeriods button").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.period === chartView.preset);
     });
-    const label = document.getElementById("chartRange");
-    if (label) {
-        label.textContent = range
-            ? `Dal ${new Date(range.start).toLocaleDateString("it-IT")} al ${new Date(range.end).toLocaleDateString("it-IT")}`
-            : "";
-    }
+    // le date seguono zoom e periodo, ma non si toccano mentre le stai scegliendo
+    [["chartFrom", range && range.start], ["chartTo", range && range.end]].forEach(([id, time]) => {
+        const input = document.getElementById(id);
+        if (!input || document.activeElement === input) return;
+        input.value = time ? chartISODate(time) : "";
+        input.min = chartGeom ? chartISODate(chartGeom.domainStart) : "";
+        input.max = chartGeom ? chartISODate(chartGeom.domainEnd) : "";
+    });
+}
+
+function chartISODate(time) {
+    const d = new Date(time);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Date scelte a mano: dall'inizio del primo giorno alla fine dell'ultimo, anche se le metti al contrario
+function chartRangeFromDates(fromStr, toStr, domainStart, domainEnd) {
+    if (fromStr && toStr && fromStr > toStr) [fromStr, toStr] = [toStr, fromStr];
+    let start = fromStr ? new Date(fromStr + "T00:00:00").getTime() : domainStart;
+    let end = toStr ? new Date(toStr + "T23:59:59").getTime() : domainEnd;
+    if (isNaN(start)) start = domainStart;
+    if (isNaN(end)) end = domainEnd;
+    return clampChartRange(start, end, domainStart, domainEnd);
+}
+
+function setChartDates() {
+    if (!chartGeom) return;
+    const range = chartRangeFromDates(document.getElementById("chartFrom").value, document.getElementById("chartTo").value,
+        chartGeom.domainStart, chartGeom.domainEnd);
+    chartView.preset = "custom";
+    chartView.start = range.start;
+    chartView.end = range.end;
+    redrawProjectChart();
 }
 
 function showChartTooltip(x, y) {

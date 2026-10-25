@@ -16,7 +16,7 @@ const EXPORTS = [
     "netWinFromOdds", "tradeResult", "buildBackup", "parseBackup", "getToday", "daysBetween",
     "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
     "calculateStagePlan", "stageExpected", "autoStages", "parseCSV", "betfairColumns", "parseBetfairDetails", "itDate", "itNumber", "parseMovimentiChiusi", "getStrategies", "betfairStrategyName", "applyMovementEdit", "parseCalcExpression", "previewMovementEdit",
-    "chartPresetRange", "clampChartRange", "zoomChartRange"
+    "chartPresetRange", "clampChartRange", "zoomChartRange", "chartRangeFromDates"
 ];
 
 function fakeElement() {

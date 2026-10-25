@@ -53,3 +53,18 @@ test("lo zoom si ferma a un giorno e a tutto il progetto", () => {
     const wide = app.zoomChartRange({ start: START + 10 * DAY, end: START + 40 * DAY }, START + 20 * DAY, 100, START, END);
     assert.deepEqual({ ...wide }, { start: START, end: END });
 });
+
+test("date scelte a mano: dal primo giorno a tutto l'ultimo", () => {
+    const r = app.chartRangeFromDates("2027-02-01", "2027-02-10", START, END);
+    assert.equal(r.start, new Date("2027-02-01T00:00:00").getTime());
+    assert.equal(r.end, new Date("2027-02-10T23:59:59").getTime());
+});
+
+test("date al contrario o fuori dal progetto si sistemano", () => {
+    const swapped = app.chartRangeFromDates("2027-02-10", "2027-02-01", START, END);
+    assert.equal(swapped.start, new Date("2027-02-01T00:00:00").getTime());
+    const outside = app.chartRangeFromDates("2026-06-01", "2028-06-01", START, END);
+    assert.deepEqual({ ...outside }, { start: START, end: END });
+    const onlyFrom = app.chartRangeFromDates("2027-06-01", "", START, END);
+    assert.equal(onlyFrom.end, END);
+});
