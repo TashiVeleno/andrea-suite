@@ -683,6 +683,38 @@ label { font-size: 12px; color: var(--muted); }
 
 canvas { width: 100%; height: 100%; display: block; }
 
+/* lo scorrimento verticale resta alla pagina, i gesti di lato e il pizzico sono del grafico */
+#projectChart { touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+
+.chart-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: 14px;
+}
+
+.chart-periods { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chart-periods button {
+    background: var(--card2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.chart-periods button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.chart-range { font-size: 12px; color: var(--muted); }
+.chart-hint { margin-top: 8px; font-size: 11px; }
+
 .chart-tooltip {
     position: absolute;
     display: none;
@@ -1455,6 +1487,18 @@ canvas { width: 100%; height: 100%; display: block; }
         <p class="small" style="margin-top:6px;">
             Linea blu: risultato netto. Linea verde: tabella di marcia.
         </p>
+
+        <div class="chart-toolbar">
+            <div class="chart-periods" id="chartPeriods">
+                <button type="button" data-period="7" onclick="setChartPeriod('7')">7g</button>
+                <button type="button" data-period="30" onclick="setChartPeriod('30')">30g</button>
+                <button type="button" data-period="90" onclick="setChartPeriod('90')">3m</button>
+                <button type="button" data-period="365" onclick="setChartPeriod('365')">1a</button>
+                <button type="button" data-period="all" class="active" onclick="setChartPeriod('all')">Tutto</button>
+            </div>
+            <span class="chart-range" id="chartRange"></span>
+        </div>
+        <p class="small chart-hint">Pizzica con due dita o usa la rotella per zoomare, trascina di lato per scorrere nel tempo.</p>
 
         <div class="chart-container">
             <canvas id="projectChart"></canvas>
@@ -4774,9 +4818,84 @@ function renderHistory(project, stats) {
     }).join("");
 }
 
+// ===== GRAFICO: PERIODO E ZOOM =====
+// Il grafico mostra un tratto di tempo [start, end] dentro la vita del progetto (dalla creazione alla scadenza).
+// I pulsanti scelgono un periodo che finisce oggi, la rotella o le due dita zoomano, il trascinamento scorre.
+const CHART_DAY = 86400000;
+const CHART_MIN_SPAN = CHART_DAY; // non si zooma oltre un giorno
+const CHART_PERIODS = ["7", "30", "90", "365", "all"];
+let chartView = { projectId: null, preset: "all", start: null, end: null };
+let chartLast = null;  // ultimo progetto disegnato, per ridisegnare durante lo zoom
+let chartGeom = null;  // misure dell'ultimo disegno, servono a tocchi e rotella
+
+// Periodo che finisce oggi; se il progetto è più giovane del periodo si parte dall'inizio e si vede la tabella di marcia che viene
+function chartPresetRange(preset, domainStart, domainEnd, now) {
+    if (preset === "all") return { start: domainStart, end: domainEnd };
+    const span = Number(preset) * CHART_DAY;
+    let end = Math.min(Math.max(now, domainStart), domainEnd);
+    let start = end - span;
+    if (start < domainStart) {
+        start = domainStart;
+        end = Math.min(domainEnd, start + span);
+    }
+    return { start, end };
+}
+
+// Tiene il tratto dentro il progetto e fra un giorno e tutta la durata
+function clampChartRange(start, end, domainStart, domainEnd) {
+    const full = domainEnd - domainStart;
+    const span = Math.min(Math.max(end - start, Math.min(CHART_MIN_SPAN, full)), full);
+    start = Math.max(domainStart, Math.min(start, domainEnd - span));
+    return { start, end: start + span };
+}
+
+// Zoom attorno a un istante: factor < 1 avvicina, > 1 allontana. L'istante sotto il dito resta fermo.
+function zoomChartRange(range, centerTime, factor, domainStart, domainEnd) {
+    const span = range.end - range.start;
+    const full = domainEnd - domainStart;
+    const newSpan = Math.min(Math.max(span * factor, Math.min(CHART_MIN_SPAN, full)), full);
+    const start = centerTime - (centerTime - range.start) * (newSpan / span);
+    return clampChartRange(start, start + newSpan, domainStart, domainEnd);
+}
+
+function setChartPeriod(preset) {
+    chartView.preset = preset;
+    redrawProjectChart();
+}
+
+function redrawProjectChart() {
+    if (chartLast) drawProjectChart(chartLast.project, chartLast.stats);
+}
+
+let chartFrame = null;
+function scheduleChartRedraw() {
+    if (chartFrame) return;
+    chartFrame = requestAnimationFrame(() => { chartFrame = null; redrawProjectChart(); });
+}
+
+function setChartRange(range) {
+    chartView.preset = "custom";
+    chartView.start = range.start;
+    chartView.end = range.end;
+    scheduleChartRedraw();
+}
+
+function chartDateLabel(time, span) {
+    const d = new Date(time);
+    if (span <= 3 * CHART_DAY) {
+        return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }) + " " +
+            d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    }
+    if (span > 200 * CHART_DAY) return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" });
+    return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
 function drawProjectChart(project, stats) {
     const canvas = document.getElementById("projectChart");
     if (!canvas) return;
+    chartLast = { project, stats };
+    if (chartView.projectId !== project.id) chartView = { projectId: project.id, preset: "all", start: null, end: null };
+
     const container = canvas.parentElement;
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -4801,8 +4920,10 @@ function drawProjectChart(project, stats) {
     });
 
     chartPoints = points;
+    updateChartToolbar(null);
 
     if (points.length < 2) {
+        chartGeom = null;
         ctx.fillStyle = "#98a2b3";
         ctx.font = "16px Arial";
         ctx.textAlign = "center";
@@ -4812,16 +4933,65 @@ function drawProjectChart(project, stats) {
 
     const startTime = new Date(project.createdAt).getTime();
     const endTime = new Date(project.endDate + "T00:00:00").getTime();
-    const values = [0, project.goal];
+    const domainStart = startTime;
+    const domainEnd = Math.max(endTime, points[points.length - 1].date.getTime(), startTime + CHART_MIN_SPAN);
 
-    points.forEach(point => values.push(point.value));
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
+    const range = chartView.preset === "custom"
+        ? clampChartRange(chartView.start, chartView.end, domainStart, domainEnd)
+        : chartPresetRange(chartView.preset, domainStart, domainEnd, Date.now());
+    chartView.start = range.start;
+    chartView.end = range.end;
+    const span = range.end - range.start;
+    const isFull = range.start <= domainStart && range.end >= domainEnd;
+
+    // Linea verde (tabella di marcia) come spezzata nel tempo: con le tappe sale più piano all'inizio
+    const ideal = [{ t: startTime, v: 0 }];
+    if (stats.stagePlan) {
+        stats.stagePlan.stages.forEach(s => {
+            if (!s.last) ideal.push({ t: addDays(s.startDate, s.days).getTime(), v: s.endTarget });
+        });
+    }
+    ideal.push({ t: endTime, v: project.goal });
+
+    function lineAt(list, t, key) {
+        if (t <= list[0][key]) return list[0];
+        for (let i = 1; i < list.length; i++) {
+            if (t <= list[i][key]) return [list[i - 1], list[i]];
+        }
+        return list[list.length - 1];
+    }
+    function idealAt(t) {
+        const seg = lineAt(ideal, t, "t");
+        if (!Array.isArray(seg)) return seg.v;
+        const [a, b] = seg;
+        return b.t === a.t ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
+    }
+    function resultAt(t) {
+        const timed = points.map(p => ({ t: p.date.getTime(), v: p.value }));
+        const seg = lineAt(timed, t, "t");
+        if (!Array.isArray(seg)) return seg.v;
+        const [a, b] = seg;
+        return b.t === a.t ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
+    }
+
+    // Scala verticale: tutto il progetto va da 0 all'obiettivo, uno zoom si adatta a quello che si vede
+    const values = [resultAt(range.start), resultAt(range.end), idealAt(range.start), idealAt(Math.min(range.end, endTime))];
+    points.forEach(p => { const t = p.date.getTime(); if (t >= range.start && t <= range.end) values.push(p.value); });
+    ideal.forEach(p => { if (p.t >= range.start && p.t <= range.end) values.push(p.v); });
+    let minValue = Math.min(...values);
+    let maxValue = Math.max(...values);
+    if (isFull) {
+        minValue = Math.min(minValue, 0, project.goal);
+        maxValue = Math.max(maxValue, 0, project.goal);
+    } else {
+        const margin = Math.max(5, (maxValue - minValue) * 0.08);
+        minValue -= margin;
+        maxValue += margin;
+    }
     const valueRange = Math.max(1, maxValue - minValue);
 
     function xFromTime(time) {
-        const progress = Math.max(0, Math.min(1, (time - startTime) / (endTime - startTime)));
-        return padding.left + progress * chartWidth;
+        return padding.left + (time - range.start) / span * chartWidth;
     }
 
     function yFromValue(value) {
@@ -4845,18 +5015,38 @@ function drawProjectChart(project, stats) {
         ctx.fillText(euro(value), padding.left - 8, y + 4);
     }
 
+    // Date sotto il grafico: agli estremi e in mezzo
+    const ticks = chartWidth > 500 ? 5 : 3;
+    for (let i = 0; i < ticks; i++) {
+        const t = range.start + span * i / (ticks - 1);
+        const x = xFromTime(t);
+        if (i > 0 && i < ticks - 1) {
+            ctx.strokeStyle = "rgba(152,162,179,.08)";
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + chartHeight);
+            ctx.stroke();
+        }
+        ctx.fillStyle = "#98a2b3";
+        ctx.font = "11px Arial";
+        ctx.textAlign = i === 0 ? "left" : i === ticks - 1 ? "right" : "center";
+        ctx.fillText(chartDateLabel(t, span), x, height - 15);
+    }
+
+    // Le linee escono dai bordi quando si zooma: si taglia quello che sta fuori
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(padding.left - 5, padding.top - 6, chartWidth + 10, chartHeight + 12); // margine per i pallini sui bordi
+    ctx.clip();
+
     ctx.strokeStyle = "#22c55e";
     ctx.lineWidth = 2;
     ctx.setLineDash([7,6]);
     ctx.beginPath();
-    ctx.moveTo(padding.left, yFromValue(0));
-    if (stats.stagePlan) {
-        // con le tappe la linea ideale sale più piano all'inizio
-        stats.stagePlan.stages.forEach(s => {
-            if (!s.last) ctx.lineTo(xFromTime(addDays(s.startDate, s.days).getTime()), yFromValue(s.endTarget));
-        });
-    }
-    ctx.lineTo(width - padding.right, yFromValue(project.goal));
+    ideal.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(xFromTime(p.t), yFromValue(p.v));
+        else ctx.lineTo(xFromTime(p.t), yFromValue(p.v));
+    });
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -4873,70 +5063,180 @@ function drawProjectChart(project, stats) {
     });
     ctx.stroke();
 
-    points.forEach(point => {
-        ctx.fillStyle = "#4f8cff";
-        ctx.beginPath();
-        ctx.arc(point.chartX, point.chartY, 4, 0, Math.PI * 2);
-        ctx.fill();
+    // Con tanti punti vicini i pallini coprono la linea: si mostrano solo se c'è spazio
+    const visible = points.filter(p => p.chartX >= padding.left - 1 && p.chartX <= width - padding.right + 1);
+    const dotRadius = visible.length > chartWidth / 6 ? 0 : 4;
+    if (dotRadius) {
+        visible.forEach(point => {
+            ctx.fillStyle = "#4f8cff";
+            ctx.beginPath();
+            ctx.arc(point.chartX, point.chartY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+    ctx.restore();
+
+    chartGeom = { padding, chartWidth, width, domainStart, domainEnd, range, visible, idealAt, project };
+    updateChartToolbar(range);
+    bindChartEvents(canvas);
+}
+
+function updateChartToolbar(range) {
+    document.querySelectorAll("#chartPeriods button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.period === chartView.preset);
+    });
+    const label = document.getElementById("chartRange");
+    if (label) {
+        label.textContent = range
+            ? `Dal ${new Date(range.start).toLocaleDateString("it-IT")} al ${new Date(range.end).toLocaleDateString("it-IT")}`
+            : "";
+    }
+}
+
+function showChartTooltip(x, y) {
+    const tooltip = document.getElementById("chartTooltip");
+    const canvas = document.getElementById("projectChart");
+    if (!tooltip || !chartGeom) return false;
+
+    let closest = null;
+    let closestDistance = Infinity;
+    chartGeom.visible.forEach(point => {
+        const distance = Math.sqrt(Math.pow(x - point.chartX, 2) + Math.pow(y - point.chartY, 2));
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closest = point;
+        }
     });
 
-    ctx.fillStyle = "#98a2b3";
-    ctx.font = "11px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(new Date(project.createdAt).toLocaleDateString("it-IT"), padding.left, height - 15);
-    ctx.textAlign = "right";
-    ctx.fillText(formatDate(project.endDate), width - padding.right, height - 15);
+    if (!closest || closestDistance >= 30) {
+        hideChartTooltip();
+        return false;
+    }
 
-    canvas.onmousemove = function(event) {
+    const expected = chartGeom.idealAt(closest.date.getTime());
+    const difference = closest.value - expected;
+
+    tooltip.innerHTML = `
+        <strong>📅 ${closest.date.toLocaleString("it-IT")}</strong>
+        💰 Saldo: ${euro(closest.balance)}<br>
+        📈 Risultato netto: ${euro(closest.value)}<br>
+        🎯 Previsto: ${euro(expected)}<br>
+        <span class="${difference >= 0 ? 'green' : 'red'}">
+            ${difference >= 0 ? '🟢' : '🔴'} Differenza: ${euro(difference)}
+        </span>`;
+
+    tooltip.style.display = "block";
+    let tooltipX = closest.chartX + 15;
+    let tooltipY = closest.chartY + 15;
+    if (tooltipX > chartGeom.width - 230) tooltipX = Math.max(0, closest.chartX - 220);
+    tooltip.style.left = tooltipX + "px";
+    tooltip.style.top = tooltipY + "px";
+    canvas.style.cursor = "pointer";
+    return true;
+}
+
+function hideChartTooltip() {
+    const tooltip = document.getElementById("chartTooltip");
+    if (tooltip) tooltip.style.display = "none";
+    const canvas = document.getElementById("projectChart");
+    if (canvas) canvas.style.cursor = "grab";
+}
+
+// Tocchi e mouse si agganciano una volta sola: leggono sempre le misure dell'ultimo disegno
+function bindChartEvents(canvas) {
+    if (canvas.dataset.chartBound) return;
+    canvas.dataset.chartBound = "1";
+
+    const pointers = new Map();
+    let drag = null;   // un dito o il mouse: scorre
+    let pinch = null;  // due dita: zoom
+
+    function local(event) {
         const rect = canvas.getBoundingClientRect();
-        const mouseX = event.clientX - rect.left;
-        const mouseY = event.clientY - rect.top;
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+    function timeAt(x) {
+        const g = chartGeom;
+        const progress = Math.max(0, Math.min(1, (x - g.padding.left) / g.chartWidth));
+        return g.range.start + progress * (g.range.end - g.range.start);
+    }
+    function startDrag(p) {
+        drag = { x: p.x, y: p.y, range: { ...chartGeom.range }, moved: false };
+    }
+    function startPinch() {
+        const [a, b] = [...pointers.values()];
+        pinch = {
+            dist: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)),
+            center: timeAt((a.x + b.x) / 2),
+            range: { ...chartGeom.range }
+        };
+        drag = null;
+    }
 
-        let closest = null;
-        let closestDistance = Infinity;
+    canvas.addEventListener("pointerdown", event => {
+        if (!chartGeom) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        const p = local(event);
+        pointers.set(event.pointerId, p);
+        try { canvas.setPointerCapture(event.pointerId); } catch (e) {}
+        if (pointers.size === 1) startDrag(p);
+        else if (pointers.size === 2) startPinch();
+    });
 
-        points.forEach(point => {
-            const distance = Math.sqrt(Math.pow(mouseX - point.chartX, 2) + Math.pow(mouseY - point.chartY, 2));
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closest = point;
-            }
-        });
-
-        const tooltip = document.getElementById("chartTooltip");
-
-        if (closest && closestDistance < 30) {
-            const daysFromStart = daysBetween(project.createdAt, closest.date);
-            const expected = project.goal * Math.max(0, Math.min(1, daysFromStart / stats.totalDays));
-            const difference = closest.value - expected;
-
-            tooltip.innerHTML = `
-                <strong>📅 ${closest.date.toLocaleString("it-IT")}</strong>
-                💰 Saldo: ${euro(closest.balance)}<br>
-                📈 Risultato netto: ${euro(closest.value)}<br>
-                🎯 Previsto: ${euro(expected)}<br>
-                <span class="${difference >= 0 ? 'green' : 'red'}">
-                    ${difference >= 0 ? '🟢' : '🔴'} Differenza: ${euro(difference)}
-                </span>`;
-
-            tooltip.style.display = "block";
-            let tooltipX = closest.chartX + 15;
-            let tooltipY = closest.chartY + 15;
-
-            if (tooltipX > width - 230) tooltipX = closest.chartX - 220;
-
-            tooltip.style.left = tooltipX + "px";
-            tooltip.style.top = tooltipY + "px";
-            canvas.style.cursor = "pointer";
-        } else {
-            tooltip.style.display = "none";
-            canvas.style.cursor = "default";
+    canvas.addEventListener("pointermove", event => {
+        if (!chartGeom) return;
+        const p = local(event);
+        if (!pointers.has(event.pointerId)) {
+            if (event.pointerType === "mouse") showChartTooltip(p.x, p.y);
+            return;
         }
-    };
+        pointers.set(event.pointerId, p);
+        const g = chartGeom;
 
-    canvas.onmouseleave = function() {
-        document.getElementById("chartTooltip").style.display = "none";
-    };
+        if (pinch && pointers.size >= 2) {
+            const [a, b] = [...pointers.values()];
+            const dist = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+            hideChartTooltip();
+            setChartRange(zoomChartRange(pinch.range, pinch.center, pinch.dist / dist, g.domainStart, g.domainEnd));
+        } else if (drag) {
+            const dx = p.x - drag.x;
+            if (!drag.moved && Math.abs(dx) < 6) return;
+            drag.moved = true;
+            hideChartTooltip();
+            canvas.style.cursor = "grabbing";
+            const dt = dx / g.chartWidth * (drag.range.end - drag.range.start);
+            setChartRange(clampChartRange(drag.range.start - dt, drag.range.end - dt, g.domainStart, g.domainEnd));
+        }
+    });
+
+    function endPointer(event) {
+        if (!pointers.has(event.pointerId)) return;
+        const p = local(event);
+        const wasTap = drag && !drag.moved && pointers.size === 1 && event.type === "pointerup";
+        pointers.delete(event.pointerId);
+        if (wasTap) showChartTooltip(p.x, p.y);
+        drag = null;
+        pinch = null;
+        // dopo lo zoom a due dita, quello che resta giù continua a scorrere
+        if (pointers.size === 1 && chartGeom) startDrag([...pointers.values()][0]);
+        if (event.pointerType === "mouse") canvas.style.cursor = "grab";
+    }
+    canvas.addEventListener("pointerup", endPointer);
+    canvas.addEventListener("pointercancel", endPointer);
+
+    canvas.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse" && !pointers.size) hideChartTooltip();
+    });
+
+    canvas.addEventListener("wheel", event => {
+        if (!chartGeom) return;
+        event.preventDefault();
+        const g = chartGeom;
+        const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.0015)));
+        setChartRange(zoomChartRange(g.range, timeAt(local(event).x), factor, g.domainStart, g.domainEnd));
+    }, { passive: false });
+
+    canvas.addEventListener("dblclick", () => setChartPeriod("all"));
 }
 
 function updateDashboard() {
