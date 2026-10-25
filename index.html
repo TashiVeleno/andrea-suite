@@ -513,6 +513,13 @@ h2 {
 .danger, .delete-btn { background: rgba(239,68,68,.15); color: #ff8d8d; }
 .edit-btn { border: none; border-radius: 11px; padding: 10px 14px; cursor: pointer; font-size: 14px; background: rgba(59,130,246,.15); color: white; }
 .history-actions { display: flex; gap: 6px; }
+.calc-box { margin: 4px 0 12px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; }
+.calc-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+.calc-row input { margin: 0; }
+.calc-row button { padding: 8px 14px; font-size: 18px; }
+.calc-log { margin-top: 6px; font-size: 12px; min-height: 0; }
+.movement-preview { margin-bottom: 12px; padding: 10px; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 13px; line-height: 1.6; }
+.movement-preview:empty { display: none; }
 
 input {
     width: 100%;
@@ -997,7 +1004,7 @@ canvas { width: 100%; height: 100%; display: block; }
         </div>
         <div class="card form-card" style="box-shadow:none; padding:0; background:transparent; border:none;">
             <label>Data e Ora</label>
-            <input id="editMovementDate" type="datetime-local">
+            <input id="editMovementDate" type="datetime-local" oninput="updateMovementPreview()">
             <div id="editMovementAmountBlock">
                 <label>Importo (€)</label>
                 <input id="editMovementAmount" type="number" step="0.01" min="0" inputmode="decimal">
@@ -1008,18 +1015,28 @@ canvas { width: 100%; height: 100%; display: block; }
             </label>
             <div id="editMovementDayBlock">
                 <label>Saldo (€) *</label>
-                <input id="editMovementBalance" type="number" step="0.01" min="0" inputmode="decimal">
+                <input id="editMovementBalance" type="number" step="0.01" min="0" inputmode="decimal" oninput="updateMovementPreview()">
+                <div class="calc-box">
+                    <label>🧮 Aggiungi vincite o perdite al saldo</label>
+                    <div class="calc-row">
+                        <input id="editMovementCalc" type="text" inputmode="decimal" placeholder="Es. 5 oppure 5+2,5-3" onkeydown="if (event.key === 'Enter') applyMovementCalc(1)">
+                        <button class="secondary" title="Vincita: aggiungi al saldo" onclick="applyMovementCalc(1)">➕</button>
+                        <button class="secondary" title="Perdita: togli dal saldo" onclick="applyMovementCalc(-1)">➖</button>
+                    </div>
+                    <div id="editMovementCalcLog" class="small calc-log"></div>
+                </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                     <div>
                         <label>Prelievi (€)</label>
-                        <input id="editMovementDayWithdraw" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0">
+                        <input id="editMovementDayWithdraw" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" oninput="updateMovementPreview()">
                     </div>
                     <div>
                         <label>Depositi (€)</label>
-                        <input id="editMovementDayDeposit" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0">
+                        <input id="editMovementDayDeposit" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0" oninput="updateMovementPreview()">
                     </div>
                 </div>
             </div>
+            <div id="editMovementPreview" class="movement-preview"></div>
             <p class="small" style="margin-bottom: 12px;">Saldi, tabella di marcia e statistiche si ricalcolano da soli.</p>
             <button class="primary" style="width:100%;" onclick="saveEditedMovement()">💾 Salva modifiche</button>
         </div>
@@ -4329,6 +4346,37 @@ function applyMovementEdit(project, id, values) {
     return "";
 }
 
+// Calcolatrice: "5", "+5", "-3", "5+2,5-3" -> numero (la virgola vale come punto). NaN se non è un conto valido.
+function parseCalcExpression(text) {
+    const clean = String(text || "").replace(/\s+/g, "").replace(/,/g, ".");
+    if (!/^[+-]?\d+(\.\d+)?([+-]\d+(\.\d+)?)*$/.test(clean) && !/^[+-]?\.\d+$/.test(clean)) return NaN;
+    const total = (clean.match(/[+-]?[^+-]+/g) || []).reduce((t, part) => t + Number(part), 0);
+    return Math.round(total * 100) / 100;
+}
+
+// Come andrebbero le cose con questa modifica, senza salvarla: G/P del giorno, stop di oggi, piano e allarmi.
+function previewMovementEdit(project, id, values) {
+    const trial = JSON.parse(JSON.stringify(project));
+    const error = applyMovementEdit(trial, id, values);
+    if (error) return { error };
+    const stats = calculateProject(trial);
+    const item = stats.history.find(h => String(h.id) === String(id));
+    const mm = calculateMoneyManagement(trial, stats);
+    const alarms = calculateAlarms(trial, stats);
+    return {
+        error: "",
+        dayDiff: item ? item.dayDiff : null,
+        balanceAfter: item ? item.balanceAfter : 0,
+        isToday: item ? dayKey(item.date) === dayKey(getToday()) : false,
+        todayPL: mm.todayPL,
+        dailyLimit: mm.dailyLimit,
+        dailyLeft: mm.dailyLimit > 0 ? mm.dailyLimit + Math.min(0, mm.todayPL) : null,
+        roadmapDifference: stats.roadmapDifference,
+        stop: alarms.filter(a => a.level === "red").map(a => a.title),
+        ahead: alarms.some(a => a.level === "blue")
+    };
+}
+
 let editingMovementId = null;
 
 // Data ISO -> valore per <input type="datetime-local"> nell'ora del telefono
@@ -4363,7 +4411,61 @@ function openEditMovement(id) {
     document.getElementById("editMovementBalance").value = isDay ? movement.balance : "";
     document.getElementById("editMovementDayWithdraw").value = isDay && movement.withdraw ? movement.withdraw : "";
     document.getElementById("editMovementDayDeposit").value = isDay && movement.deposit ? movement.deposit : "";
+    document.getElementById("editMovementCalc").value = "";
+    document.getElementById("editMovementCalcLog").innerHTML = "";
+    updateMovementPreview();
     document.getElementById("editMovementModal").classList.add("active");
+}
+
+// Valori della finestra di modifica. Se la data non è stata toccata si tiene quella originale (con i secondi).
+function readEditMovementForm(movement) {
+    const dateInput = document.getElementById("editMovementDate").value;
+    return {
+        date: dateInput === toLocalInputValue(movement.date) ? movement.date : dateInput,
+        amount: document.getElementById("editMovementAmount").value,
+        transfer: document.getElementById("editMovementTransferBlock").style.display !== "none" && document.getElementById("editMovementTransfer").checked,
+        balance: document.getElementById("editMovementBalance").value,
+        deposit: document.getElementById("editMovementDayDeposit").value,
+        withdraw: document.getElementById("editMovementDayWithdraw").value
+    };
+}
+
+// ➕ / ➖ della calcolatrice: somma (o toglie) il conto scritto al saldo del resoconto
+function applyMovementCalc(sign) {
+    const input = document.getElementById("editMovementCalc");
+    const value = parseCalcExpression(input.value);
+    if (isNaN(value) || value === 0) { input.focus(); return; }
+    const balanceInput = document.getElementById("editMovementBalance");
+    const before = Number(balanceInput.value) || 0;
+    const delta = sign * value;
+    const after = Math.round((before + delta) * 100) / 100;
+    if (after < 0) { alert("Il saldo non può andare sotto zero."); return; }
+    balanceInput.value = after;
+    const log = document.getElementById("editMovementCalcLog");
+    log.innerHTML += `<div>${euro(before)} <strong class="${delta > 0 ? "green" : "red"}">${delta > 0 ? "+" : "−"}${euro(Math.abs(delta))}</strong> = <strong>${euro(after)}</strong></div>`;
+    input.value = "";
+    input.focus();
+    updateMovementPreview();
+}
+
+// Anteprima dal vivo: come va la giornata e se è il caso di fermarsi, prima di salvare
+function updateMovementPreview() {
+    const box = document.getElementById("editMovementPreview");
+    const project = getProject(currentProjectId);
+    const movement = project && (project.movements || []).find(m => String(m.id) === String(editingMovementId));
+    if (!movement || movement.type !== "day") { box.innerHTML = ""; return; }
+    const pv = previewMovementEdit(project, movement.id, readEditMovementForm(movement));
+    if (pv.error) { box.innerHTML = `<span class="small">${pv.error}</span>`; return; }
+    const signed = v => `<strong class="${v > 0 ? "green" : v < 0 ? "red" : ""}">${v > 0 ? "+" : ""}${euro(v)}</strong>`;
+    const lines = [`📅 G/P di questo resoconto: ${signed(pv.dayDiff || 0)} · saldo ${euro(pv.balanceAfter)}`];
+    if (pv.isToday) {
+        lines.push(`Oggi in tutto: ${signed(pv.todayPL)}${pv.dailyLeft !== null ? ` · ${pv.dailyLeft > 0 ? `puoi perdere ancora ${euro(pv.dailyLeft)}` : `stop giornaliero (${euro(-pv.dailyLimit)}) raggiunto`}` : ""}`);
+    }
+    const diff = pv.roadmapDifference;
+    lines.push(`🗺️ Piano: ${diff >= 0 ? `<strong class="green">avanti di ${euro(diff)}</strong>` : `<strong class="orange">indietro di ${euro(-diff)}</strong>`}`);
+    if (pv.stop.length) lines.push(`<strong class="red">🛑 Fermati: ${pv.stop.join(", ")}</strong>`);
+    else if (pv.ahead) lines.push(`<strong class="blue">🏖️ Sei avanti sul piano: puoi staccare</strong>`);
+    box.innerHTML = lines.map(l => `<div>${l}</div>`).join("");
 }
 
 function closeEditMovementModal() {
@@ -4379,17 +4481,7 @@ function saveEditedMovement() {
     const movement = (project.movements || []).find(m => String(m.id) === String(editingMovementId));
     if (!movement) return;
 
-    // Se la data non è stata toccata si tiene quella originale (con i secondi)
-    const dateInput = document.getElementById("editMovementDate").value;
-    const values = {
-        date: dateInput === toLocalInputValue(movement.date) ? movement.date : dateInput,
-        amount: document.getElementById("editMovementAmount").value,
-        transfer: document.getElementById("editMovementTransferBlock").style.display !== "none" && document.getElementById("editMovementTransfer").checked,
-        balance: document.getElementById("editMovementBalance").value,
-        deposit: document.getElementById("editMovementDayDeposit").value,
-        withdraw: document.getElementById("editMovementDayWithdraw").value
-    };
-    const error = applyMovementEdit(project, editingMovementId, values);
+    const error = applyMovementEdit(project, editingMovementId, readEditMovementForm(movement));
     if (error) { alert(error); return; }
     closeEditMovementModal();
     window.saveProjects(projects);
