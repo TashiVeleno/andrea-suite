@@ -841,6 +841,8 @@ canvas { width: 100%; height: 100%; display: block; }
 .strategy-table td { text-align: right; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .strategy-table th:first-child, .strategy-table td:first-child { text-align: left; white-space: normal; }
 .strategy-table tr:last-child td { border-bottom: none; }
+.strategy-table tr.sub-row td { font-size: 12px; color: var(--muted); padding-top: 4px; padding-bottom: 4px; }
+.strategy-table tr.sub-row td:first-child { padding-left: 20px; }
 .state-pill { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
 .state-pill.ok { background: rgba(34,197,94,.15); color: var(--green); }
 .state-pill.below { background: rgba(239,68,68,.15); color: var(--red); }
@@ -1185,6 +1187,11 @@ canvas { width: 100%; height: 100%; display: block; }
             <div><label id="betExitStakeLabel">Importo d'uscita (€)</label><input id="betExitStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Lo calcolo io" oninput="betExitStakeTouched = true; autoFillBetAmount()"></div>
         </div>
         <div id="betExitHint" class="small" style="margin:-4px 0 10px; font-size:12px;"></div>
+        <div class="rules-grid">
+            <div><label>Minuto d'entrata</label><input id="betMinute" oninput="updateBetOddsHint()" type="number" step="1" min="0" max="130" inputmode="numeric" placeholder="Vuoto se prima del via"></div>
+            <div><label>Risultato quando entri</label><div style="display:flex; gap:6px; align-items:center;"><input id="betScoreHome" oninput="updateBetOddsHint()" type="number" step="1" min="0" inputmode="numeric" placeholder="casa"><span>-</span><input id="betScoreAway" oninput="updateBetOddsHint()" type="number" step="1" min="0" inputmode="numeric" placeholder="ospite"></div></div>
+        </div>
+        <div class="small" style="margin:-4px 0 10px; font-size:12px;">Se giochi in live, con minuto e risultato divido la strategia in gruppi (gol già segnati e fascia di minuti), così ogni gruppo ha quote simili.</div>
         <label>Quanto hai vinto o perso, netto commissione (€)</label>
         <input id="betAmount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Si calcola da puntata e quota" oninput="betAmountTouched = true">
         <button class="primary" style="width:100%;" onclick="saveBet()">💾 Salva operazione</button>
@@ -2943,12 +2950,35 @@ function calculateMoneyManagement(project, stats) {
 }
 
 // Per ogni strategia: quota media, % di vincita, soglia di pareggio e quanto è affidabile il confronto.
+// Operazioni live: gruppo per gol già segnati e fascia di minuti. null se non hai scritto il minuto.
+const LIVE_WINDOWS = [[0, 15, "0-15'"], [16, 45, "16-45'"], [46, 70, "46-70'"], [71, Infinity, "71'+"]];
+function betSituation(bet) {
+    if (!(Number(bet.minute) >= 0) || bet.minute === null || bet.minute === undefined || !Array.isArray(bet.score)) return null;
+    const goals = (Number(bet.score[0]) || 0) + (Number(bet.score[1]) || 0);
+    const w = LIVE_WINDOWS.find(([from, to]) => bet.minute >= from && bet.minute <= to);
+    return { goals, window: w[2], key: `${goals}|${w[2]}`, label: `${goals === 0 ? "sullo 0-0" : `dopo ${goals} gol`} · ${w[2]}` };
+}
+
 function calculateStrategyStats(project) {
     const rules = getRules(project);
     const bets = getBets(project);
 
     return getStrategies(project).map(s => {
         const list = bets.filter(b => b.strategyId === s.id);
+        const out = strategyStatsFor(s, list, rules);
+        // Gruppi live: stesse regole, ma senza i dati del backtest (valgono prima del via)
+        const groups = new Map();
+        list.forEach(b => { const sit = betSituation(b); if (sit) { if (!groups.has(sit.key)) groups.set(sit.key, { sit, list: [] }); groups.get(sit.key).list.push(b); } });
+        const live = { ...s, refOdds: null, refBreakEven: null, refWinRate: null };
+        out.groups = [...groups.values()]
+            .sort((a, b) => a.sit.goals - b.sit.goals || LIVE_WINDOWS.findIndex(w => w[2] === a.sit.window) - LIVE_WINDOWS.findIndex(w => w[2] === b.sit.window))
+            .map(g => ({ ...strategyStatsFor(live, g.list, rules), name: g.sit.label, situation: g.sit }));
+        return out;
+    });
+}
+
+function strategyStatsFor(s, list, rules) {
+    {
         let wins = 0, losses = 0, winSum = 0, lossSum = 0, total = 0, oddsSum = 0, oddsCount = 0, beSum = 0, closedEarly = 0, plSq = 0, oddsAll = 0;
         list.forEach(b => {
             const pl = Number(b.pl) || 0;
@@ -3006,7 +3036,7 @@ function calculateStrategyStats(project) {
         else if (s.refWinRate > 0) { oddsLimit = oddsLimitFromWinRate(s.side, s.refWinRate, rules.commissionPct); oddsLimitFromRef = true; }
 
         return { ...s, n, wins, losses, winRate, avgOdds, total, breakEven, source, z, state, minBets: rules.minBets, oddsLimit, oddsLimitFromRef, trading, closedEarly };
-    });
+    }
 }
 
 // Elenco allarmi del progetto: rossi = fermati, gialli = attenzione.
@@ -3278,9 +3308,9 @@ function renderStrategies(project) {
             <table class="strategy-table">
                 <thead><tr><th>Strategia</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Serve</th><th>Entra a</th><th>Totale</th><th>Stato</th></tr></thead>
                 <tbody>
-                    ${list.map(s => `
-                        <tr>
-                            <td>${escapeHTML(s.name)} <span class="small" style="font-size:11px;">${s.side === "lay" ? "banca" : "punta"}</span></td>
+                    ${list.map(s => [s, ...(s.groups || [])].map((s, i) => `
+                        <tr class="${i ? "sub-row" : ""}">
+                            <td>${i ? "↳ " + escapeHTML(s.name) : `${escapeHTML(s.name)} <span class="small" style="font-size:11px;">${s.side === "lay" ? "banca" : "punta"}</span>`}</td>
                             <td>${s.n}</td>
                             <td>${oddsCell(s)}</td>
                             <td class="${wrClass(s)}">${s.winRate === null ? "--" : fmtPct(s.winRate)}</td>
@@ -3288,7 +3318,7 @@ function renderStrategies(project) {
                             <td>${s.trading ? `<span class="small">chiusura</span>` : `<strong class="blue">${oddsLimitText(s)}</strong>`}</td>
                             <td class="${s.total > 0 ? "green" : s.total < 0 ? "red" : ""}">${s.n ? euro(s.total) : "--"}</td>
                             <td>${pill(s)}</td>
-                        </tr>`).join("")}
+                        </tr>`).join("")).join("")}
                 </tbody>
             </table>
         </div>
@@ -3433,12 +3463,18 @@ function updateBetOddsHint() {
     const box = document.getElementById("betOddsHint");
     const project = getProject(currentProjectId);
     const s = currentBetStrategy();
-    const st = project && s ? calculateStrategyStats(project).find(x => x.id === s.id) : null;
+    let st = project && s ? calculateStrategyStats(project).find(x => x.id === s.id) : null;
+    // In live vale solo la quota del gruppo (gol già segnati e minuto), non quella prepartita del backtest
+    const minuteVal = document.getElementById("betMinute").value;
+    if (st && minuteVal !== "") {
+        const sit = betSituation({ minute: Number(minuteVal), score: [document.getElementById("betScoreHome").value, document.getElementById("betScoreAway").value] });
+        st = st.groups.find(g => g.situation.key === sit.key) || null;
+    }
     if (!st || !st.oddsLimit) { box.innerHTML = ""; return; }
     const odds = Number(document.getElementById("betOdds").value);
     const lay = s.side === "lay";
     const bad = odds > 1 && (lay ? odds > st.oddsLimit + 0.005 : odds < st.oddsLimit - 0.005);
-    const base = `Con questa strategia entra a quota <strong>${oddsLimitText(st)}</strong>${st.oddsLimitFromRef ? " (dal backtest)" : " (dai tuoi risultati)"}.`;
+    const base = `Con questa ${st.situation ? `strategia ${escapeHTML(st.name)}` : "strategia"} entra a quota <strong>${oddsLimitText(st)}</strong>${st.oddsLimitFromRef ? " (dal backtest)" : " (dai tuoi risultati)"}.`;
     box.innerHTML = bad
         ? `<span class="orange">⚠️ Quota ${lay ? "troppo alta" : "troppo bassa"}.</span> ${base} A lungo andare giocate così fanno perdere.`
         : base;
@@ -3454,6 +3490,7 @@ function resetBetForm() {
     document.getElementById("betExitOdds").value = "";
     document.getElementById("betExitStake").value = "";
     document.getElementById("betExitHint").innerHTML = "";
+    ["betMinute", "betScoreHome", "betScoreAway"].forEach(id => { document.getElementById(id).value = ""; });
     betAmountTouched = false;
     betExitStakeTouched = false;
     setBetResult(null);
@@ -3532,6 +3569,11 @@ function saveBet() {
     };
     if (odds > 1) bet.odds = odds;
     if (exitOdds > 1) { bet.exitOdds = exitOdds; if (exitStake > 0) bet.exitStake = exitStake; }
+    const minuteVal = document.getElementById("betMinute").value;
+    if (minuteVal !== "") {
+        bet.minute = Math.max(0, Math.round(Number(minuteVal)));
+        bet.score = [document.getElementById("betScoreHome").value, document.getElementById("betScoreAway").value].map(v => Math.max(0, Math.round(Number(v) || 0)));
+    }
     project.bets.push(bet);
     project.strategies = getStrategies(project);
     project.strategiesVersion = STRATEGIES_VERSION;
@@ -3553,6 +3595,7 @@ function renderBetList(project) {
         if (b.label) details.unshift(escapeHTML(b.label));
         if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
         if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
+        if (betSituation(b)) details.push(`entrata al ${b.minute}' (${b.score.join("-")})`);
         if (b.exitOdds) details.push(`uscita ${s && s.side === "lay" ? "punta" : "banca"} ${b.exitStake ? euro(b.exitStake) + " " : ""}a ${fmtOdds(b.exitOdds)}`);
         return `
         <div class="bet-item">
