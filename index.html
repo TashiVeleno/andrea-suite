@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Andrea Suite</title>
+<title>🌱 SERENITÀ 🌱</title>
 
 <!-- App installabile sul telefono: icona nella schermata home, schermo intero, si apre anche offline -->
 <link rel="manifest" href="manifest.json">
@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Andrea Suite">
+<meta name="apple-mobile-web-app-title" content="SERENITÀ">
 
 <!-- Libreria per l'effetto coriandoli -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -887,7 +887,7 @@ canvas { width: 100%; height: 100%; display: block; }
 
 <header>
     <div class="header-content">
-        <div class="logo">🌱 Andrea <span>Suite</span></div>
+        <div class="logo">🌱 <span>SERENITÀ</span> 🌱</div>
         <div class="header-center" id="todayDate"></div>
         <div class="header-right">
             <button class="guide-trigger-btn" onclick="openGuideModal()">
@@ -2062,7 +2062,7 @@ function parseBackup(text) {
     try { data = JSON.parse(text); }
     catch { throw new Error("Il file non è un JSON valido."); }
     if (!data || typeof data !== "object") throw new Error("Il file non contiene un backup.");
-    if (data.app !== BACKUP_APP || !Array.isArray(data.projects)) throw new Error("Questo file non è un backup di Andrea Suite.");
+    if (data.app !== BACKUP_APP || !Array.isArray(data.projects)) throw new Error("Questo file non è un backup di SERENITÀ.");
     if (Number(data.version) > BACKUP_VERSION) throw new Error("Il backup è stato creato da una versione più nuova dell'app.");
 
     data.projects.forEach((p, i) => {

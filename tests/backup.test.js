@@ -64,7 +64,7 @@ test("backup senza Bilancio Vita Reale o senza movimenti", () => {
 test("file non validi vengono rifiutati con un messaggio chiaro", () => {
     const parse = text => app().parseBackup(text);
     assert.throws(() => parse("non è json"), /JSON valido/);
-    assert.throws(() => parse(JSON.stringify(projects)), /non è un backup di Andrea Suite/);
+    assert.throws(() => parse(JSON.stringify(projects)), /non è un backup di SERENITÀ/);
     assert.throws(() => parse(JSON.stringify({ app: "altro", version: 1, projects: [] })), /non è un backup/);
     assert.throws(() => parse(JSON.stringify({ app: "andrea-suite", version: 2, projects: [] })), /versione più nuova/);
     assert.throws(() => parse(JSON.stringify({ app: "andrea-suite", version: 1, projects: [{ name: "Senza id" }] })), /progetto n° 1/);
