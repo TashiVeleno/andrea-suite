@@ -390,6 +390,7 @@ h2 {
     text-align: center;
 }
 .today-result strong { font-size: 16px; }
+.today-edit { border: none; border-radius: 9px; padding: 3px 8px; margin-left: 6px; cursor: pointer; font-size: 13px; background: rgba(59,130,246,.15); color: white; vertical-align: middle; }
 
 .roadmap-grid {
     display: grid;
@@ -1351,7 +1352,7 @@ canvas { width: 100%; height: 100%; display: block; }
                     <div class="big-number" id="detailRealized">€ 0,00</div>
                 </div>
             </div>
-            <div class="today-result" id="detailToday">📅 Incasso del giorno: <strong>—</strong></div>
+            <div class="today-result" id="detailToday">📅 Incasso del giorno: <strong>—</strong> <button class="today-edit" id="detailTodayEdit" title="Aggiorna il resoconto di oggi" onclick="editTodayReport()">✏️</button></div>
         </div>
 
         <div class="console-card" id="operationsCardBlock">
@@ -2139,6 +2140,20 @@ function todayResult(stats) {
     const today = dayKey(getToday());
     const days = stats.history.filter(h => h.type === "day" && h.dayDiff !== null && dayKey(h.date) === today);
     return days.length ? days.reduce((t, h) => t + h.dayDiff, 0) : null;
+}
+
+// ✏️ accanto all'incasso del giorno: apre la modifica (con calcolatrice) dell'ultimo resoconto di oggi, o ne crea uno nuovo
+function editTodayReport() {
+    const project = getProject(currentProjectId);
+    if (!project) return;
+    const today = dayKey(getToday());
+    const reports = (project.movements || []).filter(m => m.type === "day" && dayKey(m.date) === today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (reports.length) openEditMovement(reports[reports.length - 1].id);
+    else {
+        showOperationForm("day");
+        document.getElementById("operationsCardBlock").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
 }
 
 function getToday() {
@@ -4641,6 +4656,7 @@ function renderProjectDetail() {
         const strong = todayElement.querySelector("strong");
         strong.textContent = value === null ? "—" : (value > 0 ? "+" : "") + euro(value);
         strong.className = value > 0 ? "green" : value < 0 ? "red" : "";
+        document.getElementById("detailTodayEdit").style.display = isClosed ? "none" : "";
     }
 
     document.getElementById("detailGoal").textContent = euro(project.goal);
