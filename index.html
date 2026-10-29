@@ -382,6 +382,15 @@ h2 {
     margin-top: 12px;
 }
 
+.today-result {
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+}
+.today-result strong { font-size: 16px; }
+
 .roadmap-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1342,6 +1351,7 @@ canvas { width: 100%; height: 100%; display: block; }
                     <div class="big-number" id="detailRealized">€ 0,00</div>
                 </div>
             </div>
+            <div class="today-result" id="detailToday">📅 Incasso del giorno: <strong>—</strong></div>
         </div>
 
         <div class="console-card" id="operationsCardBlock">
@@ -2122,6 +2132,13 @@ function importBackup(input) {
 
 function euro(value) {
     return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
+}
+
+// Incasso di oggi: quanto è cambiato il risultato con i resoconti di oggi rispetto al saldo di ieri (null se oggi non c'è resoconto)
+function todayResult(stats) {
+    const today = dayKey(getToday());
+    const days = stats.history.filter(h => h.type === "day" && h.dayDiff !== null && dayKey(h.date) === today);
+    return days.length ? days.reduce((t, h) => t + h.dayDiff, 0) : null;
 }
 
 function getToday() {
@@ -4616,6 +4633,14 @@ function renderProjectDetail() {
         } else {
             realizedElement.style.color = "var(--muted)";
         }
+    }
+
+    const todayElement = document.getElementById("detailToday");
+    if (todayElement) {
+        const value = todayResult(stats);
+        const strong = todayElement.querySelector("strong");
+        strong.textContent = value === null ? "—" : (value > 0 ? "+" : "") + euro(value);
+        strong.className = value > 0 ? "green" : value < 0 ? "red" : "";
     }
 
     document.getElementById("detailGoal").textContent = euro(project.goal);

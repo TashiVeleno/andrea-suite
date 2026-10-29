@@ -11,7 +11,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1
 if (scripts.length !== 1) throw new Error(`Atteso un solo <script> classico in index.html, trovati ${scripts.length}`);
 
 const EXPORTS = [
-    "calculateProject", "calculateCompoundPlan", "calculateCedola", "calculateMoneyManagement",
+    "calculateProject", "todayResult", "calculateCompoundPlan", "calculateCedola", "calculateMoneyManagement",
     "calculateAlarms", "calculateStrategyStats", "breakEvenFromOdds", "oddsLimitFromWinRate",
     "netWinFromOdds", "tradeResult", "buildBackup", "parseBackup", "getToday", "daysBetween",
     "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
