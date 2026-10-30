@@ -390,6 +390,7 @@ h2 {
     text-align: center;
 }
 .today-result strong { font-size: 16px; }
+.today-switch { cursor: pointer; }
 .today-edit { border: none; border-radius: 9px; padding: 3px 8px; margin-left: 6px; cursor: pointer; font-size: 13px; background: rgba(59,130,246,.15); color: white; vertical-align: middle; }
 
 .roadmap-grid {
@@ -1352,7 +1353,7 @@ canvas { width: 100%; height: 100%; display: block; }
                     <div class="big-number" id="detailRealized">€ 0,00</div>
                 </div>
             </div>
-            <div class="today-result" id="detailToday">📅 Incasso del giorno: <strong>—</strong> <button class="today-edit" id="detailTodayEdit" title="Aggiorna il resoconto di oggi" onclick="editTodayReport()">✏️</button></div>
+            <div class="today-result" id="detailToday"><span class="today-switch" onclick="toggleTodayView()" title="Tocca per scegliere: incasso di oggi o posizione sul piano"><span id="detailTodayLabel">📅 Incasso del giorno:</span> <strong>—</strong><span id="detailTodayExtra"></span> 🔄</span> <button class="today-edit" id="detailTodayEdit" title="Aggiorna il resoconto di oggi" onclick="editTodayReport()">✏️</button></div>
         </div>
 
         <div class="console-card" id="operationsCardBlock">
@@ -2140,6 +2141,16 @@ function todayResult(stats) {
     const today = dayKey(getToday());
     const days = stats.history.filter(h => h.type === "day" && h.dayDiff !== null && dayKey(h.date) === today);
     return days.length ? days.reduce((t, h) => t + h.dayDiff, 0) : null;
+}
+
+// La riga in fondo a Situazione attuale mostra, a scelta, la posizione sul piano (predefinita) o l'incasso di oggi
+const TODAY_VIEW_KEY = "andrea_suite_today_view";
+function getTodayView() {
+    try { return localStorage.getItem(TODAY_VIEW_KEY) === "today" ? "today" : "plan"; } catch (e) { return "plan"; }
+}
+function toggleTodayView() {
+    try { localStorage.setItem(TODAY_VIEW_KEY, getTodayView() === "plan" ? "today" : "plan"); } catch (e) {}
+    renderProjectDetail();
 }
 
 // ✏️ accanto all'incasso del giorno: apre la modifica (con calcolatrice) dell'ultimo resoconto di oggi, o ne crea uno nuovo
@@ -4652,9 +4663,14 @@ function renderProjectDetail() {
 
     const todayElement = document.getElementById("detailToday");
     if (todayElement) {
-        const value = todayResult(stats);
+        const showPlan = getTodayView() === "plan" && !isClosed;
+        const value = showPlan ? stats.roadmapDifference : todayResult(stats);
         const strong = todayElement.querySelector("strong");
         strong.textContent = value === null ? "—" : (value > 0 ? "+" : "") + euro(value);
+        document.getElementById("detailTodayLabel").textContent = showPlan ? "🗺️ Sul piano:" : "📅 Incasso del giorno:";
+        const days = Math.round(Math.abs(stats.daysDifference));
+        document.getElementById("detailTodayExtra").textContent = !showPlan || days < 1 ? ""
+            : ` · ${days} ${days === 1 ? "giorno" : "giorni"} ${stats.daysDifference > 0 ? "avanti" : "indietro"}`;
         strong.className = value > 0 ? "green" : value < 0 ? "red" : "";
         document.getElementById("detailTodayEdit").style.display = isClosed ? "none" : "";
     }
