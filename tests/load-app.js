@@ -13,7 +13,7 @@ if (scripts.length !== 1) throw new Error(`Atteso un solo <script> classico in i
 const EXPORTS = [
     "calculateProject", "todayResult", "calculateCompoundPlan", "calculateCedola", "calculateMoneyManagement",
     "calculateAlarms", "calculateStrategyStats", "breakEvenFromOdds", "oddsLimitFromWinRate",
-    "netWinFromOdds", "tradeResult", "buildBackup", "parseBackup", "getToday", "daysBetween",
+    "netWinFromOdds", "tradeResult", "oppositeExit", "buildBackup", "parseBackup", "getToday", "daysBetween",
     "DEFAULT_RULES", "AVVISO_QUASI", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
     "calculateStagePlan", "stageExpected", "autoStages", "parseCSV", "betfairColumns", "parseBetfairDetails", "itDate", "itNumber", "parseMovimentiChiusi", "getStrategies", "betfairStrategyName", "betSituation", "applyMovementEdit", "parseCalcExpression", "previewMovementEdit",
     "chartPresetRange", "clampChartRange", "zoomChartRange", "chartRangeFromDates"
