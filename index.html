@@ -2832,9 +2832,7 @@ const DEFAULT_STRATEGIES = [
     { id: "back_over_2_5", name: "Punta Over 2.5", side: "back", refOdds: 2.03, refBreakEven: 52.2, refWinRate: 51.2, breakEven: null },
     { id: "lay_over_0_5_primo_tempo", name: "Banca Over 0.5 primo tempo", side: "lay", refOdds: 1.44, refBreakEven: 31.1, refWinRate: 29.6, breakEven: null },
     { id: "lay_favorito", name: "Banca favorito", side: "lay", refOdds: 2.04, refBreakEven: 49.0, refWinRate: 47.9, breakEven: null },
-    { id: "back_goal_btts_si", name: "Punta Goal (BTTS sì)", side: "back", refOdds: 1.91, refBreakEven: 54.0, refWinRate: 52.8, breakEven: null },
     { id: "back_favorito", name: "Punta favorito", side: "back", refOdds: 2.02, refBreakEven: 53.7, refWinRate: 52.1, breakEven: null },
-    { id: "back_no_goal_btts_no", name: "Punta No Goal (BTTS no)", side: "back", refOdds: 2.14, refBreakEven: 48.7, refWinRate: 47.2, breakEven: null },
     { id: "lay_over_2_5", name: "Banca Over 2.5", side: "lay", refOdds: 2.04, refBreakEven: 50.5, refWinRate: 48.8, breakEven: null },
     { id: "lay_0_0", name: "Banca 0-0", side: "lay", refOdds: 16.93, refBreakEven: 93.2, refWinRate: 93.0, breakEven: null },
     { id: "back_under_2_5", name: "Punta Under 2.5", side: "back", refOdds: 2.13, refBreakEven: 50.5, refWinRate: 48.8, breakEven: null },
@@ -2843,10 +2841,15 @@ const DEFAULT_STRATEGIES = [
     // quindi la soglia si calcola dalle quote delle tue operazioni. Vittoria primo tempo = media tra casa (33,8%) e ospite (26,3%)
     { id: "back_vittoria_primo_tempo", name: "Punta vittoria primo tempo", side: "back", refOdds: null, refWinRate: 30.1, breakEven: null, since: 2 },
     { id: "back_over_0_5", name: "Punta Over 0.5", side: "back", refOdds: null, refWinRate: 93.6, breakEven: null, since: 2 },
-    { id: "back_under_0_5", name: "Punta Under 0.5", side: "back", refOdds: null, refWinRate: 6.4, breakEven: null, since: 2 }
+    { id: "back_under_0_5", name: "Punta Under 0.5", side: "back", refOdds: null, refWinRate: 6.4, breakEven: null, since: 2 },
+    // Gol nel primo tempo, stesse 10.733 partite: almeno 2 gol nel 35,7%, al massimo 1 nel 64,3%
+    { id: "back_over_1_5_primo_tempo", name: "Punta Over 1.5 primo tempo", side: "back", refOdds: null, refWinRate: 35.7, breakEven: null, since: 3 },
+    { id: "back_under_1_5_primo_tempo", name: "Punta Under 1.5 primo tempo", side: "back", refOdds: null, refWinRate: 64.3, breakEven: null, since: 3 }
 ];
 // Sale quando si aggiungono strategie predefinite: i progetti salvati prima le ricevono una volta sola
-const STRATEGIES_VERSION = 2;
+const STRATEGIES_VERSION = 3;
+// Tolte dalle predefinite: spariscono dai progetti salvati prima, ma solo se non hanno operazioni registrate
+const REMOVED_STRATEGIES = { back_goal_btts_si: 3, back_no_goal_btts_no: 3 };
 
 function getRules(project) {
     return { ...DEFAULT_RULES, ...(project.rules || {}) };
@@ -2862,8 +2865,10 @@ function getStrategies(project) {
     const added = DEFAULT_STRATEGIES
         .filter(d => d.since > version && !project.strategies.some(s => s.id === d.id || String(s.name).toLowerCase() === d.name.toLowerCase()))
         .map(({ since, ...d }) => ({ ...d }));
+    const used = new Set(getBets(project).map(b => b.strategyId));
+    const kept = project.strategies.filter(s => !(REMOVED_STRATEGIES[s.id] > version && !used.has(s.id)));
     // Le strategie salvate con la prima versione hanno i nomi inglesi: si aggiornano se non sono stati cambiati
-    return project.strategies.concat(added).map(s => {
+    return kept.concat(added).map(s => {
         const def = DEFAULT_STRATEGIES.find(d => d.id === s.id);
         const oldName = def && (OLD_STRATEGY_NAMES[s.id] || def.name.replace(/^Punta /, "Back ").replace(/^Banca /, "Lay "));
         const out = def && s.name === oldName ? { ...s, name: def.name } : s;
