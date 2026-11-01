@@ -64,7 +64,7 @@ test("strategie nuove: vittoria primo tempo e Over/Under 0.5", () => {
     assert.ok(list.some(s => s.id === "back_under_0_5"));
     assert.ok(list.every(s => !("since" in s)));
     // se le ha già ricevute e poi le ha tolte, non tornano
-    assert.equal(app.getStrategies({ strategies: [], strategiesVersion: 2 }).length, 0);
+    assert.equal(app.getStrategies({ strategies: [], strategiesVersion: 3 }).length, 0);
 });
 
 test("import: esito primo tempo diventa vittoria primo tempo", () => {
