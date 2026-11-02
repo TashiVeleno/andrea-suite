@@ -224,6 +224,12 @@ h2 {
     white-space: nowrap;
 }
 
+/* Senza il "giorno": prima il mese, poi la settimana */
+.header-ritmo.no-daily .ritmo-daily { display: none; }
+.header-ritmo.no-daily .ritmo-monthly { order: 1; }
+.header-ritmo.no-daily .ritmo-weekly { order: 2; }
+.header-ritmo.no-daily .ritmo-info-btn { order: 3; }
+
 .header-ritmo-item .small {
     font-size: 13px;
 }
@@ -1124,6 +1130,9 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="modal-close-btn" onclick="closeRulesModal()">✕</button>
         </div>
 
+        <h4 class="rules-section-title">👁️ In alto nella pagina</h4>
+        <label class="planner-check"><input type="checkbox" id="ruleHideDaily"> Nascondi l'obiettivo «Al giorno» (mostra solo mese e settimana)</label>
+
         <h4 class="rules-section-title">🛡️ Money management</h4>
         <p class="rules-help">Percentuali sulla banca. Metti <strong>0</strong> per spegnere una regola.</p>
         <div class="rules-grid">
@@ -1309,16 +1318,16 @@ canvas { width: 100%; height: 100%; display: block; }
             <button class="danger icon-btn" id="btnCloseProjectHeader" onclick="openCloseProjectModal()" title="Concludi Progetto">⏻</button>
         </div>
 
-        <div class="header-ritmo">
-            <span class="header-ritmo-item">
+        <div class="header-ritmo" id="headerRitmo">
+            <span class="header-ritmo-item ritmo-daily">
                 <span class="small">📅 Al giorno</span>
                 <strong class="blue" id="dailyNeeded">€ 0,00</strong>
             </span>
-            <span class="header-ritmo-item">
+            <span class="header-ritmo-item ritmo-weekly">
                 <span class="small">📆 Alla settimana</span>
                 <strong class="blue" id="weeklyNeeded">€ 0,00</strong>
             </span>
-            <span class="header-ritmo-item">
+            <span class="header-ritmo-item ritmo-monthly">
                 <span class="small">🗓️ Al mese</span>
                 <strong class="blue" id="monthlyNeeded">€ 0,00</strong>
             </span>
@@ -2802,7 +2811,8 @@ const DEFAULT_RULES = {
     commissionPct: 4.5,   // commissione Betfair Italia sulle vincite nette
     noReportDays: 3,      // allarme se non c'è un resoconto da N giorni
     aheadDays: 10,        // avviso "sei avanti, stacca" quando sei in anticipo sul piano di almeno N giorni
-    minBets: 30           // operazioni minime prima di giudicare una strategia
+    minBets: 30,          // operazioni minime prima di giudicare una strategia
+    hideDaily: false      // in alto nel progetto: nasconde «Al giorno» e mostra prima il mese, poi la settimana
 };
 
 // Ritmo obiettivo: dopo 3 mesi giallo sotto il 75% del piano, dopo 6 mesi rosso sotto il 50% o in perdita
@@ -3309,6 +3319,7 @@ function openRulesModal() {
     if (!project) return;
     const r = getRules(project);
     Object.entries(RULE_INPUTS).forEach(([key, id]) => { document.getElementById(id).value = r[key]; });
+    document.getElementById("ruleHideDaily").checked = !!r.hideDaily;
     rulesDraftStrategies = getStrategies(project).map(s => ({ ...s }));
     renderRulesStrategies();
     document.getElementById("rulesModal").classList.add("active");
@@ -3377,6 +3388,7 @@ function saveRules() {
     });
     rules.commissionPct = Math.min(100, rules.commissionPct);
     rules.minBets = Math.max(1, Math.round(rules.minBets));
+    rules.hideDaily = document.getElementById("ruleHideDaily").checked;
     project.rules = rules;
     project.strategies = rulesDraftStrategies;
     project.strategiesVersion = STRATEGIES_VERSION;
@@ -4717,6 +4729,7 @@ function renderProjectDetail() {
 
     renderStageInfo(stats, isClosed);
 
+    document.getElementById("headerRitmo").classList.toggle("no-daily", !!getRules(project).hideDaily);
     document.getElementById("dailyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.dailyNeeded);
     document.getElementById("weeklyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.weeklyNeeded);
     document.getElementById("monthlyNeeded").textContent = (isClosed || stats.deadlinePassed) ? '--' : euro(stats.monthlyNeeded);
