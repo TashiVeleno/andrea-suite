@@ -117,62 +117,20 @@ function dayProject(todayBalance, extra = {}) {
 const alarmsOf = p => app.calculateAlarms(p, app.calculateProject(p));
 const titles = p => alarmsOf(p).map(a => `${a.level}: ${a.title}`);
 
-test("stop giornaliero: rosso al 5% di perdita, giallo al 75% dello stop", () => {
-    assert.ok(titles(dayProject(950)).includes("red: Stop giornaliero raggiunto"));          // -50 = 5% di 1000
-    assert.ok(titles(dayProject(962.5)).includes("yellow: Vicino allo stop giornaliero"));   // -37,50 = 75% dello stop
-    assert.ok(!titles(dayProject(963)).some(t => t.includes("stop giornaliero")));           // -37 = sotto il 75%
-});
-
-test("stop giornaliero: il limite si calcola sulla banca di inizio giornata", () => {
-    const p = dayProject(950);
-    const mm = app.calculateMoneyManagement(p, app.calculateProject(p));
-    assert.equal(mm.todayPL, -50);
-    assert.equal(mm.dailyLimit, 50);
-    assert.equal(mm.dailyUsed, 1);
-    assert.equal(mm.monthlyLimit, 150); // 15% della banca a inizio mese
-});
-
-test("stop disattivato con percentuale a zero", () => {
-    const p = dayProject(900, { rules: { dailyStopPct: 0 } });
-    assert.ok(!titles(p).some(t => t.includes("stop giornaliero")));
-});
-
-test("calo dal picco: dimezza le puntate al 20%, stop al 30%", () => {
-    const withPeak = bottom => ({
-        ...dayProject(bottom),
-        movements: [
-            { id: 31, type: "deposit", amount: 1000, date: "2026-10-01T09:00:00" },
-            { id: 32, type: "day", balance: 2000, deposit: 0, withdraw: 0, date: "2026-10-12T20:00:00" },
-            { id: 33, type: "day", balance: bottom, deposit: 0, withdraw: 0, date: "2026-10-13T20:00:00" },
-            { id: 34, type: "day", balance: bottom, deposit: 0, withdraw: 0, date: "2026-10-14T20:00:00" }
-        ]
-    });
-
-    const warn = withPeak(1600);
-    const mm = app.calculateMoneyManagement(warn, app.calculateProject(warn));
-    assert.equal(mm.peak, 2000);
-    close(mm.drawdownPct, 20);
-    assert.equal(mm.reduced, true);
-    assert.equal(mm.stakePct, 1);   // 2% → 1%
-    assert.equal(mm.layPct, 1.5);   // 3% → 1,5%
-    assert.ok(titles(warn).includes("yellow: Calo dal picco: riduci le puntate"));
-
-    assert.ok(titles(withPeak(1400)).includes("red: Calo dal picco troppo forte"));
-    assert.ok(!titles(withPeak(1601)).some(t => t.includes("Calo dal picco")));
-});
-
-test("tilt: 3 giornate in perdita di fila e perdita oltre il 15% in un giorno", () => {
-    const losing = dayProject(990);
-    losing.movements.splice(1, 0,
-        { id: 41, type: "day", balance: 1010, deposit: 0, withdraw: 0, date: "2026-10-12T20:00:00" },
-        { id: 42, type: "day", balance: 1005, deposit: 0, withdraw: 0, date: "2026-10-13T20:00:00" });
-    losing.movements[3].balance = 1000; // 14 ott: -5, 15 ott: -10 → tre giornate negative
-    assert.ok(titles(losing).includes("yellow: 3 giornate in perdita di fila"));
-
-    const p = dayProject(840, { rules: { dailyStopPct: 0, monthlyStopPct: 0 } }); // -16% in un giorno
-    assert.ok(titles(p).includes("red: Perdita oltre il 15% in un giorno"));
-    const q = dayProject(850, { rules: { dailyStopPct: 0, monthlyStopPct: 0 } }); // -15% esatto: niente
-    assert.ok(!titles(q).includes("red: Perdita oltre il 15% in un giorno"));
+test("stop perdita, calo dal picco e tilt non danno più allarmi", () => {
+    const peak = { ...dayProject(1000), movements: [
+        { id: 31, type: "deposit", amount: 1000, date: "2026-10-01T09:00:00" },
+        { id: 32, type: "day", balance: 2000, deposit: 0, withdraw: 0, date: "2026-10-12T20:00:00" },
+        { id: 33, type: "day", balance: 1500, deposit: 0, withdraw: 0, date: "2026-10-13T20:00:00" },
+        { id: 34, type: "day", balance: 1200, deposit: 0, withdraw: 0, date: "2026-10-14T20:00:00" },
+        { id: 35, type: "day", balance: 800, deposit: 0, withdraw: 0, date: "2026-10-15T20:00:00" }
+    ] };
+    const t = titles(peak).join(" | ");
+    assert.ok(!/stop|Calo dal picco|giornate in perdita|oltre il 15%/i.test(t), t);
+    const mm = app.calculateMoneyManagement(peak, app.calculateProject(peak));
+    assert.equal(mm.stakePct, 2); // la puntata non viene più dimezzata dopo un calo
+    assert.equal(mm.layPct, 3);
+    assert.equal(mm.todayPL, -400);
 });
 
 test("scadenza superata e ritmo sul piano", () => {
