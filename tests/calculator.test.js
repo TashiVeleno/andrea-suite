@@ -40,16 +40,11 @@ test("anteprima: aggiungere una vincita al resoconto di oggi aggiorna G/P e stop
     assert.deepEqual(plain(p), before); // il progetto vero non cambia
 });
 
-test("anteprima: una perdita oltre lo stop giornaliero dice di fermarsi", () => {
+test("anteprima: una perdita forte non dà più lo stop giornaliero", () => {
     const p = project();
-    // stop giornaliero di default 5% della banca a inizio giornata (1000 €) = 50 €
     const pv = app.previewMovementEdit(p, 3, { date: p.movements[2].date, balance: 940, deposit: "", withdraw: "" });
     assert.equal(pv.todayPL, -60);
-    assert.ok(pv.dailyLeft <= 0);
-    assert.ok(pv.stop.some(t => /Stop giornaliero/i.test(t)), plain(pv.stop).join());
-    const ok = app.previewMovementEdit(p, 3, { date: p.movements[2].date, balance: 990, deposit: "", withdraw: "" });
-    assert.equal(ok.stop.length, 0);
-    assert.equal(ok.dailyLeft, 40);
+    assert.ok(!pv.stop.some(t => /stop/i.test(t)), plain(pv.stop).join());
 });
 
 test("anteprima: valori non validi restituiscono l'errore", () => {
