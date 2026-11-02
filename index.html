@@ -479,6 +479,8 @@ h2 {
     display: flex;
     gap: 8px;
 }
+.move-btn { padding: 8px 10px; border-radius: 8px; line-height: 1; }
+.move-btn:disabled { opacity: .3; cursor: default; }
 
 .card h3, .console-card h3 {
     font-size: 13px;
@@ -4116,9 +4118,43 @@ function createProject() {
     updateAll();
 }
 
+// Ordine dei progetti aperti: ognuno ha il suo numero "order" (si sincronizza nel cloud come gli altri campi).
+// Chi non ce l'ha ancora (progetti vecchi o appena creati) va in fondo, nell'ordine di sempre.
+function sortActiveProjects(projects) {
+    return projects
+        .map((p, i) => ({ p, i }))
+        .filter(x => !x.p.status || x.p.status === 'active')
+        .sort((a, b) => {
+            const oa = Number.isFinite(a.p.order), ob = Number.isFinite(b.p.order);
+            if (oa && ob && a.p.order !== b.p.order) return a.p.order - b.p.order;
+            if (oa !== ob) return oa ? -1 : 1;
+            return a.i - b.i;
+        })
+        .map(x => x.p);
+}
+
+// Sposta un progetto aperto di un posto (dir = -1 su, +1 giù) e rinumera i progetti aperti 0, 1, 2...
+// I progetti chiusi non vengono toccati. Restituisce false se non si può spostare.
+function moveProjectInList(projects, id, dir) {
+    const active = sortActiveProjects(projects);
+    const from = active.findIndex(p => p.id === id);
+    const to = from + dir;
+    if (from < 0 || to < 0 || to >= active.length) return false;
+    [active[from], active[to]] = [active[to], active[from]];
+    active.forEach((p, i) => { p.order = i; });
+    return true;
+}
+
+function moveProject(id, dir) {
+    const projects = window.loadProjects();
+    if (!moveProjectInList(projects, id, dir)) return;
+    window.saveProjects(projects);
+    renderProjects();
+}
+
 function renderProjects() {
     const projects = window.loadProjects();
-    const activeProjects = projects.filter(p => !p.status || p.status === 'active');
+    const activeProjects = sortActiveProjects(projects);
     const closedProjects = projects.filter(p => p.status === 'completed' || p.status === 'abandoned');
     
     const containerActive = document.getElementById("projectsList");
@@ -4127,7 +4163,7 @@ function renderProjects() {
     if (!activeProjects.length) {
         containerActive.innerHTML = `<div class="empty">💼 Non hai progetti in corso.<br><br>Premi <strong>➕ Nuovo</strong> per iniziare.</div>`;
     } else {
-        containerActive.innerHTML = activeProjects.map(project => {
+        containerActive.innerHTML = activeProjects.map((project, index) => {
             const stats = calculateProject(project);
             const resultClass = stats.result > 0 ? "green" : stats.result < 0 ? "red" : "";
             const progress = Math.max(0, Math.min(100, stats.goalProgress));
@@ -4144,6 +4180,8 @@ function renderProjects() {
                             <p class="small">🎯 ${euro(project.goal)} netto · 📅 ${formatDate(project.endDate)}${stats.stagePlan ? ` · 🪜 ${stats.stagePlan.stages[stats.currentStage].name}` : ""}</p>
                         </div>
                         <div class="action-btns-container">
+                            ${activeProjects.length > 1 ? `<button class="secondary move-btn" title="Sposta in alto" ${index === 0 ? "disabled" : ""} onclick="event.stopPropagation(); moveProject(${project.id}, -1)">▲</button>
+                            <button class="secondary move-btn" title="Sposta in basso" ${index === activeProjects.length - 1 ? "disabled" : ""} onclick="event.stopPropagation(); moveProject(${project.id}, 1)">▼</button>` : ""}
                             <button class="secondary" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); openEditProjectModal(${project.id})">✏️</button>
                             <button class="danger delete-btn" style="padding: 8px; border-radius: 8px;" onclick="event.stopPropagation(); deleteProject(${project.id})">🗑️</button>
                         </div>
