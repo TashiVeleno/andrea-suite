@@ -38,3 +38,18 @@ test("Under 2.5 sull'1-0 al 60': serve che arrivi al massimo un altro gol", () =
     const lambda = 1.642 * 37 / 50;
     close(r.p, 100 * Math.exp(-lambda) * (1 + lambda), 0.01);
 });
+
+test("statistiche per campionato dalle tue operazioni", () => {
+    const bets = [
+        { id: 1, strategyId: "back_over_0_5_primo_tempo", competition: "uefa.cl", pl: 4, stake: 10, odds: 1.4 },
+        { id: 2, strategyId: "back_over_0_5_primo_tempo", competition: "uefa.cl", pl: -10, stake: 10, odds: 1.5 },
+        { id: 3, strategyId: "back_under_2_5", competition: "it.1", pl: 5, stake: 20, odds: 1.25 },
+        { id: 4, strategyId: "back_under_2_5", pl: 5, stake: 20 }
+    ];
+    const all = app.calculateCompetitionStats({ bets });
+    assert.equal(all.length, 2);
+    const cl = all.find(g => g.id === "uefa.cl");
+    assert.equal(cl.n, 2); assert.equal(cl.winRate, 50); assert.equal(cl.total, -6);
+    close(cl.roi, -30, 1e-9); close(cl.avgOdds, 1.45, 1e-9);
+    assert.equal(app.calculateCompetitionStats({ bets }, "back_under_2_5").length, 1);
+});
