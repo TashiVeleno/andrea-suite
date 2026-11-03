@@ -38,3 +38,28 @@ test("Under 2.5 sull'1-0 al 60': serve che arrivi al massimo un altro gol", () =
     const lambda = 1.642 * 37 / 50;
     close(r.p, 100 * Math.exp(-lambda) * (1 + lambda), 0.01);
 });
+
+test("cronologia quote: statistiche per campionato e mercato con soldi investiti", () => {
+    const a = app;
+    const log = [
+        { id: 1, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.5, stake: 100, p: 70, commissionPct: 5, result: "win" },
+        { id: 2, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.5, stake: 50, p: 70, commissionPct: 5, result: "loss" },
+        { id: 3, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.4, stake: 20, p: 72, result: null },
+        { id: 4, competitionId: "uefa.cl", competition: "Champions League", marketId: "u25", market: "Under 2.5", odds: 2, stake: 10, p: 45, commissionPct: 5, result: "win" }
+    ];
+    const { rows, total } = a.calculateOddsLogStats(log);
+    const sa = rows.find(r => r.competitionId === "it.1");
+    assert.equal(sa.count, 3);
+    assert.equal(sa.settled, 2);
+    assert.equal(sa.open, 1);
+    assert.equal(sa.openStake, 20);
+    assert.equal(sa.staked, 150);
+    close(sa.profit, 100 * 0.5 * 0.95 - 50, 1e-9);
+    close(sa.winPct, 50, 1e-9);
+    close(sa.expectedPct, 70, 1e-9);
+    close(sa.avgOdds, 1.5, 1e-9);
+    assert.equal(total.settled, 3);
+    assert.equal(total.staked, 160);
+    close(total.profit, 47.5 - 50 + 9.5, 1e-9);
+    assert.equal(a.oddsLogProfit({ odds: 2, stake: 10, result: null }), 0);
+});
