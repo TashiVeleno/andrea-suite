@@ -24,7 +24,8 @@ const projects = [
         ]
     }
 ];
-const realLife = { manualDeposits: 300, manualWithdrawals: 50, deletedDeposits: 120.5, deletedWithdrawals: 0 };
+const realLife = { manualDeposits: 300, manualWithdrawals: 50, deletedDeposits: 120.5, deletedWithdrawals: 0,
+    manualLog: [{ id: "m1", date: "2026-11-03", type: "deposit", amount: 100 }] };
 
 test("il backup contiene tutto e si ripristina identico", () => {
     const source = loadApp(NOW, { projects, realLife });
@@ -36,7 +37,7 @@ test("il backup contiene tutto e si ripristina identico", () => {
     target.state.realLife = restored.realLife;
 
     assert.deepEqual(JSON.parse(JSON.stringify(target.state.projects)), projects);
-    assert.deepEqual({ ...target.state.realLife }, realLife);
+    assert.deepEqual(JSON.parse(JSON.stringify(target.state.realLife)), realLife);
     assert.equal(restored.exportedAt, new Date(NOW).toISOString());
 
     // Stessi numeri prima e dopo il ripristino
@@ -57,7 +58,7 @@ test("il backup è una copia: modificare i dati dopo non cambia il file", () => 
 
 test("backup senza Bilancio Vita Reale o senza movimenti", () => {
     const r = app().parseBackup(JSON.stringify({ app: "andrea-suite", version: 1, projects: [{ id: 1, name: "X" }] }));
-    assert.deepEqual({ ...r.realLife }, { manualDeposits: 0, manualWithdrawals: 0, deletedDeposits: 0, deletedWithdrawals: 0 });
+    assert.deepEqual(JSON.parse(JSON.stringify(r.realLife)), { manualDeposits: 0, manualWithdrawals: 0, deletedDeposits: 0, deletedWithdrawals: 0, manualLog: [] });
     assert.deepEqual([...r.projects[0].movements], []);
 });
 

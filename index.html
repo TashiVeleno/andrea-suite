@@ -1153,11 +1153,18 @@ canvas { width: 100%; height: 100%; display: block; }
                 <label>Prelevati dai progetti eliminati (€)</label>
                 <input id="deletedWithdrawals" type="number" step="0.01" min="0" style="margin-bottom:0;">
             </div>
-            <label>➕ Aggiungi versamenti pregressi extra (€)</label>
-            <input id="manualDeposits" type="number" step="0.01" min="0">
-            <label>➕ Aggiungi prelievi pregressi extra (€)</label>
-            <input id="manualWithdrawals" type="number" step="0.01" min="0">
-            <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRealLifeManual()">💾 Salva Allineamento</button>
+            <p class="small" style="margin-bottom: 10px;">Scrivi <strong>solo la cifra nuova</strong> (es. 100): viene sommata al totale, non devi ricordarti quelle passate.</p>
+            <div class="small" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;"><span>⬇️ Versati extra finora: <strong class="red" id="manualDepositsTotal">€ 0,00</strong></span><button type="button" class="secondary" style="padding:3px 8px; font-size:11px; white-space:nowrap; flex-shrink:0;" onclick="fixRealLifeTotal('deposit')">✏️ Correggi</button></div>
+            <label>➕ Nuovo versamento (€)</label>
+            <input id="manualDeposits" type="number" step="0.01" min="0" placeholder="es. 100">
+            <div class="small" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;"><span>⬆️ Prelevati extra finora: <strong class="green" id="manualWithdrawalsTotal">€ 0,00</strong></span><button type="button" class="secondary" style="padding:3px 8px; font-size:11px; white-space:nowrap; flex-shrink:0;" onclick="fixRealLifeTotal('withdraw')">✏️ Correggi</button></div>
+            <label>➕ Nuovo prelievo (€)</label>
+            <input id="manualWithdrawals" type="number" step="0.01" min="0" placeholder="es. 100">
+            <button class="primary" style="width:100%; margin-top:8px;" onclick="saveRealLifeManual()">💾 Aggiungi al totale</button>
+            <div id="manualLogBlock" style="display:none; margin-top:15px;">
+                <div class="small" style="margin-bottom:6px;"><strong>🧾 Aggiunte registrate</strong> (🗑️ per togliere un errore)</div>
+                <div id="manualLogList"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -1641,7 +1648,8 @@ function normalizeRealLife(r) {
         manualDeposits: round2(r.manualDeposits ?? r.deposits),        // "deposits"/"withdrawals" = vecchio formato locale
         manualWithdrawals: round2(r.manualWithdrawals ?? r.withdrawals),
         deletedDeposits: round2(r.deletedDeposits),
-        deletedWithdrawals: round2(r.deletedWithdrawals)
+        deletedWithdrawals: round2(r.deletedWithdrawals),
+        manualLog: normalizeManualLog(r.manualLog)
     };
 }
 
@@ -1665,7 +1673,7 @@ let localOddsLog = (() => {
 function saveOddsLogToStorage() { localStorage.setItem(ODDS_LOG_KEY, JSON.stringify(localOddsLog)); }
 // Il bilancio va scritto nel cloud solo quando è "noto": arrivato dal cloud, salvato da te,
 // oppure con valori locali da caricare. Così un dispositivo vuoto non azzera quelli di un altro.
-let realLifeReady = Object.values(localRealLife).some(v => v !== 0);
+let realLifeReady = ["manualDeposits", "manualWithdrawals", "deletedDeposits", "deletedWithdrawals"].some(k => localRealLife[k] !== 0) || localRealLife.manualLog.length > 0;
 
 try {
     const app = initializeApp(firebaseConfig);
@@ -1947,8 +1955,9 @@ function closeEditProjectModalOnOverlay(event) { if (event.target.id === "editPr
 
 function openRealLifeModal() {
     const rl = getRealLife();
-    document.getElementById("manualDeposits").value = rl.manualDeposits || "";
-    document.getElementById("manualWithdrawals").value = rl.manualWithdrawals || "";
+    document.getElementById("manualDeposits").value = "";
+    document.getElementById("manualWithdrawals").value = "";
+    renderManualLog(rl);
 
     // I totali dei progetti eliminati si vedono e si correggono solo se ce ne sono
     const hasDeleted = rl.deletedDeposits > 0 || rl.deletedWithdrawals > 0;
@@ -1967,10 +1976,59 @@ function getRealLife() {
     return { manualDeposits: 0, manualWithdrawals: 0, deletedDeposits: 0, deletedWithdrawals: 0 };
 }
 
-function saveRealLifeManual() {
+function renderManualLog(rl) {
+    rl = { ...rl, manualLog: normalizeManualLog(rl.manualLog) };
+    document.getElementById("manualDepositsTotal").textContent = euro(rl.manualDeposits);
+    document.getElementById("manualWithdrawalsTotal").textContent = euro(rl.manualWithdrawals);
+    const list = rl.manualLog.slice().reverse(); // le più recenti in alto
+    document.getElementById("manualLogBlock").style.display = list.length ? "block" : "none";
+    document.getElementById("manualLogList").innerHTML = list.map(e => {
+        const what = e.fix ? "✏️ Correzione " + (e.type === "deposit" ? "versati" : "prelevati")
+            : (e.type === "deposit" ? "⬇️ Versamento" : "⬆️ Prelievo");
+        const sign = e.amount >= 0 ? "+" : "−";
+        return `<div class="mm-row" style="align-items:center; gap:6px;"><span style="flex:1;">${e.date ? formatDate(e.date) : ""} · ${what} <strong class="${e.type === "deposit" ? "red" : "green"}">${sign}${euro(Math.abs(e.amount))}</strong></span>`
+            + `<button type="button" class="secondary" style="padding:3px 8px; font-size:12px;" onclick="deleteManualEntry('${String(e.id).replace(/[^\w-]/g, "")}')">🗑️</button></div>`;
+    }).join("");
+}
+
+function manualEntryId() { return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function todayISO() {
+    const d = getToday();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function deleteManualEntry(id) {
     const rl = getRealLife();
-    rl.manualDeposits = parseFloat(document.getElementById("manualDeposits").value) || 0;
-    rl.manualWithdrawals = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    const entry = normalizeManualLog(rl.manualLog).find(e => String(e.id) === String(id));
+    if (!entry) return;
+    if (!confirm(`Vuoi togliere ${euro(Math.abs(entry.amount))} dal totale?`)) return;
+    const updated = removeManualEntry(rl, id);
+    if (window.saveRealLife) window.saveRealLife(updated);
+    renderManualLog(updated);
+    updateDashboard();
+}
+
+// Per sistemare un totale sbagliato (anche quelli salvati prima del contatore): scrivi il totale giusto
+function fixRealLifeTotal(type) {
+    const rl = getRealLife();
+    const field = type === "deposit" ? "manualDeposits" : "manualWithdrawals";
+    const answer = prompt(`Totale giusto dei ${type === "deposit" ? "versamenti" : "prelievi"} extra (€):`, String(rl[field]).replace(".", ","));
+    if (answer === null) return;
+    const value = parseFloat(String(answer).replace(",", "."));
+    if (!isFinite(value) || value < 0) { alert("Scrivi un numero valido (0 o più)."); return; }
+    const updated = addManualEntry(rl, type, round2(value - rl[field]), todayISO(), manualEntryId(), true);
+    if (window.saveRealLife) window.saveRealLife(updated);
+    renderManualLog(updated);
+    updateDashboard();
+}
+
+function saveRealLifeManual() {
+    let rl = getRealLife();
+    const dep = parseFloat(document.getElementById("manualDeposits").value) || 0;
+    const wit = parseFloat(document.getElementById("manualWithdrawals").value) || 0;
+    if (dep < 0 || wit < 0) { alert("Scrivi cifre positive: per togliere un'aggiunta usa 🗑️ nella cronologia."); return; }
+    if (dep > 0) rl = addManualEntry(rl, "deposit", dep, todayISO(), manualEntryId());
+    if (wit > 0) rl = addManualEntry(rl, "withdraw", wit, todayISO(), manualEntryId());
     if (document.getElementById("deletedProjectsBlock").style.display !== "none") {
         rl.deletedDeposits = Math.max(0, parseFloat(document.getElementById("deletedDeposits").value) || 0);
         rl.deletedWithdrawals = Math.max(0, parseFloat(document.getElementById("deletedWithdrawals").value) || 0);
@@ -2110,8 +2168,48 @@ function mergeProjects(base, local, remote) {
     return mergeById(base, local, remote, mergeProject);
 }
 
-// I totali dei progetti eliminati si sommano (si può eliminare su tutti e due i dispositivi);
-// gli altri valori del bilancio seguono la regola di sempre.
+const rl2 = v => Math.round((Number(v) || 0) * 100) / 100;
+
+// Cronologia delle aggiunte fatte in "Allinea storico": { id, date, type: "deposit"|"withdraw", amount, fix? }
+// amount può essere negativo solo per una correzione del totale (fix: true).
+function normalizeManualLog(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(e => e && typeof e === "object" && e.id !== undefined && (e.type === "deposit" || e.type === "withdraw") && isFinite(Number(e.amount)))
+        .map(e => {
+            const out = { id: e.id, date: String(e.date || ""), type: e.type, amount: rl2(e.amount) };
+            if (e.fix) out.fix = true;
+            return out;
+        });
+}
+
+// Somma una nuova cifra al totale extra e la segna nella cronologia. Restituisce un nuovo bilancio.
+function addManualEntry(realLife, type, amount, date, id, fix) {
+    const rl = { ...realLife, manualLog: normalizeManualLog(realLife && realLife.manualLog) };
+    rl.manualDeposits = rl2(rl.manualDeposits); rl.manualWithdrawals = rl2(rl.manualWithdrawals);
+    amount = rl2(amount);
+    if (!amount || (amount < 0 && !fix)) return rl;
+    const field = type === "deposit" ? "manualDeposits" : "manualWithdrawals";
+    rl[field] = rl2(rl[field] + amount);
+    const entry = { id, date, type, amount };
+    if (fix) entry.fix = true;
+    rl.manualLog.push(entry);
+    return rl;
+}
+
+// Toglie un'aggiunta dalla cronologia e la sottrae dal totale.
+function removeManualEntry(realLife, id) {
+    const rl = { ...realLife, manualLog: normalizeManualLog(realLife && realLife.manualLog) };
+    rl.manualDeposits = rl2(rl.manualDeposits); rl.manualWithdrawals = rl2(rl.manualWithdrawals);
+    const entry = rl.manualLog.find(e => String(e.id) === String(id));
+    if (!entry) return rl;
+    const field = entry.type === "deposit" ? "manualDeposits" : "manualWithdrawals";
+    rl[field] = rl2(rl[field] - entry.amount);
+    rl.manualLog = rl.manualLog.filter(e => e !== entry);
+    return rl;
+}
+
+// I totali si sommano: progetti eliminati e aggiunte di "Allinea storico" fatte su due dispositivi contano entrambe.
+// La cronologia delle aggiunte si unisce per id.
 function mergeRealLife(base, local, remote) {
     if (!remote) return local;
     if (!local) return remote;
@@ -2121,8 +2219,9 @@ function mergeRealLife(base, local, remote) {
         const b = Number(base[k]) || 0, l = Number(local[k]) || 0, r = Number(remote[k]) || 0;
         if (l === b) merged[k] = r;
         else if (r === b || l === r) merged[k] = l;
-        else merged[k] = k.startsWith("deleted") ? Math.round((l + r - b) * 100) / 100 : l;
+        else merged[k] = Math.round((l + r - b) * 100) / 100;
     });
+    merged.manualLog = mergeById(base.manualLog, local.manualLog, remote.manualLog);
     return merged;
 }
 
@@ -2165,6 +2264,7 @@ function parseBackup(text) {
         if (!isFinite(v)) throw new Error("Il Bilancio Vita Reale nel backup non è valido.");
         realLife[k] = v;
     });
+    realLife.manualLog = normalizeManualLog(rl.manualLog);
 
     const projects = data.projects.map(p => ({ ...p, movements: Array.isArray(p.movements) ? p.movements : [] }));
     // la cronologia quote c'è solo nei backup nuovi: se manca, quella attuale resta com'è

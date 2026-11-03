@@ -81,8 +81,8 @@ test("Bilancio Vita Reale: i totali dei progetti eliminati si sommano", () => {
     const b = { manualDeposits: 100, manualWithdrawals: 0, deletedDeposits: 50, deletedWithdrawals: 0 };
     const pc = { ...b, deletedDeposits: 80 };                       // eliminato un progetto da 30 sul PC
     const phone = { ...b, deletedDeposits: 70, manualDeposits: 120 }; // eliminato uno da 20 sul telefono
-    assert.deepEqual({ ...app.mergeRealLife(b, phone, pc) },
-        { manualDeposits: 120, manualWithdrawals: 0, deletedDeposits: 100, deletedWithdrawals: 0 });
+    assert.deepEqual(plain(app.mergeRealLife(b, phone, pc)),
+        { manualDeposits: 120, manualWithdrawals: 0, deletedDeposits: 100, deletedWithdrawals: 0, manualLog: [] });
     assert.deepEqual(app.mergeRealLife(b, null, pc), pc);
     assert.deepEqual(app.mergeRealLife(b, phone, null), phone);
 });
