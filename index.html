@@ -945,7 +945,16 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="oddsGoals" type="number" step="1" min="0" inputmode="numeric" value="0" oninput="renderOddsEntry()">
         </div>
         <div id="oddsResult" style="margin-top:8px;"></div>
-        <button id="oddsRegisterBtn" class="primary" style="width:100%; margin-top:12px;" onclick="registerOddsEntry()">💾 Registra la giocata nel progetto</button>
+        <div class="rules-grid" style="margin-top:10px; align-items:end;">
+            <div><label>Soldi puntati (€)</label><input id="oddsStake" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Es. 50"></div>
+            <div><button class="primary" style="width:100%;" onclick="saveOddsEntryToLog()">💾 Salva nella cronologia</button></div>
+        </div>
+        <div id="oddsLogMsg" class="small" style="margin-top:6px;"></div>
+        <h4 style="margin:16px 0 6px;">📊 Statistiche delle tue entrate</h4>
+        <p class="small" style="margin:0 0 6px;">Solo le scommesse con l'esito segnato. Resta tutto qui, separato dai progetti.</p>
+        <div id="oddsStats"></div>
+        <h4 style="margin:16px 0 6px;">📒 Cronologia</h4>
+        <div id="oddsLogList"></div>
         <p class="small" style="margin-top:12px; font-size:12px; line-height:1.5;">Stima: in live suppongo che i gol arrivino in modo regolare nel tempo. Sopra la quota minima la scommessa rende in media; sotto, nel lungo periodo fa perdere. Non conosce la singola partita (squadre, espulsioni, ritmo).</p>
     </div>
 </div>
@@ -1220,8 +1229,6 @@ canvas { width: 100%; height: 100%; display: block; }
         <select id="betStrategy" class="field-select" onchange="betExitStakeTouched = false; updateBetStakeLabel(); autoFillBetAmount()"></select>
         <label>Data e Ora</label>
         <input id="betDate" type="datetime-local">
-        <label>Campionato o coppa</label>
-        <select id="betCompetition" class="field-select"></select>
         <label>Esito</label>
         <div class="result-toggle">
             <button id="betWinBtn" class="win" onclick="setBetResult('win')">✅ Vinta</button>
@@ -1648,6 +1655,14 @@ function saveRealLifeToStorage() {
 }
 
 let localRealLife = readLocalRealLife();
+
+// Cronologia del calcolatore quote: separata dai progetti, salvata in locale e nel cloud
+const ODDS_LOG_KEY = "andrea_suite_odds_log";
+let localOddsLog = (() => {
+    try { const v = JSON.parse(localStorage.getItem(ODDS_LOG_KEY)); return Array.isArray(v) ? v : []; }
+    catch { return []; }
+})();
+function saveOddsLogToStorage() { localStorage.setItem(ODDS_LOG_KEY, JSON.stringify(localOddsLog)); }
 // Il bilancio va scritto nel cloud solo quando è "noto": arrivato dal cloud, salvato da te,
 // oppure con valori locali da caricare. Così un dispositivo vuoto non azzera quelli di un altro.
 let realLifeReady = Object.values(localRealLife).some(v => v !== 0);
@@ -1735,8 +1750,8 @@ function readCloudBase() {
     } catch { return null; }
 }
 
-function saveCloudBase(projects, realLife) {
-    localStorage.setItem(CLOUD_BASE_KEY, JSON.stringify({ uid: currentUser.uid, projects, realLife: realLife || null }));
+function saveCloudBase(projects, realLife, oddsLog) {
+    localStorage.setItem(CLOUD_BASE_KEY, JSON.stringify({ uid: currentUser.uid, projects, realLife: realLife || null, oddsLog: oddsLog || [] }));
 }
 
 function hasUnsynced() {
@@ -1768,8 +1783,10 @@ function syncWithCloud(uid) {
             realLifeReady = true;
             saveRealLifeToStorage();
         }
-        saveCloudBase(localProjects, data.realLife ? localRealLife : null);
+        if (Array.isArray(data.oddsLog)) { localOddsLog = data.oddsLog; saveOddsLogToStorage(); }
+        saveCloudBase(localProjects, data.realLife ? localRealLife : null, Array.isArray(data.oddsLog) ? localOddsLog : []);
         if (!data.realLife && realLifeReady) pushToCloud(); // primo avvio: porta nel cloud il bilancio salvato finora solo su questo dispositivo
+        else if (!Array.isArray(data.oddsLog) && localOddsLog.length) pushToCloud(); // idem per la cronologia quote
         updateAll();
     }, e => console.warn("Cloud:", e));
 }
@@ -1780,20 +1797,23 @@ async function pushToCloud() {
     pushing = true;
     pushAgain = false;
     const ref = doc(db, "users", currentUser.uid);
-    const sent = clone({ projects: localProjects, realLife: realLifeReady ? localRealLife : null });
+    const sent = clone({ projects: localProjects, realLife: realLifeReady ? localRealLife : null, oddsLog: localOddsLog });
     try {
         const result = await runTransaction(db, async tx => {
             const snap = await tx.get(ref);
             const remote = snap.exists() ? snap.data() : null;
-            const base = readCloudBase() || { projects: [], realLife: null }; // senza base: si tiene tutto, niente si cancella
+            const base = readCloudBase() || { projects: [], realLife: null, oddsLog: [] }; // senza base: si tiene tutto, niente si cancella
             const projects = remote ? mergeProjects(base.projects, sent.projects, cloudProjects(remote)) : sent.projects;
             const realLife = mergeRealLife(base.realLife, sent.realLife, remote && remote.realLife ? normalizeRealLife(remote.realLife) : null);
-            const payload = { projects, updatedAt: new Date().toISOString() };
+            const oddsLog = mergeById(base.oddsLog, sent.oddsLog, remote ? remote.oddsLog : null);
+            const payload = { projects, oddsLog, updatedAt: new Date().toISOString() };
             if (realLife) payload.realLife = normalizeRealLife(realLife);
             tx.set(ref, payload, { merge: true });
-            return { projects, realLife: payload.realLife || null };
+            return { projects, realLife: payload.realLife || null, oddsLog };
         });
-        saveCloudBase(result.projects, result.realLife);
+        saveCloudBase(result.projects, result.realLife, result.oddsLog);
+        localOddsLog = mergeById(sent.oddsLog, localOddsLog, result.oddsLog);
+        saveOddsLogToStorage();
         // se hai modificato qualcosa mentre il salvataggio era in corso, quelle modifiche restano
         localProjects = mergeProjects(sent.projects, localProjects, result.projects);
         const realLife = mergeRealLife(sent.realLife, realLifeReady ? localRealLife : null, result.realLife);
@@ -1863,6 +1883,17 @@ window.saveProjects = (projects, realLife) => {
 };
 
 window.saveRealLife = (realLife) => window.saveProjects(localProjects, realLife);
+
+window.loadOddsLog = () => localOddsLog.slice();
+window.saveOddsLog = (list) => {
+    localOddsLog = Array.isArray(list) ? list : [];
+    saveOddsLogToStorage();
+    if (currentUser) {
+        setUnsynced(true);
+        pushToCloud();
+    }
+    updateAll();
+};
 
 if (localStorage.getItem("andrea_suite_local_session") === "true") {
     renderAuthUI("Andrea (Locale)", null);
@@ -2102,13 +2133,14 @@ const BACKUP_APP = "andrea-suite";
 const BACKUP_VERSION = 1;
 const REAL_LIFE_FIELDS = ["manualDeposits", "manualWithdrawals", "deletedDeposits", "deletedWithdrawals"];
 
-function buildBackup(projects, realLife, now) {
+function buildBackup(projects, realLife, now, oddsLog) {
     return {
         app: BACKUP_APP,
         version: BACKUP_VERSION,
         exportedAt: (now || new Date()).toISOString(),
         projects: JSON.parse(JSON.stringify(projects || [])),
-        realLife: { ...(realLife || {}) }
+        realLife: { ...(realLife || {}) },
+        oddsLog: JSON.parse(JSON.stringify(oddsLog || []))
     };
 }
 
@@ -2135,11 +2167,13 @@ function parseBackup(text) {
     });
 
     const projects = data.projects.map(p => ({ ...p, movements: Array.isArray(p.movements) ? p.movements : [] }));
-    return { projects, realLife, exportedAt: data.exportedAt || null };
+    // la cronologia quote c'è solo nei backup nuovi: se manca, quella attuale resta com'è
+    const oddsLog = Array.isArray(data.oddsLog) ? data.oddsLog.filter(e => e && typeof e === "object" && e.id !== undefined) : null;
+    return { projects, realLife, oddsLog, exportedAt: data.exportedAt || null };
 }
 
 function exportBackup() {
-    const backup = buildBackup(window.loadProjects(), window.loadRealLife());
+    const backup = buildBackup(window.loadProjects(), window.loadRealLife(), undefined, window.loadOddsLog ? window.loadOddsLog() : []);
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2170,6 +2204,7 @@ function importBackup(input) {
         currentProjectId = null;
         goToPage("main-dashboard");
         window.saveProjects(backup.projects, backup.realLife);
+        if (backup.oddsLog && window.saveOddsLog) window.saveOddsLog(backup.oddsLog);
         alert("Backup ripristinato.");
     };
     reader.onerror = () => alert("Impossibile leggere il file.");
@@ -3333,36 +3368,11 @@ function renderStrategies(project) {
                 </tbody>
             </table>
         </div>
-        ${competitionTable(project)}
         <p class="small" style="margin-top:10px; font-size:12px; line-height:1.6;">
             ${totalBets ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); openBetModal()">${totalBets} operazioni registrate</a> · ` : ""}
             ${used.length ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); toggleAllStrategies()">${hidden ? `mostra altre ${hidden} strategie` : "mostra solo quelle usate"}</a> · ` : ""}
             "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. "Entra a" = quota da cercare per non perdere con la % che vinci: in punta almeno quella, in banca al massimo quella. † dati del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. ${all.some(s => s.trading) ? `"Chiusura" = strategia che chiudi quasi sempre prima della fine: la giudico sul guadagno medio per operazione, non sulla quota d'entrata. ` : ""}Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
         </p>`;
-}
-
-// Tabella "Per campionato": compare solo se hai indicato il campionato in qualche operazione
-function competitionTable(project) {
-    const list = calculateCompetitionStats(project);
-    if (!list.length) return "";
-    return `
-        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 4px;">📊 PER CAMPIONATO</h4>
-        <div class="strategy-table-wrap">
-            <table class="strategy-table">
-                <thead><tr><th>Campionato</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Ogni 100€</th><th>Totale</th></tr></thead>
-                <tbody>
-                    ${list.map(g => `
-                        <tr>
-                            <td>${escapeHTML(g.name)}</td>
-                            <td>${g.n}</td>
-                            <td>${g.avgOdds ? fmtOdds(g.avgOdds) : "--"}</td>
-                            <td>${fmtPct(g.winRate)}</td>
-                            <td class="${g.roi > 0 ? "green" : g.roi < 0 ? "red" : ""}">${g.roi === null ? "--" : `${g.roi > 0 ? "+" : ""}${euro(g.roi)}`}</td>
-                            <td class="${g.total > 0 ? "green" : g.total < 0 ? "red" : ""}">${euro(g.total)}</td>
-                        </tr>`).join("")}
-                </tbody>
-            </table>
-        </div>`;
 }
 
 // ----- Modale regole -----
@@ -3480,8 +3490,6 @@ function openBetModal() {
     const lastId = bets.length ? bets[bets.length - 1].strategyId : null;
     document.getElementById("betStrategy").innerHTML = strategies
         .map(s => `<option value="${escapeHTML(s.id)}" ${s.id === lastId ? "selected" : ""}>${escapeHTML(s.name)}</option>`).join("");
-    document.getElementById("betCompetition").innerHTML = `<option value="">Non indicato</option>` +
-        ODDS_COMPETITIONS.map(c => `<option value="${c.id}">${escapeHTML(c.id === "altro" ? "Altro" : c.name)}</option>`).join("");
     resetBetForm();
     renderBetList(project);
     document.getElementById("betModal").classList.add("active");
@@ -3545,7 +3553,7 @@ function resetBetForm() {
     document.getElementById("betExitOdds").value = "";
     document.getElementById("betExitStake").value = "";
     document.getElementById("betExitHint").innerHTML = "";
-    ["betMinute", "betScoreHome", "betScoreAway", "betCompetition"].forEach(id => { document.getElementById(id).value = ""; });
+    ["betMinute", "betScoreHome", "betScoreAway"].forEach(id => { document.getElementById(id).value = ""; });
     betAmountTouched = false;
     betExitStakeTouched = false;
     betExitOpposite = false;
@@ -3634,8 +3642,6 @@ function saveBet() {
         if (exitStake > 0) bet.exitStake = exitStake;
         if (betExitOpposite) bet.exitOpposite = true; // quota e importo veri dell'esito contrario
     }
-    const competition = document.getElementById("betCompetition").value;
-    if (competition) bet.competition = competition;
     const minuteVal = document.getElementById("betMinute").value;
     if (minuteVal !== "") {
         bet.minute = Math.max(0, Math.round(Number(minuteVal)));
@@ -3662,7 +3668,6 @@ function renderBetList(project) {
         if (b.label) details.unshift(escapeHTML(b.label));
         if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
         if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
-        if (b.competition) details.push(escapeHTML(competitionName(b.competition)));
         if (betSituation(b)) details.push(`entrata al ${b.minute}' (${b.score.join("-")})`);
         if (b.exitOdds) {
             const lay = s && s.side === "lay";
@@ -3767,65 +3772,6 @@ function openOddsModal() {
 
 function closeOddsModal() { document.getElementById("oddsModal").classList.remove("active"); }
 
-function competitionName(id) {
-    const c = ODDS_COMPETITIONS.find(x => x.id === id);
-    return c ? (c.id === "altro" ? "Altro campionato" : c.name) : id;
-}
-
-// Le tue operazioni per campionato (solo quelle con il campionato indicato), eventualmente di una sola strategia
-function calculateCompetitionStats(project, strategyId) {
-    const groups = new Map();
-    getBets(project).forEach(b => {
-        if (!b.competition || (strategyId && b.strategyId !== strategyId)) return;
-        if (!groups.has(b.competition)) groups.set(b.competition, { id: b.competition, name: competitionName(b.competition), n: 0, wins: 0, total: 0, staked: 0, oddsSum: 0, oddsN: 0 });
-        const g = groups.get(b.competition), pl = Number(b.pl) || 0;
-        g.n++; g.total += pl;
-        if (pl > 0) g.wins++;
-        if (Number(b.stake) > 0) g.staked += Number(b.stake);
-        if (Number(b.odds) > 1) { g.oddsSum += Number(b.odds); g.oddsN++; }
-    });
-    return [...groups.values()].map(g => ({
-        ...g, winRate: g.wins / g.n * 100, avgOdds: g.oddsN ? g.oddsSum / g.oddsN : null,
-        roi: g.staked > 0 ? g.total / g.staked * 100 : null
-    })).sort((a, b) => b.n - a.n);
-}
-
-// Strategia del progetto che corrisponde al mercato del calcolatore ("Punta Over 0.5 primo tempo")
-function marketStrategyName(market) { return `Punta ${market.label}`; }
-
-function registerOddsEntry() {
-    const projects = window.loadProjects();
-    const project = projects.find(p => p.id === currentProjectId);
-    if (!project || isProjectClosed(project)) { alert("Apri un progetto attivo per registrare la giocata."); return; }
-    const market = ODDS_MARKETS.find(m => m.id === document.getElementById("oddsMarket").value);
-    const name = marketStrategyName(market);
-    project.strategies = getStrategies(project);
-    project.strategiesVersion = STRATEGIES_VERSION;
-    let strategy = project.strategies.find(s => s.name.toLowerCase() === name.toLowerCase());
-    if (!strategy) {
-        strategy = { id: "calc_" + market.id, name, side: "back", refOdds: null, breakEven: null };
-        project.strategies.push(strategy);
-        window.saveProjects(projects);
-    }
-    const values = {
-        competition: document.getElementById("oddsCompetition").value,
-        minute: document.getElementById("oddsMinute").value,
-        goals: document.getElementById("oddsGoals").value,
-        odds: document.getElementById("oddsOdds").value
-    };
-    closeOddsModal();
-    openBetModal();
-    document.getElementById("betStrategy").value = strategy.id;
-    document.getElementById("betCompetition").value = values.competition;
-    document.getElementById("betOdds").value = values.odds;
-    if (values.minute !== "") {
-        document.getElementById("betMinute").value = values.minute;
-        document.getElementById("betScoreHome").value = values.goals || 0;
-        document.getElementById("betScoreAway").value = 0;
-    }
-    updateBetStakeLabel(); autoFillBetAmount(); updateBetOddsHint();
-}
-
 function renderOddsEntry() {
     const minute = document.getElementById("oddsMinute").value;
     document.getElementById("oddsGoalsRow").style.display = minute === "" ? "none" : "";
@@ -3850,16 +3796,125 @@ function renderOddsEntry() {
             ? `<div class="green" style="font-weight:600;">✅ Conviene secondo le statistiche: in media ${r.ev100 >= 0 ? "+" : ""}${euro(r.ev100)} ogni 100 € puntati.</div>`
             : `<div class="red" style="font-weight:600;">❌ Non conviene secondo le statistiche: in media ${euro(r.ev100)} ogni 100 € puntati. Aspetta almeno ${fmtOdds(r.minOdds)}.</div>`;
     }
-    // Le tue giocate registrate con questo campionato e questo mercato
-    if (project) {
-        const strategy = getStrategies(project).find(s => s.name.toLowerCase() === marketStrategyName(r.market).toLowerCase());
-        const mine = strategy ? calculateCompetitionStats(project, strategy.id).find(g => g.id === r.comp.id) : null;
-        html += mine
-            ? `<div class="small" style="margin-top:8px;">📒 Le tue giocate qui: <strong>${mine.n}</strong> · vinte ${fmtPct(mine.winRate)}${mine.avgOdds ? ` · quota media ${fmtOdds(mine.avgOdds)}` : ""} · <span class="${mine.total > 0 ? "green" : mine.total < 0 ? "red" : ""}">${mine.total > 0 ? "+" : ""}${euro(mine.total)}</span></div>`
-            : `<div class="small" style="margin-top:8px;">📒 Nessuna tua giocata registrata con questo campionato e mercato.</div>`;
-    }
     box.innerHTML = html;
-    document.getElementById("oddsRegisterBtn").style.display = project && !isProjectClosed(project) ? "" : "none";
+    renderOddsLog();
+}
+
+// ----- Cronologia delle quote (separata dai progetti) -----
+function oddsLogProfit(e) {
+    const stake = Number(e.stake) || 0;
+    const c = (e.commissionPct === undefined ? DEFAULT_RULES.commissionPct : Number(e.commissionPct)) / 100;
+    if (e.result === "win") return stake * (e.odds - 1) * (1 - c);
+    if (e.result === "loss") return -stake;
+    return 0;
+}
+
+// Raggruppa per campionato + mercato: quante entrate, quante vinte rispetto alla stima, soldi puntati e guadagno
+function calculateOddsLogStats(log) {
+    const groups = new Map();
+    const total = { key: "total", count: 0, settled: 0, wins: 0, expected: 0, oddsSum: 0, staked: 0, profit: 0, open: 0, openStake: 0 };
+    for (const e of log || []) {
+        const key = `${e.competitionId}|${e.marketId}`;
+        if (!groups.has(key)) groups.set(key, { key, competitionId: e.competitionId, marketId: e.marketId, competition: e.competition, market: e.market,
+            count: 0, settled: 0, wins: 0, expected: 0, oddsSum: 0, staked: 0, profit: 0, open: 0, openStake: 0 });
+        for (const g of [groups.get(key), total]) {
+            g.count++;
+            if (e.result === "win" || e.result === "loss") {
+                g.settled++;
+                if (e.result === "win") g.wins++;
+                g.expected += (Number(e.p) || 0) / 100;
+                g.oddsSum += Number(e.odds) || 0;
+                g.staked += Number(e.stake) || 0;
+                g.profit += oddsLogProfit(e);
+            } else {
+                g.open++;
+                g.openStake += Number(e.stake) || 0;
+            }
+        }
+    }
+    const finish = g => Object.assign(g, {
+        winPct: g.settled ? g.wins / g.settled * 100 : null,
+        expectedPct: g.settled ? g.expected / g.settled * 100 : null,
+        avgOdds: g.settled ? g.oddsSum / g.settled : null,
+        roi: g.staked ? g.profit / g.staked * 100 : null
+    });
+    const rows = [...groups.values()].map(finish).sort((a, b) => b.count - a.count);
+    return { rows, total: finish(total) };
+}
+
+function saveOddsEntryToLog() {
+    const msg = document.getElementById("oddsLogMsg");
+    const minute = document.getElementById("oddsMinute").value;
+    const odds = Number(document.getElementById("oddsOdds").value) || 0;
+    const stake = Number(document.getElementById("oddsStake").value) || 0;
+    const r = calculateOddsEntry({
+        competitionId: document.getElementById("oddsCompetition").value,
+        marketId: document.getElementById("oddsMarket").value,
+        minute: minute === "" ? null : Number(minute),
+        goals: Number(document.getElementById("oddsGoals").value) || 0,
+        odds, commissionPct: DEFAULT_RULES.commissionPct
+    });
+    if (r.error) { msg.textContent = r.error; return; }
+    if (!(odds > 1)) { msg.textContent = "Scrivi la quota a cui sei entrato."; return; }
+    if (!(stake > 0)) { msg.textContent = "Scrivi quanti soldi hai puntato."; return; }
+    const log = window.loadOddsLog ? window.loadOddsLog() : [];
+    log.push({
+        id: Date.now(), date: new Date().toISOString(),
+        competitionId: r.comp.id, competition: r.comp.name, marketId: r.market.id, market: r.market.label,
+        minute: r.live ? Number(minute) : null, goals: r.live ? (Number(document.getElementById("oddsGoals").value) || 0) : 0,
+        odds, stake, p: r.p, minOdds: r.minOdds, commissionPct: DEFAULT_RULES.commissionPct, result: null
+    });
+    window.saveOddsLog(log);
+    document.getElementById("oddsStake").value = "";
+    msg.textContent = "Salvata. Quando finisce segna ✅ o ❌ qui sotto.";
+    renderOddsLog();
+}
+
+function setOddsLogResult(id, result) {
+    const log = window.loadOddsLog();
+    const e = log.find(x => x.id === id);
+    if (!e) return;
+    e.result = e.result === result ? null : result;
+    window.saveOddsLog(log);
+    renderOddsLog();
+}
+
+function deleteOddsLogEntry(id) {
+    if (!confirm("Cancello questa voce dalla cronologia?")) return;
+    window.saveOddsLog(window.loadOddsLog().filter(x => x.id !== id));
+    renderOddsLog();
+}
+
+function renderOddsLog() {
+    const listBox = document.getElementById("oddsLogList");
+    const statsBox = document.getElementById("oddsStats");
+    if (!listBox || !window.loadOddsLog) return;
+    const log = window.loadOddsLog();
+    const signed = v => `${v >= 0 ? "+" : ""}${euro(v)}`;
+    const { rows, total } = calculateOddsLogStats(log);
+    const settledRows = rows.filter(g => g.settled);
+    if (!settledRows.length) {
+        statsBox.innerHTML = `<div class="small">Ancora niente: segna l'esito delle scommesse salvate.</div>`;
+    } else {
+        let html = `<div class="strategy-table-wrap"><table class="strategy-table"><thead><tr><th style="text-align:left;">Campionato · mercato</th><th>Giocate</th><th>Vinte</th><th>Attese</th><th>Quota media</th><th>Investiti</th><th>Guadagno</th></tr></thead><tbody>`;
+        for (const g of settledRows) {
+            html += `<tr><td style="text-align:left;">${escapeHTML(g.competition)}<br><span class="small">${escapeHTML(g.market)}</span></td><td>${g.settled}</td><td>${fmtPct(g.winPct)}</td><td>${fmtPct(g.expectedPct)}</td><td>${fmtOdds(g.avgOdds)}</td><td>${euro(g.staked)}</td><td class="${g.profit >= 0 ? "green" : "red"}">${signed(g.profit)}<br><span class="small">${g.roi >= 0 ? "+" : ""}${fmtPct(g.roi)}</span></td></tr>`;
+        }
+        html += `</tbody></table></div>`;
+        html += `<div class="mm-row" style="margin-top:8px;"><div><div>Totale</div><div class="small">${total.settled} giocate · ${total.wins} vinte · investiti ${euro(total.staked)}${total.open ? ` · ${total.open} in corso (${euro(total.openStake)})` : ""}</div></div><strong class="${total.profit >= 0 ? "green" : "red"}">${signed(total.profit)}</strong></div>`;
+        statsBox.innerHTML = html;
+    }
+    if (!log.length) { listBox.innerHTML = `<div class="small">Nessuna quota salvata.</div>`; return; }
+    listBox.innerHTML = log.slice().reverse().slice(0, 50).map(e => {
+        const d = new Date(e.date);
+        const when = e.minute === null || e.minute === undefined ? "prepartita" : `${e.minute}' (${e.goals} gol)`;
+        const res = e.result === "win" ? `<span class="green">vinta ${signed(oddsLogProfit(e))}</span>`
+            : e.result === "loss" ? `<span class="red">persa ${signed(oddsLogProfit(e))}</span>` : `<span class="small">in corso</span>`;
+        return `<div class="mm-row" style="align-items:center; gap:6px;"><div style="flex:1; min-width:0;"><div>${escapeHTML(e.competition)} · ${escapeHTML(e.market)}</div><div class="small">${d.toLocaleDateString("it-IT")} · ${when} · quota ${fmtOdds(e.odds)} (min ${fmtOdds(e.minOdds)}) · puntati ${euro(Number(e.stake) || 0)}</div><div>${res}</div></div>`
+            + `<button class="secondary icon-btn" title="Vinta" style="${e.result === "win" ? "outline:2px solid #22c55e;" : ""}" onclick="setOddsLogResult(${e.id}, 'win')">✅</button>`
+            + `<button class="secondary icon-btn" title="Persa" style="${e.result === "loss" ? "outline:2px solid #ef4444;" : ""}" onclick="setOddsLogResult(${e.id}, 'loss')">❌</button>`
+            + `<button class="secondary icon-btn" title="Cancella" onclick="deleteOddsLogEntry(${e.id})">🗑️</button></div>`;
+    }).join("");
 }
 
 // ----- Importazione CSV Betfair (scommesse concluse) -----
@@ -5668,6 +5723,7 @@ function updateAll() {
     renderProjects();
     updateDashboard();
     if (currentProjectId) renderProjectDetail();
+    if (document.getElementById("oddsModal").classList.contains("active")) renderOddsLog();
 }
 
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("it-IT", {

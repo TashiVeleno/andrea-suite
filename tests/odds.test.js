@@ -39,17 +39,27 @@ test("Under 2.5 sull'1-0 al 60': serve che arrivi al massimo un altro gol", () =
     close(r.p, 100 * Math.exp(-lambda) * (1 + lambda), 0.01);
 });
 
-test("statistiche per campionato dalle tue operazioni", () => {
-    const bets = [
-        { id: 1, strategyId: "back_over_0_5_primo_tempo", competition: "uefa.cl", pl: 4, stake: 10, odds: 1.4 },
-        { id: 2, strategyId: "back_over_0_5_primo_tempo", competition: "uefa.cl", pl: -10, stake: 10, odds: 1.5 },
-        { id: 3, strategyId: "back_under_2_5", competition: "it.1", pl: 5, stake: 20, odds: 1.25 },
-        { id: 4, strategyId: "back_under_2_5", pl: 5, stake: 20 }
+test("cronologia quote: statistiche per campionato e mercato con soldi investiti", () => {
+    const a = app;
+    const log = [
+        { id: 1, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.5, stake: 100, p: 70, commissionPct: 5, result: "win" },
+        { id: 2, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.5, stake: 50, p: 70, commissionPct: 5, result: "loss" },
+        { id: 3, competitionId: "it.1", competition: "Serie A", marketId: "o05_1t", market: "Over 0.5 1T", odds: 1.4, stake: 20, p: 72, result: null },
+        { id: 4, competitionId: "uefa.cl", competition: "Champions League", marketId: "u25", market: "Under 2.5", odds: 2, stake: 10, p: 45, commissionPct: 5, result: "win" }
     ];
-    const all = app.calculateCompetitionStats({ bets });
-    assert.equal(all.length, 2);
-    const cl = all.find(g => g.id === "uefa.cl");
-    assert.equal(cl.n, 2); assert.equal(cl.winRate, 50); assert.equal(cl.total, -6);
-    close(cl.roi, -30, 1e-9); close(cl.avgOdds, 1.45, 1e-9);
-    assert.equal(app.calculateCompetitionStats({ bets }, "back_under_2_5").length, 1);
+    const { rows, total } = a.calculateOddsLogStats(log);
+    const sa = rows.find(r => r.competitionId === "it.1");
+    assert.equal(sa.count, 3);
+    assert.equal(sa.settled, 2);
+    assert.equal(sa.open, 1);
+    assert.equal(sa.openStake, 20);
+    assert.equal(sa.staked, 150);
+    close(sa.profit, 100 * 0.5 * 0.95 - 50, 1e-9);
+    close(sa.winPct, 50, 1e-9);
+    close(sa.expectedPct, 70, 1e-9);
+    close(sa.avgOdds, 1.5, 1e-9);
+    assert.equal(total.settled, 3);
+    assert.equal(total.staked, 160);
+    close(total.profit, 47.5 - 50 + 9.5, 1e-9);
+    assert.equal(a.oddsLogProfit({ odds: 2, stake: 10, result: null }), 0);
 });
