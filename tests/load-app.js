@@ -17,7 +17,7 @@ const EXPORTS = [
     "DEFAULT_RULES", "Z_SOTTO_SOGLIA", "mergeProjects", "mergeRealLife", "sameData",
     "calculateStagePlan", "stageExpected", "autoStages", "parseCSV", "betfairColumns", "parseBetfairDetails", "itDate", "itNumber", "parseMovimentiChiusi", "calculateOddsEntry", "calculateOddsLogStats", "oddsLogProfit", "getStrategies", "betfairStrategyName", "betSituation", "applyMovementEdit", "parseCalcExpression", "previewMovementEdit",
     "chartPresetRange", "clampChartRange", "zoomChartRange", "chartRangeFromDates",
-    "sortActiveProjects", "moveProjectInList"
+    "sortActiveProjects", "moveProjectInList", "addManualEntry", "removeManualEntry", "normalizeManualLog"
 ];
 
 function fakeElement() {
