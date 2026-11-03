@@ -1058,6 +1058,18 @@ canvas { width: 100%; height: 100%; display: block; }
     </div>
 </div>
 
+<!-- MODALE PENSIERO DEL GIORNO: si apre aprendo un progetto e si chiude solo col bottone -->
+<div class="modal-overlay" id="reflectionModal">
+    <div class="modal-content" style="max-width: 440px; text-align: center;">
+        <div id="reflectionIcon" style="font-size: 40px; margin-bottom: 8px;">🌱</div>
+        <div id="reflectionKind" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px;"></div>
+        <h3 id="reflectionTitle" style="margin-bottom: 12px; font-size: 21px;"></h3>
+        <p id="reflectionText" style="line-height: 1.5; margin-bottom: 14px;"></p>
+        <p id="reflectionStatus" style="line-height: 1.5; margin-bottom: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); display: none;"></p>
+        <button class="primary" style="padding: 14px; font-size: 16px; width: 100%;" onclick="closeReflectionModal()">Ho letto</button>
+    </div>
+</div>
+
 <!-- MODALE CHIUSURA PROGETTO -->
 <div class="modal-overlay" id="closeProjectModal" onclick="closeCloseProjectModalOnOverlay(event)">
     <div class="modal-content" style="max-width: 420px; text-align: center;">
@@ -4646,12 +4658,106 @@ function deleteProject(id) {
     updateAll();
 }
 
+// 🌱 PENSIERO DEL GIORNO: un messaggio che cambia ogni giorno e si apre quando entri in un progetto.
+// Tre tipi a turno: motivazione, "hai già raggiunto l'obiettivo?" (con i numeri veri), "ne vale la pena?".
+// Tutti spingono a fermarsi e rispettare il piano, mai a giocare di più.
+const REFLECTION_KINDS = [
+    { kind: "motivazione", label: "Motivazione", icon: "🌱" },
+    { kind: "obiettivo", label: "Obiettivo", icon: "🎯" },
+    { kind: "riflessione", label: "Ne vale la pena?", icon: "🤔" }
+];
+const REFLECTIONS = {
+    motivazione: [
+        ["Lento è veloce", "25.000 € non si fanno in un giorno. Si fanno con tanti giorni normali, uno dopo l'altro. Oggi basta un giorno normale."],
+        ["La disciplina è il guadagno", "Il vero profitto di oggi è rispettare le tue regole. I soldi arrivano dopo, come conseguenza."],
+        ["Fermarsi è una vittoria", "Chiudere l'app quando hai finito non è perdere un'occasione: è proteggere tutto quello che hai già costruito."],
+        ["Il mercato riapre domani", "Ci saranno sempre altre partite e altre quote. Il capitale perso invece non torna da solo. Non c'è fretta."],
+        ["Un germoglio non si tira", "Una pianta non cresce più in fretta se la tiri. Il tuo progetto cresce con pazienza e piccoli passi costanti."],
+        ["Sei tu che decidi", "Non è la partita a decidere quando smetti. Sei tu. Decidilo adesso, prima di cominciare."],
+        ["Proteggi la serenità", "L'app si chiama Serenità per un motivo. Se una giocata ti toglie la calma, non vale nessuna cifra."],
+        ["Costanza, non colpi", "Chi arriva lontano non fa colpi grossi: fa le stesse cose giuste ogni giorno, anche quando annoiano."],
+        ["Una perdita è solo una perdita", "Una giornata storta è normale. Diventa un problema solo se provi a recuperarla subito. Lasciala andare."],
+        ["Guarda quanta strada hai fatto", "Ogni giorno in cui hai rispettato il piano conta. Non rovinare quei giorni per la fretta di oggi."]
+    ],
+    obiettivo: [
+        ["Hai già raggiunto l'obiettivo?", "Se l'obiettivo di oggi è già fatto, il lavoro è finito. Chiudi e goditi la giornata."],
+        ["Sei già in linea col piano?", "Se sei in linea o avanti, non c'è niente da inseguire. Ogni giocata in più rischia ciò che hai già."],
+        ["A che punto sei oggi?", "Guarda i numeri qui sotto prima di fare qualsiasi cosa. Se il giorno è già buono, fermati qui."],
+        ["Ti serve davvero un'altra giocata?", "Se hai già incassato la tua parte di oggi, la risposta è no. Domani è un altro giorno del piano."],
+        ["Obiettivo raggiunto = stop", "La regola è semplice: quando arrivi all'obiettivo del giorno, smetti. Anche se ti senti in forma."],
+        ["Sei sotto il piano?", "Se sei sotto, non si recupera oggi. Si recupera con calma, a tappe, nei prossimi giorni e settimane."],
+        ["Quanto ti manca davvero?", "Spesso manca meno di quanto pensi. Il piano è fatto per arrivarci senza forzare nessun giorno."],
+        ["Hai già fatto la tua parte?", "Se oggi sei in positivo, proteggi quel risultato. Restituirlo al mercato è il modo più facile di perderlo."],
+        ["Il giorno è già chiuso?", "Se hai già registrato il resoconto di oggi, considera la giornata finita. Riapri domani."],
+        ["Stai seguendo la tappa?", "Ogni tappa ha il suo ritmo. Non devi fare di più del ritmo della tappa: devi solo rispettarlo."]
+    ],
+    riflessione: [
+        ["Ne vale davvero la pena?", "Prima di entrare chiediti: questa giocata rispetta le mie regole, o la sto facendo per noia o per recuperare?"],
+        ["Stai cercando di recuperare?", "Se la risposta è sì, oggi non giocare. Le giocate per recuperare sono quasi sempre le più care."],
+        ["Come ti senti adesso?", "Stanco, nervoso, arrabbiato o troppo euforico? In questi momenti la scelta migliore è non entrare."],
+        ["Se perdi, come starai?", "Immagina di perdere questa puntata. Se l'idea ti agita, la puntata è troppo grande o il momento è sbagliato."],
+        ["È la quota giusta?", "Se devi convincerti che la quota va bene, probabilmente non va bene. Le occasioni buone non hanno bisogno di scuse."],
+        ["Lo faresti anche a mente fredda?", "Se domattina, riposato, non faresti questa giocata, non farla nemmeno adesso."],
+        ["Cosa rischi per cosa?", "Metti su una bilancia la serenità di oggi e i pochi euro in più. Quale delle due pesa di più per te?"],
+        ["Puoi anche non fare niente", "Non giocare è sempre una scelta valida. Nessuno ti obbliga a entrare oggi."],
+        ["Chi decide: tu o l'impulso?", "Aspetta cinque minuti prima di ogni giocata. Se l'impulso passa, non era una buona idea."],
+        ["Vale il tuo tempo?", "Ci sono cose della vita reale che contano più di questa partita. Forse oggi è il giorno per loro."]
+    ]
+};
+
+// Giorno n° (ora locale) da cui dipende il messaggio: cambia a mezzanotte, uguale per tutto il giorno
+function reflectionDayNumber(date) {
+    const d = new Date(date);
+    return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+}
+
+// Sceglie il messaggio del giorno: il tipo ruota ogni giorno, il testo dentro il tipo ogni 3 giorni (ciclo di 30 giorni)
+function dailyReflection(date) {
+    const n = reflectionDayNumber(date);
+    const type = REFLECTION_KINDS[((n % 3) + 3) % 3];
+    const list = REFLECTIONS[type.kind];
+    const [title, text] = list[Math.floor(n / 3) % list.length];
+    return { kind: type.kind, label: type.label, icon: type.icon, title, text };
+}
+
+// Per i messaggi "Obiettivo": dove sei oggi e sul piano, con i numeri del progetto
+function reflectionStatus(stats) {
+    if (!stats || stats.deadlinePassed) return "";
+    const lines = [];
+    const today = todayResult(stats);
+    if (stats.dailyNeeded > 0) {
+        if (today === null) lines.push(`Oggi non hai ancora registrato il resoconto. Ritmo del giorno: <strong>${euro(stats.dailyNeeded)}</strong>.`);
+        else if (today >= stats.dailyNeeded) lines.push(`✅ Oggi hai fatto <strong>${euro(today)}</strong> su ${euro(stats.dailyNeeded)}: obiettivo del giorno raggiunto. Puoi chiudere qui.`);
+        else lines.push(`Oggi sei a <strong>${euro(today)}</strong> su ${euro(stats.dailyNeeded)}.`);
+    }
+    if (stats.roadmapDifference >= 0) lines.push(`Sul piano sei in linea o avanti (<strong>+${euro(stats.roadmapDifference)}</strong>): non c'è niente da inseguire.`);
+    else lines.push(`Sul piano sei sotto di <strong>${euro(-stats.roadmapDifference)}</strong>. Non si recupera oggi: si recupera con calma, a tappe.`);
+    return lines.join("<br>");
+}
+
+function openReflectionModal(project) {
+    if (!project || project.status === "completed" || project.status === "abandoned") return;
+    const r = dailyReflection(getToday());
+    document.getElementById("reflectionIcon").textContent = r.icon;
+    document.getElementById("reflectionKind").textContent = r.label;
+    document.getElementById("reflectionTitle").textContent = r.title;
+    document.getElementById("reflectionText").textContent = r.text;
+    const statusEl = document.getElementById("reflectionStatus");
+    let status = "";
+    if (r.kind === "obiettivo") { try { status = reflectionStatus(calculateProject(project)); } catch (e) { status = ""; } }
+    statusEl.innerHTML = status;
+    statusEl.style.display = status ? "block" : "none";
+    document.getElementById("reflectionModal").classList.add("active");
+}
+function closeReflectionModal() { document.getElementById("reflectionModal").classList.remove("active"); }
+
 function openProject(id) {
     currentProjectId = id;
     const project = getProject(id);
     if (project) updateProjectStartState(project);
     goToPage("projectDetail");
     renderProjectDetail();
+    openReflectionModal(project);
 }
 
 function showOperationForm(type) {
