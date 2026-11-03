@@ -945,6 +945,7 @@ canvas { width: 100%; height: 100%; display: block; }
             <input id="oddsGoals" type="number" step="1" min="0" inputmode="numeric" value="0" oninput="renderOddsEntry()">
         </div>
         <div id="oddsResult" style="margin-top:8px;"></div>
+        <button id="oddsRegisterBtn" class="primary" style="width:100%; margin-top:12px;" onclick="registerOddsEntry()">💾 Registra la giocata nel progetto</button>
         <p class="small" style="margin-top:12px; font-size:12px; line-height:1.5;">Stima: in live suppongo che i gol arrivino in modo regolare nel tempo. Sopra la quota minima la scommessa rende in media; sotto, nel lungo periodo fa perdere. Non conosce la singola partita (squadre, espulsioni, ritmo).</p>
     </div>
 </div>
@@ -1219,6 +1220,8 @@ canvas { width: 100%; height: 100%; display: block; }
         <select id="betStrategy" class="field-select" onchange="betExitStakeTouched = false; updateBetStakeLabel(); autoFillBetAmount()"></select>
         <label>Data e Ora</label>
         <input id="betDate" type="datetime-local">
+        <label>Campionato o coppa</label>
+        <select id="betCompetition" class="field-select"></select>
         <label>Esito</label>
         <div class="result-toggle">
             <button id="betWinBtn" class="win" onclick="setBetResult('win')">✅ Vinta</button>
@@ -3330,11 +3333,36 @@ function renderStrategies(project) {
                 </tbody>
             </table>
         </div>
+        ${competitionTable(project)}
         <p class="small" style="margin-top:10px; font-size:12px; line-height:1.6;">
             ${totalBets ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); openBetModal()">${totalBets} operazioni registrate</a> · ` : ""}
             ${used.length ? `<a href="#" style="color:var(--accent);" onclick="event.preventDefault(); toggleAllStrategies()">${hidden ? `mostra altre ${hidden} strategie` : "mostra solo quelle usate"}</a> · ` : ""}
             "Serve" = % minima di vinte per non perdere, calcolata dalla quota con commissione ${fmtPct(getRules(project).commissionPct)}. "Entra a" = quota da cercare per non perdere con la % che vinci: in punta almeno quella, in banca al massimo quella. † dati del backtest${all.some(s => s.source === "data") ? ", * dai tuoi risultati" : ""}. ${all.some(s => s.trading) ? `"Chiusura" = strategia che chiudi quasi sempre prima della fine: la giudico sul guadagno medio per operazione, non sulla quota d'entrata. ` : ""}Giudizio dopo ${all[0].minBets} operazioni: con poche operazioni conta anche la fortuna.
         </p>`;
+}
+
+// Tabella "Per campionato": compare solo se hai indicato il campionato in qualche operazione
+function competitionTable(project) {
+    const list = calculateCompetitionStats(project);
+    if (!list.length) return "";
+    return `
+        <h4 style="color:var(--muted); font-size:12px; margin: 16px 0 4px;">📊 PER CAMPIONATO</h4>
+        <div class="strategy-table-wrap">
+            <table class="strategy-table">
+                <thead><tr><th>Campionato</th><th>Op.</th><th>Quota</th><th>Vinte</th><th>Ogni 100€</th><th>Totale</th></tr></thead>
+                <tbody>
+                    ${list.map(g => `
+                        <tr>
+                            <td>${escapeHTML(g.name)}</td>
+                            <td>${g.n}</td>
+                            <td>${g.avgOdds ? fmtOdds(g.avgOdds) : "--"}</td>
+                            <td>${fmtPct(g.winRate)}</td>
+                            <td class="${g.roi > 0 ? "green" : g.roi < 0 ? "red" : ""}">${g.roi === null ? "--" : `${g.roi > 0 ? "+" : ""}${euro(g.roi)}`}</td>
+                            <td class="${g.total > 0 ? "green" : g.total < 0 ? "red" : ""}">${euro(g.total)}</td>
+                        </tr>`).join("")}
+                </tbody>
+            </table>
+        </div>`;
 }
 
 // ----- Modale regole -----
@@ -3452,6 +3480,8 @@ function openBetModal() {
     const lastId = bets.length ? bets[bets.length - 1].strategyId : null;
     document.getElementById("betStrategy").innerHTML = strategies
         .map(s => `<option value="${escapeHTML(s.id)}" ${s.id === lastId ? "selected" : ""}>${escapeHTML(s.name)}</option>`).join("");
+    document.getElementById("betCompetition").innerHTML = `<option value="">Non indicato</option>` +
+        ODDS_COMPETITIONS.map(c => `<option value="${c.id}">${escapeHTML(c.id === "altro" ? "Altro" : c.name)}</option>`).join("");
     resetBetForm();
     renderBetList(project);
     document.getElementById("betModal").classList.add("active");
@@ -3515,7 +3545,7 @@ function resetBetForm() {
     document.getElementById("betExitOdds").value = "";
     document.getElementById("betExitStake").value = "";
     document.getElementById("betExitHint").innerHTML = "";
-    ["betMinute", "betScoreHome", "betScoreAway"].forEach(id => { document.getElementById(id).value = ""; });
+    ["betMinute", "betScoreHome", "betScoreAway", "betCompetition"].forEach(id => { document.getElementById(id).value = ""; });
     betAmountTouched = false;
     betExitStakeTouched = false;
     betExitOpposite = false;
@@ -3604,6 +3634,8 @@ function saveBet() {
         if (exitStake > 0) bet.exitStake = exitStake;
         if (betExitOpposite) bet.exitOpposite = true; // quota e importo veri dell'esito contrario
     }
+    const competition = document.getElementById("betCompetition").value;
+    if (competition) bet.competition = competition;
     const minuteVal = document.getElementById("betMinute").value;
     if (minuteVal !== "") {
         bet.minute = Math.max(0, Math.round(Number(minuteVal)));
@@ -3630,6 +3662,7 @@ function renderBetList(project) {
         if (b.label) details.unshift(escapeHTML(b.label));
         if (b.stake) details.push(`${s && s.side === "lay" ? "resp." : "puntata"} ${euro(b.stake)}`);
         if (b.odds) details.push(`quota ${fmtOdds(b.odds)}`);
+        if (b.competition) details.push(escapeHTML(competitionName(b.competition)));
         if (betSituation(b)) details.push(`entrata al ${b.minute}' (${b.score.join("-")})`);
         if (b.exitOdds) {
             const lay = s && s.side === "lay";
@@ -3734,6 +3767,65 @@ function openOddsModal() {
 
 function closeOddsModal() { document.getElementById("oddsModal").classList.remove("active"); }
 
+function competitionName(id) {
+    const c = ODDS_COMPETITIONS.find(x => x.id === id);
+    return c ? (c.id === "altro" ? "Altro campionato" : c.name) : id;
+}
+
+// Le tue operazioni per campionato (solo quelle con il campionato indicato), eventualmente di una sola strategia
+function calculateCompetitionStats(project, strategyId) {
+    const groups = new Map();
+    getBets(project).forEach(b => {
+        if (!b.competition || (strategyId && b.strategyId !== strategyId)) return;
+        if (!groups.has(b.competition)) groups.set(b.competition, { id: b.competition, name: competitionName(b.competition), n: 0, wins: 0, total: 0, staked: 0, oddsSum: 0, oddsN: 0 });
+        const g = groups.get(b.competition), pl = Number(b.pl) || 0;
+        g.n++; g.total += pl;
+        if (pl > 0) g.wins++;
+        if (Number(b.stake) > 0) g.staked += Number(b.stake);
+        if (Number(b.odds) > 1) { g.oddsSum += Number(b.odds); g.oddsN++; }
+    });
+    return [...groups.values()].map(g => ({
+        ...g, winRate: g.wins / g.n * 100, avgOdds: g.oddsN ? g.oddsSum / g.oddsN : null,
+        roi: g.staked > 0 ? g.total / g.staked * 100 : null
+    })).sort((a, b) => b.n - a.n);
+}
+
+// Strategia del progetto che corrisponde al mercato del calcolatore ("Punta Over 0.5 primo tempo")
+function marketStrategyName(market) { return `Punta ${market.label}`; }
+
+function registerOddsEntry() {
+    const projects = window.loadProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project || isProjectClosed(project)) { alert("Apri un progetto attivo per registrare la giocata."); return; }
+    const market = ODDS_MARKETS.find(m => m.id === document.getElementById("oddsMarket").value);
+    const name = marketStrategyName(market);
+    project.strategies = getStrategies(project);
+    project.strategiesVersion = STRATEGIES_VERSION;
+    let strategy = project.strategies.find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (!strategy) {
+        strategy = { id: "calc_" + market.id, name, side: "back", refOdds: null, breakEven: null };
+        project.strategies.push(strategy);
+        window.saveProjects(projects);
+    }
+    const values = {
+        competition: document.getElementById("oddsCompetition").value,
+        minute: document.getElementById("oddsMinute").value,
+        goals: document.getElementById("oddsGoals").value,
+        odds: document.getElementById("oddsOdds").value
+    };
+    closeOddsModal();
+    openBetModal();
+    document.getElementById("betStrategy").value = strategy.id;
+    document.getElementById("betCompetition").value = values.competition;
+    document.getElementById("betOdds").value = values.odds;
+    if (values.minute !== "") {
+        document.getElementById("betMinute").value = values.minute;
+        document.getElementById("betScoreHome").value = values.goals || 0;
+        document.getElementById("betScoreAway").value = 0;
+    }
+    updateBetStakeLabel(); autoFillBetAmount(); updateBetOddsHint();
+}
+
 function renderOddsEntry() {
     const minute = document.getElementById("oddsMinute").value;
     document.getElementById("oddsGoalsRow").style.display = minute === "" ? "none" : "";
@@ -3758,7 +3850,16 @@ function renderOddsEntry() {
             ? `<div class="green" style="font-weight:600;">✅ Conviene secondo le statistiche: in media ${r.ev100 >= 0 ? "+" : ""}${euro(r.ev100)} ogni 100 € puntati.</div>`
             : `<div class="red" style="font-weight:600;">❌ Non conviene secondo le statistiche: in media ${euro(r.ev100)} ogni 100 € puntati. Aspetta almeno ${fmtOdds(r.minOdds)}.</div>`;
     }
+    // Le tue giocate registrate con questo campionato e questo mercato
+    if (project) {
+        const strategy = getStrategies(project).find(s => s.name.toLowerCase() === marketStrategyName(r.market).toLowerCase());
+        const mine = strategy ? calculateCompetitionStats(project, strategy.id).find(g => g.id === r.comp.id) : null;
+        html += mine
+            ? `<div class="small" style="margin-top:8px;">📒 Le tue giocate qui: <strong>${mine.n}</strong> · vinte ${fmtPct(mine.winRate)}${mine.avgOdds ? ` · quota media ${fmtOdds(mine.avgOdds)}` : ""} · <span class="${mine.total > 0 ? "green" : mine.total < 0 ? "red" : ""}">${mine.total > 0 ? "+" : ""}${euro(mine.total)}</span></div>`
+            : `<div class="small" style="margin-top:8px;">📒 Nessuna tua giocata registrata con questo campionato e mercato.</div>`;
+    }
     box.innerHTML = html;
+    document.getElementById("oddsRegisterBtn").style.display = project && !isProjectClosed(project) ? "" : "none";
 }
 
 // ----- Importazione CSV Betfair (scommesse concluse) -----
