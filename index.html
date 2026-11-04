@@ -1967,7 +1967,7 @@ function fixRealLifeTotal(type) {
     if (answer === null) return;
     const value = parseFloat(String(answer).replace(",", "."));
     if (!isFinite(value) || value < 0) { alert("Scrivi un numero valido (0 o più)."); return; }
-    const updated = addManualEntry(rl, type, round2(value - rl[field]), todayISO(), manualEntryId(), true);
+    const updated = fixManualTotal(rl, type, value, todayISO(), manualEntryId());
     if (window.saveRealLife) window.saveRealLife(updated);
     renderManualLog(updated);
     updateDashboard();
@@ -2145,6 +2145,12 @@ function addManualEntry(realLife, type, amount, date, id, fix) {
     if (fix) entry.fix = true;
     rl.manualLog.push(entry);
     return rl;
+}
+
+// Porta il totale extra (versati o prelevati) alla cifra giusta, anche 0, segnando la correzione nella cronologia.
+function fixManualTotal(realLife, type, value, date, id) {
+    const field = type === "deposit" ? "manualDeposits" : "manualWithdrawals";
+    return addManualEntry(realLife, type, rl2(rl2(value) - rl2(realLife && realLife[field])), date, id, true);
 }
 
 // Toglie un'aggiunta dalla cronologia e la sottrae dal totale.

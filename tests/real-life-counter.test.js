@@ -47,3 +47,11 @@ test("Allinea storico: aggiunte fatte su telefono e PC si sommano tutte e due", 
     assert.equal(merged.manualDeposits, 300);
     assert.deepEqual(merged.manualLog.map(e => e.id).sort(), ["c", "p"]);
 });
+
+test("Allinea storico: ✏️ Correggi azzera un totale salvato prima del contatore", () => {
+    const zero = plain(app.fixManualTotal({ manualDeposits: 1400, manualWithdrawals: 0 }, "deposit", 0, "2026-11-04", "f"));
+    assert.equal(zero.manualDeposits, 0);
+    assert.deepEqual(zero.manualLog, [{ id: "f", date: "2026-11-04", type: "deposit", amount: -1400, fix: true }]);
+    assert.equal(plain(app.fixManualTotal({ manualDeposits: 1400 }, "deposit", 900.5, "2026-11-04", "g")).manualDeposits, 900.5);
+    assert.equal(plain(app.fixManualTotal({ manualWithdrawals: 10 }, "withdraw", 250, "2026-11-04", "h")).manualWithdrawals, 250);
+});
