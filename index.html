@@ -1536,11 +1536,15 @@ canvas { width: 100%; height: 100%; display: block; }
 
     <div class="card chart-card">
         <h2>📈 Andamento del progetto</h2>
-        <p class="small" style="margin-top:6px;">
+        <p class="small" style="margin-top:6px;" id="chartLegend">
             Linea blu: risultato netto. Linea verde: tabella di marcia.
         </p>
 
         <div class="chart-toolbar">
+            <div class="chart-periods" id="chartModes">
+                <button type="button" data-mode="result" class="active" onclick="setChartMode('result')">📈 Guadagno</button>
+                <button type="button" data-mode="balance" onclick="setChartMode('balance')">💰 Saldo</button>
+            </div>
             <div class="chart-periods" id="chartPeriods">
                 <button type="button" data-period="7" onclick="setChartPeriod('7')">7g</button>
                 <button type="button" data-period="30" onclick="setChartPeriod('30')">30g</button>
@@ -5147,6 +5151,9 @@ const CHART_DAY = 86400000;
 const CHART_MIN_SPAN = CHART_DAY; // non si zooma oltre un giorno
 const CHART_PERIODS = ["7", "30", "90", "365", "all"];
 let chartView = { projectId: null, preset: "all", start: null, end: null };
+// Cosa segue la linea blu: "result" = guadagno netto (con la tabella di marcia), "balance" = saldo sul conto
+let chartMode = "result";
+try { if (localStorage.getItem("andrea_suite_chart_mode") === "balance") chartMode = "balance"; } catch (e) {}
 let chartLast = null;  // ultimo progetto disegnato, per ridisegnare durante lo zoom
 let chartGeom = null;  // misure dell'ultimo disegno, servono a tocchi e rotella
 
@@ -5182,6 +5189,13 @@ function zoomChartRange(range, centerTime, factor, domainStart, domainEnd) {
 
 function setChartPeriod(preset) {
     chartView.preset = preset;
+    redrawProjectChart();
+}
+
+function setChartMode(mode) {
+    chartMode = mode === "balance" ? "balance" : "result";
+    try { localStorage.setItem("andrea_suite_chart_mode", chartMode); } catch (e) {}
+    hideChartTooltip();
     redrawProjectChart();
 }
 
@@ -5236,10 +5250,22 @@ function drawProjectChart(project, stats) {
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
-    const points = [{ date: new Date(project.createdAt), value: 0, balance: 0 }];
+    const showBalance = chartMode === "balance";
+    const points = [{ date: new Date(project.createdAt), value: 0, balance: 0, plot: 0 }];
     stats.history.forEach(item => {
-        points.push({ date: new Date(item.date), value: item.resultAfter, balance: item.balanceAfter });
+        points.push({ date: new Date(item.date), value: item.resultAfter, balance: item.balanceAfter,
+            plot: showBalance ? item.balanceAfter : item.resultAfter });
     });
+    // col saldo la tabella di marcia non c'entra: misura il guadagno, non i soldi sul conto
+    if (showBalance && points.length > 1) points[0].plot = points[1].balance;
+
+    document.querySelectorAll("#chartModes button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === chartMode);
+    });
+    const legend = document.getElementById("chartLegend");
+    if (legend) legend.textContent = showBalance
+        ? "Linea blu: saldo sul conto (sale e scende anche con versamenti e prelievi)."
+        : "Linea blu: risultato netto. Linea verde: tabella di marcia.";
 
     chartPoints = points;
     updateChartToolbar(null);
@@ -5289,7 +5315,7 @@ function drawProjectChart(project, stats) {
         return b.t === a.t ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
     }
     function resultAt(t) {
-        const timed = points.map(p => ({ t: p.date.getTime(), v: p.value }));
+        const timed = points.map(p => ({ t: p.date.getTime(), v: p.plot }));
         const seg = lineAt(timed, t, "t");
         if (!Array.isArray(seg)) return seg.v;
         const [a, b] = seg;
@@ -5297,12 +5323,13 @@ function drawProjectChart(project, stats) {
     }
 
     // Scala verticale: tutto il progetto va da 0 all'obiettivo, uno zoom si adatta a quello che si vede
-    const values = [resultAt(range.start), resultAt(range.end), idealAt(range.start), idealAt(Math.min(range.end, endTime))];
-    points.forEach(p => { const t = p.date.getTime(); if (t >= range.start && t <= range.end) values.push(p.value); });
-    ideal.forEach(p => { if (p.t >= range.start && p.t <= range.end) values.push(p.v); });
+    const values = [resultAt(range.start), resultAt(range.end)];
+    if (!showBalance) values.push(idealAt(range.start), idealAt(Math.min(range.end, endTime)));
+    points.forEach(p => { const t = p.date.getTime(); if (t >= range.start && t <= range.end) values.push(p.plot); });
+    if (!showBalance) ideal.forEach(p => { if (p.t >= range.start && p.t <= range.end) values.push(p.v); });
     let minValue = Math.min(...values);
     let maxValue = Math.max(...values);
-    if (isFull) {
+    if (isFull && !showBalance) {
         minValue = Math.min(minValue, 0, project.goal);
         maxValue = Math.max(maxValue, 0, project.goal);
     } else {
@@ -5361,23 +5388,25 @@ function drawProjectChart(project, stats) {
     ctx.rect(padding.left - 5, padding.top - 6, chartWidth + 10, chartHeight + 12); // margine per i pallini sui bordi
     ctx.clip();
 
-    ctx.strokeStyle = "#22c55e";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([7,6]);
-    ctx.beginPath();
-    ideal.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(xFromTime(p.t), yFromValue(p.v));
-        else ctx.lineTo(xFromTime(p.t), yFromValue(p.v));
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
+    if (!showBalance) {
+        ctx.strokeStyle = "#22c55e";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7,6]);
+        ctx.beginPath();
+        ideal.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(xFromTime(p.t), yFromValue(p.v));
+            else ctx.lineTo(xFromTime(p.t), yFromValue(p.v));
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
 
     ctx.strokeStyle = "#4f8cff";
     ctx.lineWidth = 3;
     ctx.beginPath();
     points.forEach((point, index) => {
         const x = xFromTime(point.date.getTime());
-        const y = yFromValue(point.value);
+        const y = yFromValue(point.plot);
         point.chartX = x;
         point.chartY = y;
         if (index === 0) ctx.moveTo(x, y);
