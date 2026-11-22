@@ -12,6 +12,16 @@ test("Tutto mostra il progetto dall'inizio alla scadenza", () => {
     assert.deepEqual({ ...app.chartPresetRange("all", START, END, NOW) }, { start: START, end: END });
 });
 
+test("Dall'inizio va dalla creazione del progetto a oggi", () => {
+    assert.deepEqual({ ...app.chartPresetRange("start", START, END, NOW) }, { start: START, end: NOW });
+});
+
+test("Dall'inizio su un progetto appena creato mostra almeno un giorno", () => {
+    const r = app.chartPresetRange("start", NOW, END, NOW);
+    assert.equal(r.start, NOW);
+    assert.equal(r.end, NOW + DAY);
+});
+
 test("7g finisce oggi", () => {
     const r = app.chartPresetRange("7", START, END, NOW);
     assert.equal(r.end, NOW);
