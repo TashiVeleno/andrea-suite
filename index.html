@@ -1550,6 +1550,7 @@ canvas { width: 100%; height: 100%; display: block; }
                 <button type="button" data-period="30" onclick="setChartPeriod('30')">30g</button>
                 <button type="button" data-period="90" onclick="setChartPeriod('90')">3m</button>
                 <button type="button" data-period="365" onclick="setChartPeriod('365')">1a</button>
+                <button type="button" data-period="start" onclick="setChartPeriod('start')">Dall'inizio</button>
                 <button type="button" data-period="all" class="active" onclick="setChartPeriod('all')">Tutto</button>
             </div>
             <div class="chart-range">
@@ -5149,7 +5150,7 @@ function renderHistory(project, stats) {
 // I pulsanti scelgono un periodo che finisce oggi, la rotella o le due dita zoomano, il trascinamento scorre.
 const CHART_DAY = 86400000;
 const CHART_MIN_SPAN = CHART_DAY; // non si zooma oltre un giorno
-const CHART_PERIODS = ["7", "30", "90", "365", "all"];
+const CHART_PERIODS = ["7", "30", "90", "365", "start", "all"];
 let chartView = { projectId: null, preset: "all", start: null, end: null };
 // Cosa segue la linea blu: "result" = guadagno netto (con la tabella di marcia), "balance" = saldo sul conto
 let chartMode = "result";
@@ -5160,6 +5161,8 @@ let chartGeom = null;  // misure dell'ultimo disegno, servono a tocchi e rotella
 // Periodo che finisce oggi; se il progetto è più giovane del periodo si parte dall'inizio e si vede la tabella di marcia che viene
 function chartPresetRange(preset, domainStart, domainEnd, now) {
     if (preset === "all") return { start: domainStart, end: domainEnd };
+    // dall'inizio del progetto fino a oggi (almeno un giorno)
+    if (preset === "start") return clampChartRange(domainStart, Math.max(now, domainStart + CHART_MIN_SPAN), domainStart, domainEnd);
     const span = Number(preset) * CHART_DAY;
     let end = Math.min(Math.max(now, domainStart), domainEnd);
     let start = end - span;
