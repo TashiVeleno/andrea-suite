@@ -397,6 +397,10 @@ h2 {
 }
 .today-result strong { font-size: 16px; }
 .today-switch { cursor: pointer; }
+.month-goal { margin-top: 8px; font-size: 14px; color: var(--muted); text-align: center; }
+.month-goal strong { font-size: 16px; }
+.month-goal .small, .month-goal .small strong { font-size: 13px; margin-top: 2px; }
+.month-goal-ok { display: inline-block; margin-bottom: 6px; padding: 4px 12px; border-radius: 999px; background: rgba(34,197,94,.15); border: 1px solid var(--green); color: var(--green); font-weight: 700; }
 .today-edit { border: none; border-radius: 9px; padding: 3px 8px; margin-left: 6px; cursor: pointer; font-size: 13px; background: rgba(59,130,246,.15); color: white; vertical-align: middle; }
 
 .roadmap-grid {
@@ -1386,6 +1390,7 @@ canvas { width: 100%; height: 100%; display: block; }
                 </div>
             </div>
             <div class="today-result" id="detailToday"><span class="today-switch" onclick="toggleTodayView()" title="Tocca per scegliere: incasso di oggi o posizione sul piano"><span id="detailTodayLabel">📅 Incasso del giorno:</span> <strong>—</strong><span id="detailTodayExtra"></span> 🔄</span> <button class="today-edit" id="detailTodayEdit" title="Aggiorna il resoconto di oggi" onclick="editTodayReport()">✏️</button></div>
+            <div class="month-goal" id="detailMonthGoal" style="display:none;"></div>
         </div>
 
         <div class="console-card" id="operationsCardBlock">
@@ -4893,6 +4898,25 @@ function renderProjectDetail() {
             : ` · ${days} ${days === 1 ? "giorno" : "giorni"} ${stats.daysDifference > 0 ? "avanti" : "indietro"}`;
         strong.className = value > 0 ? "green" : value < 0 ? "red" : "";
         document.getElementById("detailTodayEdit").style.display = isClosed ? "none" : "";
+    }
+
+    // Obiettivo del mese: guadagno di questo mese confrontato con il ritmo "Al mese" mostrato in alto
+    const monthGoalElement = document.getElementById("detailMonthGoal");
+    if (monthGoalElement) {
+        const target = stats.monthlyNeeded;
+        if (isClosed || stats.deadlinePassed || !(target > 0)) {
+            monthGoalElement.style.display = "none";
+        } else {
+            const month = stats.profitThisMonth;
+            const gap = month - target;
+            const cls = v => v > 0 ? "green" : v < 0 ? "red" : "";
+            const reached = gap >= 0;
+            monthGoalElement.innerHTML =
+                (reached ? `<div class="month-goal-ok">✅ Obiettivo del mese raggiunto</div><br>` : "") +
+                `🗓️ Questo mese: <strong class="${cls(month)}">${month > 0 ? "+" : ""}${euro(month)}</strong> su ${euro(target)}` +
+                `<div class="small">${reached ? `<strong class="green">+${euro(gap)}</strong> in più dell'obiettivo` : `mancano <strong>${euro(-gap)}</strong> all'obiettivo`}</div>`;
+            monthGoalElement.style.display = "";
+        }
     }
 
     document.getElementById("detailGoal").textContent = euro(project.goal);
